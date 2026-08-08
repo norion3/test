@@ -1,0 +1,1823 @@
+<!DOCTYPE html>
+<html lang="ja"><head><script data-bard-injected="true">(function(firebaseConfig, initialAuthToken, appId) {
+        window.__firebase_config = firebaseConfig;
+        window.__initial_auth_token = initialAuthToken;
+        window.__app_id = appId;
+            })("\n{\n  \"apiKey\": \"AIzaSyCqyCcs2R2e7AegGjvFAwG98wlamtbHvZY\",\n  \"authDomain\": \"bard-frontend.firebaseapp.com\",\n  \"projectId\": \"bard-frontend\",\n  \"storageBucket\": \"bard-frontend.firebasestorage.app\",\n  \"messagingSenderId\": \"175205271074\",\n  \"appId\": \"1:175205271074:web:2b7bd4d34d33bf38e6ec7b\"\n}\n","eyJhbGciOiJSUzI1NiIsImtpZCI6IjExNjRiNzdiNDMzZDdhMDAyMWI4NjE4YjhjYTU3ZTMyZGI5MWUxMTMiLCJ0eXAiOiJKV1QifQ.eyJzdWIiOiJmaXJlYmFzZS1hZG1pbnNkay1mYnN2Y0BiYXJkLWZyb250ZW5kLmlhbS5nc2VydmljZWFjY291bnQuY29tIiwiYXVkIjoiaHR0cHM6Ly9pZGVudGl0eXRvb2xraXQuZ29vZ2xlYXBpcy5jb20vZ29vZ2xlLmlkZW50aXR5LmlkZW50aXR5dG9vbGtpdC52MS5JZGVudGl0eVRvb2xraXQiLCJ1aWQiOiIxMTIxMjg4MDcwMTUzNjI0Nzg0MSIsImlzcyI6ImZpcmViYXNlLWFkbWluc2RrLWZic3ZjQGJhcmQtZnJvbnRlbmQuaWFtLmdzZXJ2aWNlYWNjb3VudC5jb20iLCJjbGFpbXMiOnsiYXBwSWQiOiJjXzc3NGUwMGIyMDBiOGQyYzFfbWFpbi5odG1sLTU2MyJ9LCJleHAiOjE3ODYxOTc2MDIsImlhdCI6MTc4NjE5NDAwMiwiYWxnIjoiUlMyNTYifQ.oUk04I-bkz0Je-MFTEldze4z-cEt9GgMr_rYNsOG-1DygAFNwcfU4Uwoes_YhB8wMLeD9Vuu0viL8C1MW9WV4fLEK4SbUSOpwH2Js0Mc9tuR6S9vVrKtVGaEgpMPqUXFMFOX1TS6-xD_d8kIOUhRo5HS7wZ-e3e8zidJ2PqOLX5vbO0dcQfAsZvS3-Wvve_AamqJUmYR5nSczzm5RgwW_vLpIvtHpMbGdzu-YUBM7LSNzE2Keldqzc57UPaJT_mR1zitKEZQ8BaRGaHEPxmC5H8eO-WEqNk9lHuaBl9wZxvuTinmE9Ubg9g3uy7Kb40p-cBiHJyPpIkC8DCSBgqb-w","c_774e00b200b8d2c1_main.html-563")</script><script data-bard-injected="true">(function(){'use strict';window.addEventListener("message",a=>{a.data&&a.data.type==="SUPPLEMENTAL_DATA_UPDATE"&&window.dispatchEvent(new CustomEvent("supplementaldataupdate",{detail:a.data.data}))});}).call(this);
+</script><script data-bard-injected="true">(function(){'use strict';var h=typeof Object.defineProperties=="function"?Object.defineProperty:function(a,b,d){if(a==Array.prototype||a==Object.prototype)return a;a[b]=d.value;return a};function l(a){a=["object"==typeof globalThis&&globalThis,a,"object"==typeof window&&window,"object"==typeof self&&self,"object"==typeof global&&global];for(var b=0;b<a.length;++b){var d=a[b];if(d&&d.Math==Math)return d}throw Error("Cannot find global object");}var n=l(this);
+function p(a,b){if(b)a:{var d=n;a=a.split(".");for(var c=0;c<a.length-1;c++){var e=a[c];if(!(e in d))break a;d=d[e]}a=a[a.length-1];c=d[a];b=b(c);b!=c&&b!=null&&h(d,a,{configurable:!0,writable:!0,value:b})}}function r(a){function b(c){return a.next(c)}function d(c){return a.throw(c)}return new Promise(function(c,e){function f(g){g.done?c(g.value):Promise.resolve(g.value).then(b,d).then(f,e)}f(a.next())})}function t(a){return r(a())}
+p("Object.values",function(a){return a?a:function(b){var d=[],c;for(c in b)Object.prototype.hasOwnProperty.call(b,c)&&d.push(b[c]);return d}});p("Array.prototype.includes",function(a){return a?a:function(b,d){var c=this;c instanceof String&&(c=String(c));var e=c.length;d=d||0;for(d<0&&(d=Math.max(d+e,0));d<e;d++){var f=c[d];if(f===b||Object.is(f,b))return!0}return!1}});/*
+
+ MIT License
+
+ Copyright (c) 2017-2023 W.Y.
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+
+*/
+function u(a,b){var d=a.style;b.backgroundColor&&(d.backgroundColor=b.backgroundColor);b.width&&(d.width=`${b.width}px`);b.height&&(d.height=`${b.height}px`);var c=b.style;c!=null&&Object.keys(c).forEach(e=>{d[e]=c[e]})};var v=(()=>{var a=0;return()=>{a+=1;return`u${`0000${(Math.random()*1679616<<0).toString(36)}`.slice(-4)}${a}`}})();function w(a){var b=[];for(let d=0,c=a.length;d<c;d++)b.push(a[d]);return b}let x=null;function y(a={}){return x?x:a.l?x=a.l:x=w(window.getComputedStyle(document.documentElement))}function z(a,b){return(a=(a.ownerDocument.defaultView||window).getComputedStyle(a).getPropertyValue(b))?parseFloat(a.replace("px","")):0}
+function A(a,b={}){var d;if(!(d=b.width)){d=z(a,"border-left-width");var c=z(a,"border-right-width");d=a.clientWidth+d+c}(b=b.height)||(b=z(a,"border-top-width"),c=z(a,"border-bottom-width"),b=a.clientHeight+b+c);return{width:d,height:b}}function B(a){return new Promise((b,d)=>{var c=new Image;c.onload=()=>{c.decode().then(()=>{requestAnimationFrame(()=>b(c))})};c.onerror=d;c.crossOrigin="anonymous";c.decoding="async";c.src=a})}
+function C(a){return t(function*(){return Promise.resolve().then(()=>(new XMLSerializer).serializeToString(a)).then(encodeURIComponent).then(b=>`data:image/svg+xml;charset=utf-8,${b}`)})}
+function D(a,b,d){return t(function*(){var c=document.createElementNS("http://www.w3.org/2000/svg","svg"),e=document.createElementNS("http://www.w3.org/2000/svg","foreignObject");c.setAttribute("width",`${b}`);c.setAttribute("height",`${d}`);c.setAttribute("viewBox",`0 0 ${b} ${d}`);e.setAttribute("width","100%");e.setAttribute("height","100%");e.setAttribute("x","0");e.setAttribute("y","0");e.setAttribute("externalResourcesRequired","true");c.appendChild(e);e.appendChild(a);return C(c)})}
+var E=(a,b)=>{if(a instanceof b)return!0;a=Object.getPrototypeOf(a);return a===null?!1:a.constructor.name===b.name||E(a,b)};function F(a,b){return y(b).map(d=>{var c=a.getPropertyValue(d),e=a.getPropertyPriority(d);return`${d}: ${c}${e?" !important":""};`}).join(" ")}
+function G(a,b,d,c){a=window.getComputedStyle(a,d);var e=a.getPropertyValue("content");if(e!==""&&e!=="none"){var f=v();try{b.className=`${b.className} ${f}`}catch(k){return}e=document.createElement("style");var g=e.appendChild;d=`.${f}:${d}`;a.cssText?(c=a.getPropertyValue("content"),c=`${a.cssText} content: '${c.replace(/'|"/g,"")}';`):c=F(a,c);g.call(e,document.createTextNode(`${d}{${c}}`));b.appendChild(e)}};function H(a){return a.search(/^(data:)/)!==-1}function I(a,b,d){return t(function*(){var c=yield fetch(a,b);if(c.status===404)throw Error(`Resource "${c.url}" not found`);var e=yield c.blob();return new Promise((f,g)=>{var k=new FileReader;k.onerror=g;k.onloadend=()=>{try{f(d({o:c,result:k.result}))}catch(m){g(m)}};k.readAsDataURL(e)})})}const J={};function K(a,b,d){var c=a.replace(/\?.*/,"");d&&(c=a);/ttf|otf|eot|woff2?/i.test(c)&&(c=c.replace(/.*\//,""));return b?`[${b}]${c}`:c}
+function L(a,b,d){return t(function*(){var c=K(a,b,d.C);if(J[c]!=null)return J[c];d.u&&(a+=(/\?/.test(a)?"&":"?")+(new Date).getTime());try{let f=yield I(a,d.i,({o:g,result:k})=>{b||(b=g.headers.get("Content-Type")||"");return k.split(/,/)[1]});var e=`data:${b};base64,${f}`}catch(f){e=d.B||""}return J[c]=e})};const M={P:"application/font-woff",R:"application/font-woff",N:"application/font-truetype",v:"application/vnd.ms-fontobject",H:"image/png",F:"image/jpeg",D:"image/jpeg",A:"image/gif",M:"image/tiff",L:"image/svg+xml",O:"image/webp"};function N(a){return(a=/\.([^./]*?)$/g.exec(a))?a[1]:""};function O(a){return t(function*(){var b=a.toDataURL();return b==="data:,"?a.cloneNode(!1):B(b)})}function aa(a,b){return t(function*(){if(a.currentSrc){var d=document.createElement("canvas");let c=d.getContext("2d");d.width=a.clientWidth;d.height=a.clientHeight;c==null||c.drawImage(a,0,0,d.width,d.height);d=d.toDataURL();return B(d)}d=a.poster;d=yield L(d,M[N(d).toLowerCase()]||"",b);return B(d)})}
+function ba(a,b){return t(function*(){try{let d;if(a==null?0:(d=a.contentDocument)==null?0:d.body)return yield P(a.contentDocument.body,b,!0)}catch(d){}return a.cloneNode(!1)})}function ca(a,b){return t(function*(){return E(a,HTMLCanvasElement)?O(a):E(a,HTMLVideoElement)?aa(a,b):E(a,HTMLIFrameElement)?ba(a,b):a.cloneNode(a.tagName!=null&&a.tagName.toUpperCase()==="SVG")})}
+function da(a,b,d){return t(function*(){if(b.tagName!=null&&b.tagName.toUpperCase()==="SVG")return b;var c=[];if(a.tagName!=null&&a.tagName.toUpperCase()==="SLOT"&&a.assignedNodes)c=w(a.assignedNodes());else{let e;if(E(a,HTMLIFrameElement)&&((e=a.contentDocument)==null?0:e.body))c=w(a.contentDocument.body.childNodes);else{let f;c=w(((f=a.shadowRoot)!=null?f:a).childNodes)}}if(c.length===0||E(a,HTMLVideoElement))return b;yield c.reduce((e,f)=>e.then(()=>P(f,d)).then(g=>{g&&b.appendChild(g)}),Promise.resolve());
+return b})}function ea(a,b,d){var c=b.style;if(c){var e=window.getComputedStyle(a);e.cssText?(c.cssText=e.cssText,c.transformOrigin=e.transformOrigin):y(d).forEach(f=>{var g=e.getPropertyValue(f);f==="font-size"&&g.endsWith("px")&&(g=`${Math.floor(parseFloat(g.substring(0,g.length-2)))-.1}px`);E(a,HTMLIFrameElement)&&f==="display"&&g==="inline"&&(g="block");f==="d"&&b.getAttribute("d")&&(g=`path(${b.getAttribute("d")})`);c.setProperty(f,g,e.getPropertyPriority(f))})}}
+function fa(a,b){E(a,HTMLSelectElement)&&(b=Array.from(b.children).find(d=>a.value===d.getAttribute("value")))&&b.setAttribute("selected","")}
+function ha(a,b){return t(function*(){var d=a.querySelectorAll?a.querySelectorAll("use"):[];if(d.length===0)return a;var c={};for(var e=0;e<d.length;e++){var f=d[e].getAttribute("xlink:href");if(f){let g=document.querySelector(f);a.querySelector(f)||!g||c[f]||(c[f]=yield P(g,b,!0))}}d=Object.values(c);if(d.length){c=document.createElementNS("http://www.w3.org/1999/xhtml","svg");c.setAttribute("xmlns","http://www.w3.org/1999/xhtml");c.style.position="absolute";c.style.width="0";c.style.height="0";
+c.style.overflow="hidden";c.style.display="none";e=document.createElementNS("http://www.w3.org/1999/xhtml","defs");c.appendChild(e);for(f=0;f<d.length;f++)e.appendChild(d[f]);a.appendChild(c)}return a})}
+function P(a,b,d){return t(function*(){return d||!b.filter||b.filter(a)?Promise.resolve(a).then(c=>ca(c,b)).then(c=>da(a,c,b)).then(c=>{E(c,Element)&&(ea(a,c,b),G(a,c,":before",b),G(a,c,":after",b),E(a,HTMLTextAreaElement)&&(c.textContent=a.value),E(a,HTMLInputElement)&&c.setAttribute("value",a.value),fa(a,c));return c}).then(c=>ha(c,b)):null})};const Q=/url\((['"]?)([^'"]+?)\1\)/g,ia=/url\([^)]+\)\s*format\((["']?)([^"']+)\1\)/g,ja=/src:\s*(?:url\([^)]+\)\s*format\([^)]+\)[,;]\s*)+/g;function ka(a){var b=[];a.replace(Q,(d,c,e)=>{b.push(e);return d});return b.filter(d=>!H(d))}
+function la(a,b,d,c){return t(function*(){try{let e=d?(new URL(b,d||void 0)).toString():b,f;f=yield L(e,M[N(b).toLowerCase()]||"",c);return a.replace(new RegExp(`(url\\(['"]?)(${b.replace(/([.*+?^${}()|\[\]\/\\])/g,"\\$1")})(['"]?\\))`,"g"),`$1${f}$3`)}catch(e){}return a})}function ma(a,{I:b}){return b?a.replace(ja,d=>{for(;;){let [c,,e]=ia.exec(d)||[];if(!e)return"";if(e===b)return`src: ${c};`}}):a}
+function R(a,b,d){return t(function*(){if(a.search(Q)===-1)return a;var c=ma(a,d);return ka(c).reduce((e,f)=>e.then(g=>la(g,f,b,d)),Promise.resolve(c))})};function S(a,b,d){return t(function*(){var c,e=(c=b.style)==null?void 0:c.getPropertyValue(a);return e?(c=yield R(e,null,d),b.style.setProperty(a,c,b.style.getPropertyPriority(a)),!0):!1})}function na(a,b){return t(function*(){(yield S("background",a,b))||(yield S("background-image",a,b));(yield S("mask",a,b))||(yield S("-webkit-mask",a,b))||(yield S("mask-image",a,b))||(yield S("-webkit-mask-image",a,b))})}
+function oa(a,b){return t(function*(){var d=E(a,HTMLImageElement);if(d&&!H(a.src)||E(a,SVGImageElement)&&!H(a.href.baseVal)){var c=d?a.src:a.href.baseVal,e=yield L(c,M[N(c).toLowerCase()]||"",b);yield new Promise((f,g)=>{a.onload=f;a.onerror=b.m?(...k)=>{try{f(b.m(...k))}catch(m){g(m)}}:g;a.decode&&(a.decode=f);a.loading==="lazy"&&(a.loading="eager");d?(a.srcset="",a.src=e):a.href.baseVal=e})}})}
+function pa(a,b){return t(function*(){var d=w(a.childNodes).map(c=>T(c,b));yield Promise.all(d).then(()=>a)})}function T(a,b){return t(function*(){E(a,Element)&&(yield na(a,b),yield oa(a,b),yield pa(a,b))})};const U={};function V(a){return t(function*(){var b=U[a];if(b!=null)return b;b=yield(yield fetch(a)).text();b={url:a,cssText:b};return U[a]=b})}function W(a,b){return t(function*(){var d=a.cssText,c=/url\(["']?([^"')]+)["']?\)/g,e=(d.match(/url\([^)]+\)/g)||[]).map(f=>t(function*(){var g=f.replace(c,"$1");g.startsWith("https://")||(g=(new URL(g,a.url)).href);return I(g,b.i,({result:k})=>{d=d.replace(f,`url(${k})`);return[f,k]})}));return Promise.all(e).then(()=>d)})}
+function X(a){if(a==null)return[];var b=[];a=a.replace(/(\/\*[\s\S]*?\*\/)/gi,"");for(var d=RegExp("((@.*?keyframes [\\s\\S]*?){([\\s\\S]*?}\\s*?)})","gi");;){var c=d.exec(a);if(c===null)break;b.push(c[0])}a=a.replace(d,"");d=/@import[\s\S]*?url\([^)]*\)[\s\S]*?;/gi;for(c=RegExp("((\\s*?(?:\\/\\*[\\s\\S]*?\\*\\/)?\\s*?@media[\\s\\S]*?){([\\s\\S]*?)}\\s*?})|(([\\s\\S]*?){([\\s\\S]*?)})","gi");;){let e=d.exec(a);if(e===null)if(e=c.exec(a),e===null)break;else d.lastIndex=c.lastIndex;else c.lastIndex=
+d.lastIndex;b.push(e[0])}return b}
+function qa(a,b){return t(function*(){var d=[],c=[];a.forEach(e=>{if("cssRules"in e)try{w(e.cssRules||[]).forEach((f,g)=>{if(f.type===CSSRule.IMPORT_RULE){let k=g+1;f=V(f.href).then(m=>W(m,b)).then(m=>X(m).forEach(q=>{try{e.insertRule(q,q.startsWith("@import")?k+=1:e.cssRules.length)}catch(Da){}})).catch(()=>{});c.push(f)}})}catch(f){let g=a.find(k=>k.href==null)||document.styleSheets[0];e.href!=null&&c.push(V(e.href).then(k=>W(k,b)).then(k=>X(k).forEach(m=>{g.insertRule(m,g.cssRules.length)})).catch(()=>
+{}))}});return Promise.all(c).then(()=>{a.forEach(e=>{if("cssRules"in e)try{w(e.cssRules||[]).forEach(f=>{d.push(f)})}catch(f){}});return d})})}function ra(a){return a.filter(b=>b.type===CSSRule.FONT_FACE_RULE).filter(b=>b.style.getPropertyValue("src").search(Q)!==-1)}function sa(a,b){return t(function*(){if(a.ownerDocument==null)throw Error("Provided element is not within a Document");var d=w(a.ownerDocument.styleSheets);d=yield qa(d,b);return ra(d)})}
+function ta(a){function b(c){(c.style.fontFamily||getComputedStyle(c).fontFamily).split(",").forEach(e=>{d.add(e.trim().replace(/["']/g,""))});Array.from(c.children).forEach(e=>{e instanceof HTMLElement&&b(e)})}var d=new Set;b(a);return d}function ua(a,b){return t(function*(){var d=yield sa(a,b),c=ta(a);return(yield Promise.all(d.filter(e=>c.has(e.style.fontFamily.trim().replace(/["']/g,""))).map(e=>R(e.cssText,e.parentStyleSheet?e.parentStyleSheet.href:null,b)))).join("\n")})}
+function va(a,b){return t(function*(){var d=b.j!=null?b.j:b.K?null:yield ua(a,b);if(d){let c=document.createElement("style");c.appendChild(document.createTextNode(d));a.firstChild?a.insertBefore(c,a.firstChild):a.appendChild(c)}})};function wa(a,b={}){return t(function*(){var {width:d,height:c}=A(a,b),e=yield P(a,b,!0);yield va(e,b);yield T(e,b);u(e,b);return yield D(e,d,c)})}
+function xa(a,b={}){return t(function*(){var {width:d,height:c}=A(a,b),e=yield wa(a,b);e=yield B(e);var f=document.createElement("canvas"),g=f.getContext("2d"),k=b.G||window.devicePixelRatio||1,m=b.h||d,q=b.g||c;f.width=m*k;f.height=q*k;!b.J&&(f.width>16384||f.height>16384)&&(f.width>16384&&f.height>16384?f.width>f.height?(f.height*=16384/f.width,f.width=16384):(f.width*=16384/f.height,f.height=16384):f.width>16384?(f.height*=16384/f.width,f.width=16384):(f.width*=16384/f.height,f.height=16384));
+f.style.width=`${m}`;f.style.height=`${q}`;b.backgroundColor&&(g.fillStyle=b.backgroundColor,g.fillRect(0,0,f.width,f.height));g.drawImage(e,0,0,f.width,f.height);return f})}function ya(a,b={}){return t(function*(){return(yield xa(a,b)).toDataURL()})};const za=["gemini.google.com","corp.google.com","proxy.googlers.com"];function Y(){return document.body.querySelectorAll('[class*="animate"]').length>0}function Z(a){return t(function*(){try{return yield ya(a,{h:a.offsetWidth,g:a.offsetHeight})}catch(d){var b=a.offsetHeight;let c=document.createElement("canvas");c.width=a.offsetWidth;c.height=b;return c.toDataURL("image/png")}})}
+function Aa(){return t(function*(){var a=document.body.offsetWidth,b=document.body.offsetHeight,d=document.body.cloneNode(!0);d.querySelectorAll('[class*="animate"]').forEach(c=>{c.classList.remove(...Array.from(c.classList).filter(e=>e.startsWith("animate")))});d.style.width=`${a}px`;d.style.height=`${b}px`;return d})}
+function Ba(a){return t(function*(){var b=document.body;if(Y()){var d=yield Aa();b=d;document.body.appendChild(d)}d=yield Z(b);Y()&&document.body.removeChild(b);window.parent.postMessage({type:"SEND_SCREENSHOT",image:d,topOffset:document.documentElement.scrollTop},a.origin)})}function Ca(a){return t(function*(){var b={type:"SEND_SCREENSHOT_FOR_DATA_VISUALIZATION",image:yield Z(document.body),topOffset:0};window.parent.postMessage(b,a.origin)})}
+window.addEventListener("message",a=>t(function*(){if(za.some(d=>a.origin.includes(d))){var b=a.data;b&&(b.type==="MAKE_SCREENSHOT"&&(yield Ba(a)),b.type==="MAKE_SCREENSHOT_FOR_DATA_VISUALIZATION"&&(yield Ca(a)))}}));
+})();</script><script data-bard-injected="true">(function() {
+  // Ensure this script is executed only once
+  if (window.firebaseAuthBridgeScriptLoaded) {
+    return;
+  }
+  window.firebaseAuthBridgeScriptLoaded = true;
+
+  let nextTokenPromiseId = 0;
+
+  // Stores { resolve, reject } for ongoing token requests
+  const pendingTokenPromises = {};
+
+  // Listen for messages from the Host Application
+  window.addEventListener('message', function(event) {
+
+    const messageData = event.data;
+
+  if (messageData && messageData.type === 'RESOLVE_NEW_FIREBASE_TOKEN') {
+      const { success, token, error, promiseId } = messageData ?? {};
+      if (pendingTokenPromises[promiseId]) {
+        if (success) {
+          pendingTokenPromises[promiseId].resolve(token);
+        } else {
+          pendingTokenPromises[promiseId].reject(new Error(error || 'Token refresh failed from host.'));
+        }
+        delete pendingTokenPromises[promiseId];
+      }
+    }
+  });
+
+  // Expose a function for the Generated App to request a new Firebase token
+  window.requestNewFirebaseToken = function() {
+    const currentPromiseId = nextTokenPromiseId++;
+    const promise = new Promise((resolve, reject) => {
+      pendingTokenPromises[currentPromiseId] = { resolve, reject };
+    });
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({
+        type: 'REQUEST_NEW_FIREBASE_TOKEN',
+        promiseId: currentPromiseId
+      }, '*');
+    } else {
+      pendingTokenPromises[currentPromiseId].reject(new Error('No parent window to request token from.'));
+      delete pendingTokenPromises[currentPromiseId];
+    }
+    return promise;
+  };
+})();</script><script data-bard-injected="true">
+let realOriginalGetUserMedia = null;
+if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+  realOriginalGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+}
+
+(function() {
+  if (navigator.mediaDevices && navigator.mediaDevices.__proto__) {
+    try {
+      Object.defineProperty(navigator.mediaDevices.__proto__, 'getUserMedia', {
+        get: function() {
+          return undefined; // Or throw an error
+        },
+        configurable: false
+      });
+    } catch (error) {
+      console.error("Error defining prototype getter:", error);
+    }
+  }
+})();
+
+(function() {
+  const pendingMediaResolvers = {};
+  let nextMediaPromiseId = 0;
+
+  function requestMediaPermissions(constraints) {
+    const mediaPromiseId = nextMediaPromiseId++;
+    const promise = new Promise((resolve, reject) => {
+      pendingMediaResolvers[mediaPromiseId] = (granted) => {
+        delete pendingMediaResolvers[mediaPromiseId];
+        resolve(granted);
+      };
+    });
+
+    window.parent.postMessage({
+      type: 'requestMediaPermission',
+      constraints: constraints,
+      promiseId: mediaPromiseId,
+    }, '*');
+
+    return promise;
+  }
+
+  let originalGetUserMedia = realOriginalGetUserMedia;
+
+  function interceptGetUserMedia() {
+    if (navigator.mediaDevices) {
+      Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {
+        value: function(constraints) {
+          return requestMediaPermissions(constraints).then((granted) => {
+            if (granted) {
+              if (originalGetUserMedia) {
+                return originalGetUserMedia(constraints);
+              } else {
+                throw new Error("Original getUserMedia not available.");
+              }
+            } else {
+              throw new DOMException('Permission denied', 'NotAllowedError');
+            }
+          });
+        },
+        writable: false,
+        configurable: false
+      });
+    }
+  }
+
+  interceptGetUserMedia();
+
+  const observer = new MutationObserver(function(mutationsList, observer) {
+    for (const mutation of mutationsList) {
+      if (mutation.type === 'reconfigured' && mutation.name === 'getUserMedia' && mutation.object === navigator.mediaDevices) {
+        interceptGetUserMedia();
+      } else if (mutation.type === 'attributes' && mutation.attributeName === 'getUserMedia' && mutation.target === navigator.mediaDevices) {
+        interceptGetUserMedia();
+      } else if (mutation.type === 'childList' && mutation.addedNodes) {
+        mutation.addedNodes.forEach(node => {
+          if (node === navigator.mediaDevices) {
+            interceptGetUserMedia();
+          }
+        });
+      }
+    }
+  });
+
+  function interceptSpeechRecognition() {
+    if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
+      return;
+    }
+
+    const OriginalSpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    const SpeechRecognitionWrapper = function(...args) {
+      const recognizer = new OriginalSpeechRecognition(...args);
+      const originalStart = recognizer.start.bind(recognizer);
+
+      recognizer.start = function() {
+        requestMediaPermissions({ audio: true }).then(granted => {
+          if (granted) {
+            originalStart();
+          } else {
+            const errorEvent = new SpeechRecognitionErrorEvent('error');
+            errorEvent.error = 'not-allowed'; // This is the standard error for permission denial.
+            recognizer.dispatchEvent(errorEvent);
+          }
+        });
+      };
+
+      return recognizer;
+    };
+
+    SpeechRecognitionWrapper.prototype = OriginalSpeechRecognition.prototype;
+    SpeechRecognitionWrapper.prototype.constructor = SpeechRecognitionWrapper;
+
+    if (window.SpeechRecognition) {
+      window.SpeechRecognition = SpeechRecognitionWrapper;
+    }
+    if (window.webkitSpeechRecognition) {
+      window.webkitSpeechRecognition = SpeechRecognitionWrapper;
+    }
+  }
+
+  interceptSpeechRecognition();
+
+  window.addEventListener('message', function(event) {
+    if (event.data) {
+      if (event.data.type === 'resolveMediaPermission') {
+        const { promiseId, granted } = event.data;
+        if (pendingMediaResolvers[promiseId]) {
+          pendingMediaResolvers[promiseId](granted);
+        }
+      }
+    }
+  });
+
+})();</script><script ws-interception-config="{&quot;parentOrigin&quot;:&quot;https://gemini.google.com&quot;,&quot;proxiedDomains&quot;:[]}" data-bard-injected="true">(function(){'use strict';var u=typeof Object.defineProperties=="function"?Object.defineProperty:function(b,d,e){if(b==Array.prototype||b==Object.prototype)return b;b[d]=e.value;return b};function v(b){b=["object"==typeof globalThis&&globalThis,b,"object"==typeof window&&window,"object"==typeof self&&self,"object"==typeof global&&global];for(var d=0;d<b.length;++d){var e=b[d];if(e&&e.Math==Math)return e}throw Error("Cannot find global object");}var w=v(this);
+function y(b,d){if(d)a:{var e=w;b=b.split(".");for(var h=0;h<b.length-1;h++){var k=b[h];if(!(k in e))break a;e=e[k]}b=b[b.length-1];h=e[b];d=d(h);d!=h&&d!=null&&u(e,b,{configurable:!0,writable:!0,value:d})}}function z(b){function d(h){return b.next(h)}function e(h){return b.throw(h)}return new Promise(function(h,k){function m(n){n.done?h(n.value):Promise.resolve(n.value).then(d,e).then(m,k)}m(b.next())})}y("globalThis",function(b){return b||w});/*
+
+ Copyright The Closure Library Authors.
+ SPDX-License-Identifier: Apache-2.0
+*/
+function A(b,d){function e(){}e.prototype=d.prototype;b.i=d.prototype;b.prototype=new e;b.prototype.constructor=b;b.g=function(h,k,m){for(var n=Array(arguments.length-2),p=2;p<arguments.length;p++)n[p-2]=arguments[p];return d.prototype[k].apply(h,n)}};function B(b,d,e="*"){function h(a){if(typeof a==="string")return F.encode(a).buffer;if(a instanceof ArrayBuffer)return a.slice(0);if(ArrayBuffer.isView(a))return a.buffer.slice(a.byteOffset,a.byteOffset+a.byteLength);throw Error("Invalid data type");}function k(a){a=h(a);var f={type:"send",data:new Uint8Array(a)},g;(g=r)==null||g.postMessage(f,[a])}function m(){if(!r)throw Error("Data port not captured yet.");r.onmessage=a=>{if(a.data.type==="message"){a=new MessageEvent("message",{data:G.decode(a.data.data)});
+let f;(f=c.onmessage)==null||f.call(c,a);c.dispatchEvent(a)}}}function n(){if(!t)throw Error("Control port not captured yet.");t.onmessage=a=>{switch(a.data.type){case "open":l=1;var f=new Event("open"),g;(g=c.onopen)==null||g.call(c,f);c.dispatchEvent(f);q.forEach(H=>{k(H)});q=[];break;case "close":g=a.data;l=3;g=new CloseEvent("close",{code:g.code,reason:g.reason,wasClean:g.wasClean});(f=c.onclose)==null||f.call(c,g);c.dispatchEvent(g);break;case "error":l=3;f=new Event("error");let x;(x=c.onerror)==
+null||x.call(c,f);c.dispatchEvent(f)}}}function p(a){return z(function*(){var f=new MessageChannel;t=f.port1;var g=new MessageChannel;r=g.port1;n();m();window.parent.postMessage({type:"websocket_open",portOrdering:["control","data"],url:b,protocols:a||[],connectionId:I},e,[f.port2,g.port2])}())}var c=Reflect.construct(EventTarget,[],new.target);c.CONNECTING=0;c.OPEN=1;c.CLOSING=2;c.CLOSED=3;c.url=b;c.binaryType="arraybuffer";c.protocol="";c.h="";var l=0,t=null,r=null,q=[],F=new TextEncoder,G=new TextDecoder;
+c.onopen=null;c.onmessage=null;c.onclose=null;c.onerror=null;Object.defineProperty(c,"readyState",{get:()=>l,enumerable:!0,configurable:!0});Object.defineProperty(c,"bufferedAmount",{get:()=>{var a=0;q.forEach(f=>{a+=typeof f==="string"?f.length:f.byteLength});return a},enumerable:!0,configurable:!0});var I=function(){var a;return((a=globalThis.crypto)==null?0:a.randomUUID)?globalThis.crypto.randomUUID():"xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,f=>{var g=Math.random()*16|0;return(f===
+"x"?g:g&3|8).toString(16)})}();c.send=a=>{if(l===1)a instanceof Blob?a.arrayBuffer().then(f=>{k(f)}):k(a);else if(l===0)if(typeof a==="string")q.push(a);else if(a instanceof ArrayBuffer||ArrayBuffer.isView(a))q.push(h(a));else throw Error("Sending Blob is not supported before the connection is open.");else console.debug("WebSocket send called in CLOSING or CLOSED state; ignored.")};c.close=(a=1E3,f="")=>{if(l!==2&&l!==3){l=2;a={type:"close",code:a,reason:f,wasClean:a===1E3};var g;(g=t)==null||g.postMessage(a)}};
+Promise.resolve().then(()=>p(d));return c}A(B,EventTarget);var C=document.currentScript,D=C==null?void 0:C.getAttribute("ws-interception-config");if(!D)throw Error("WebSocket Interceptor: Missing ws-interception-config attribute in the script tag.");var E=JSON.parse(D);if(!E.parentOrigin||typeof E.parentOrigin!=="string")throw Error("WebSocket Interceptor: Invalid parentOrigin in ws-interception-config");
+(function(b){var d=Object.getOwnPropertyDescriptor(window,"WebSocket");if(!d||d.writable||d.configurable)d=Object.assign(function(e,h){try{let k=(new URL(e)).hostname;if(b.proxiedDomains.some(m=>k===m||k.endsWith(`.${m}`)))return new B(e,h,b.parentOrigin)}catch(k){throw window.parent.postMessage({type:"websocket_blocked",url:e,reason:"blocked_invalid_url"},b.parentOrigin),new DOMException(`WebSocket connection to '${e}' is not allowed in Canvas.`,"SecurityError");}window.parent.postMessage({type:"websocket_blocked",
+url:e,reason:"blocked_domain_not_allowlisted"},b.parentOrigin);throw new DOMException(`WebSocket connection to '${e}' is not allowed in Canvas.`,"SecurityError");},{CONNECTING:0,OPEN:1,CLOSING:2,CLOSED:3}),Object.defineProperty(window,"WebSocket",{value:d,writable:!1,configurable:!1})})({proxiedDomains:E.proxiedDomains||[],parentOrigin:E.parentOrigin});}).call(this);
+</script><script data-bard-injected="true">((function(modelInformation) {
+  const originalFetch = window.fetch;
+  // TODO: b/421908508 - Move these out of the script and match all generative AI model calls.
+  let googleLlmBaseApiUrls = [
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.textModelName + ':streamGenerateContent',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.textModelName + ':generateContent',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.imageModelName + ':predict',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.imageModelName + ':predictLongRunning',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.imageEditModelName + ':generateContent',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.imageTransformModelName + ':generateContent',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.videoModelName + ':predict',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.videoModelName + ':predictLongRunning',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.ttsModelName + ':generateContent',
+  ];
+  modelInformation.deprecatedTextModelNames.forEach((modelName) => {
+    googleLlmBaseApiUrls.push(
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':streamGenerateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent',
+    );
+  });
+  modelInformation.deprecatedImageModelNames.forEach((modelName) => {
+    googleLlmBaseApiUrls.push(
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':predict',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':predictLongRunning',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':streamGenerateContent',
+    );
+  });
+  modelInformation.deprecatedGenerateImageModelNames.forEach((modelName) => {
+    googleLlmBaseApiUrls.push(
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':streamGenerateContent',
+    );
+  });
+  modelInformation.deprecatedImageTransformModelNames.forEach((modelName) => {
+    googleLlmBaseApiUrls.push(
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':streamGenerateContent',
+    );
+  });
+
+  const pendingFetchResolvers = {};
+  let nextPromiseId = 0;
+
+  function handleStringInput(input, optionsArgument) {
+    const actualUrl = input;
+    const fetchCallArgs = [actualUrl, optionsArgument];
+    const effectiveOptions = optionsArgument || {};
+    const bodyForApiKeyCheck = effectiveOptions.body;
+    const bodyForPostMessage = effectiveOptions.body;
+    return { actualUrl, fetchCallArgs, effectiveOptions, bodyForApiKeyCheck, bodyForPostMessage };
+  }
+
+  function handleRequestInput(input, optionsArgument) {
+    const actualUrl = input.url;
+    const fetchCallArgs = [input, optionsArgument];
+    const effectiveOptions = { method: input.method, headers: new Headers(input.headers) };
+    let bodyForApiKeyCheck;
+    let bodyForPostMessage;
+
+    if (optionsArgument) {
+      if (optionsArgument.method) effectiveOptions.method = optionsArgument.method;
+      if (optionsArgument.headers) effectiveOptions.headers = new Headers(optionsArgument.headers);
+      if ('body' in optionsArgument) {
+        bodyForApiKeyCheck = optionsArgument.body;
+        bodyForPostMessage = optionsArgument.body;
+      } else {
+        bodyForApiKeyCheck = undefined;
+        bodyForPostMessage = input.body;
+      }
+    } else {
+      bodyForApiKeyCheck = undefined;
+      bodyForPostMessage = input.body;
+    }
+    return { actualUrl, fetchCallArgs, effectiveOptions, bodyForApiKeyCheck, bodyForPostMessage };
+  }
+
+  window.fetch = function(input, optionsArgument) {
+    let actualUrl;
+    let fetchCallArgs;
+    let effectiveOptions = {};
+    let bodyForApiKeyCheck;
+    let bodyForPostMessage;
+
+    if (typeof input === 'string') {
+      ({actualUrl, fetchCallArgs, effectiveOptions, bodyForApiKeyCheck, bodyForPostMessage} = handleStringInput(input, optionsArgument));
+    } else if (input instanceof Request) {
+      ({actualUrl, fetchCallArgs, effectiveOptions, bodyForApiKeyCheck, bodyForPostMessage} = handleRequestInput(input, optionsArgument));
+    } else {
+      return originalFetch.apply(window, [input, optionsArgument]);
+    }
+
+    effectiveOptions.method = effectiveOptions.method || 'GET';
+    if (!effectiveOptions.headers) {
+      effectiveOptions.headers = new Headers();
+    }
+
+
+    if (typeof actualUrl === 'string' && googleLlmBaseApiUrls.some((url) => actualUrl.startsWith(url))) {
+      let apiKeyIsNull = true;
+
+      const regex = new RegExp("models/([^:]+)");
+      const modelNameMatch = actualUrl.match(regex);
+      const modelName = modelNameMatch ? modelNameMatch[1] : 'unspecified';
+
+
+      try {
+        const urlObject = new URL(actualUrl);  // Use URL object for robust parsing
+        const apiKeyParam = urlObject.searchParams.get('key');
+        if (apiKeyParam) {
+          apiKeyIsNull = false;
+        }
+      } catch (e) {
+        // Continue checks even if URL parsing fails
+      }
+
+      if (apiKeyIsNull && effectiveOptions.headers) {
+        const h = new Headers(effectiveOptions.headers);
+        const apiKeyHeaderValue = h.get('X-API-Key') || h.get('x-api-key');
+        if (apiKeyHeaderValue) {
+          apiKeyIsNull = false;
+          return originalFetch.apply(window, fetchCallArgs);
+        }
+      }
+
+      if (apiKeyIsNull && effectiveOptions.method && ['POST', 'PUT', 'PATCH'].includes(effectiveOptions.method.toUpperCase()) && typeof bodyForApiKeyCheck === 'string') {
+        try {
+          const bodyData = JSON.parse(bodyForApiKeyCheck);
+          if (bodyData && bodyData.apiKey) {
+            apiKeyIsNull = false;
+            return originalFetch.apply(window, fetchCallArgs);
+          }
+        } catch (e) {
+          // Ignore JSON parsing errors
+        }
+      }
+
+      if(apiKeyIsNull) {
+        const promiseId = nextPromiseId++;
+        const promise = new Promise((resolve) => {
+          pendingFetchResolvers[promiseId] = (resolvedResponse) => {
+            delete pendingFetchResolvers[promiseId];
+            resolve(resolvedResponse);
+          };
+        });
+
+        let serializedBodyForPostMessage;
+        if (typeof bodyForPostMessage === 'string' || bodyForPostMessage == null) {
+            serializedBodyForPostMessage = bodyForPostMessage;
+        } else if (bodyForPostMessage instanceof ReadableStream) {
+            serializedBodyForPostMessage = null;
+        } else {
+            try {
+                serializedBodyForPostMessage = JSON.stringify(bodyForPostMessage);
+            } catch (e) {
+                serializedBodyForPostMessage = null;
+            }
+        }
+
+        const messageOptions = {
+            method: effectiveOptions.method,
+            headers: Object.fromEntries(new Headers(effectiveOptions.headers).entries()),
+            body: serializedBodyForPostMessage
+        };
+
+        window.parent.postMessage({
+          type: 'requestFetch',
+          url: actualUrl,
+          modelName: modelName,
+          options: messageOptions,
+          promiseId: promiseId,
+        }, '*');
+
+        return promise;
+      }
+      return originalFetch.apply(window, fetchCallArgs);
+    }
+    return originalFetch.apply(window, fetchCallArgs);
+  };
+
+  window.addEventListener('message', function(event) {
+    if (event.data && event.data.type === 'resolveFetch') {
+      const { promiseId, response } = event.data;
+      if (pendingFetchResolvers[promiseId]) {
+        try {
+          const reconstructedResponse = new Response(response.body, {
+            status: response.status,
+            statusText: response.statusText,
+            headers: new Headers(response.headers),
+          });
+          pendingFetchResolvers[promiseId](reconstructedResponse);
+        } catch (error) {
+          pendingFetchResolvers[promiseId](new Response(null, { status: 500, statusText: "Interceptor Response Reconstruction Error" }));
+        }
+      }
+    }
+  });
+
+}))({"textModelName":"gemini-3-flash-preview","imageModelName":"imagen-4.0-generate-001","imageEditModelName":"gemini-3.1-flash-image","imageTransformModelName":"gemini-3-pro-image","videoModelName":"veo-2.0-generate-001","ttsModelName":"gemini-2.5-flash-preview-tts","deprecatedTextModelNames":["gemini-2.0-flash","gemini-2.5-flash","gemini-2.5-flash-preview-04-17","gemini-2.5-flash-preview-05-20","gemini-2.5-flash-preview-09-2025"],"deprecatedImageModelNames":["imagen-3.0-generate-001","imagen-3.0-generate-002"],"deprecatedGenerateImageModelNames":["gemini-2.5-flash-image-preview","gemini-2.5-flash-image","gemini-3.1-flash-image-preview"],"deprecatedImageTransformModelNames":["gemini-3-pro-image-preview-11-2025"]})</script><script data-bard-injected="true">(function(){'use strict';function a(){window.parent.postMessage({type:"interaction"},"*")}window.addEventListener("click",a,{capture:!0,passive:!0});window.addEventListener("touchstart",a,{capture:!0,passive:!0});window.addEventListener("keydown",a,{capture:!0,passive:!0});}).call(this);
+</script><script data-bard-injected="true">(function() {
+  const originalConsoleLog = console.log;
+  const originalConsoleError = console.error;
+
+    /**
+   * Normalizes an error event or a promise rejection reason into a structured error object.
+   * @param {*} errorEventOrReason The error object or reason.
+   * @return {object} Structured error data { message, name, stack }.
+   */
+  function getErrorObject(errorEventOrReason) {
+    if (errorEventOrReason instanceof Error) {
+      return {
+        message: errorEventOrReason.message,
+        name: errorEventOrReason.name,
+        stack: errorEventOrReason.stack,
+      };
+    }
+    // Fallback for non-Error objects.
+    try {
+      return {
+        message: JSON.stringify(errorEventOrReason),
+        name: 'UnknownErrorType',
+        stack: null,
+      };
+    } catch (e) {
+      return {
+        message: String(errorEventOrReason),
+        name: 'UnknownErrorTypeNonStringifiable',
+        stack: null,
+      };
+    }
+  }
+
+  /**
+   * Converts an array of arguments (from log/error) into a single string.
+   * Handles Error objects specially to include their message and stack.
+   * @param {Array<*>} args - Arguments passed to console methods.
+   * @return {string} A string representation of the arguments.
+   */
+  function stringifyArgs(args) {
+    return args
+      .map((arg) => {
+        if (arg instanceof Error) {
+          const {message, stack} = arg;
+          return `Error: ${message}${stack ? ('\nStack: ' + stack) : ''}`;
+        }
+        if (typeof arg === 'object' && arg !== null) {
+          try {
+            return JSON.stringify(arg);
+          } catch (error) {
+            return '[Circular Object]';
+          }
+        } else {
+          return String(arg);
+        }
+      })
+      .join(' ');
+  }
+
+  console.log = function(...args) {
+    const logString = stringifyArgs(args);
+    window.parent.postMessage({ type: 'log', message: logString }, '*');
+    originalConsoleLog.apply(console, args);
+  };
+
+  console.error = function(...args) {
+    let errorData;
+    if (args.length > 0 && args[0] instanceof Error) {
+      const err = args[0];
+      // If the first arg is an Error, capture its details.
+      errorData = {
+        type: 'error',
+        source: 'CONSOLE_ERROR',
+        ...getErrorObject(err),
+        rawArgsString: stringifyArgs(args.slice(1)),
+        timestamp: new Date().toISOString(),
+      };
+    } else {
+      // If not an Error object, treat all args as a general error message.
+      errorData = {
+        type: 'error',
+        source: 'CONSOLE_ERROR',
+        message: stringifyArgs(args),
+        name: 'ConsoleLoggedError',
+        stack: null,
+        timestamp: new Date().toISOString(),
+      };
+    }
+    window.parent.postMessage(errorData, '*');
+    originalConsoleError.apply(console, args);
+  };
+
+  // Listen for global unhandled synchronous errors.
+  window.addEventListener('error', function(event) {
+    const errorDetails = event.error ? getErrorObject(event.error) : {
+      message: event.message,
+      name: 'GlobalError',
+      stack: null,
+      filename: event.filename,
+      lineno: event.lineno,
+      colno: event.colno,
+    };
+
+    window.parent.postMessage({
+      type: 'error',
+      source: 'global',
+      ...errorDetails,
+      message: errorDetails.message || event.message,
+      timestamp: new Date().toISOString(),
+    }, '*');
+  });
+
+  // Listen for unhandled promise rejections (asynchronous errors).
+  window.addEventListener('unhandledrejection', function(event) {
+    const errorDetails = getErrorObject(event.reason);
+
+    window.parent.postMessage({
+      type: 'error',
+      source: 'unhandledrejection',
+      ...errorDetails,
+      message: errorDetails.message || 'Unhandled Promise Rejection',
+      timestamp: new Date().toISOString(),
+    }, '*');
+  });
+
+})();</script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Real Night Tower Builder</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #0b1120;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      display: block;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+    .ui-layer {
+      position: absolute;
+      top: 35px;
+      left: 30px;
+      pointer-events: none;
+      color: #fff;
+      z-index: 10;
+      transition: opacity 0.5s;
+    }
+    .score-val { 
+      font-size: 42px; 
+      font-weight: 900; 
+      letter-spacing: 2px; 
+      text-shadow: 0 4px 15px rgba(0,0,0,0.9); 
+      color: #f8fafc;
+    }
+
+    #mute-btn {
+      position: absolute;
+      top: 25px;
+      right: 25px;
+      width: 50px;
+      height: 50px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 24px;
+      color: white;
+      z-index: 20;
+      cursor: pointer;
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+      transition: transform 0.1s;
+    }
+    #mute-btn:active {
+      transform: scale(0.9);
+    }
+
+    #download-html-btn {
+      position: absolute;
+      bottom: 25px;
+      right: 25px;
+      background: rgba(56, 189, 248, 0.25);
+      border: 1px solid rgba(56, 189, 248, 0.7);
+      color: #38bdf8;
+      padding: 12px 20px;
+      border-radius: 30px;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      z-index: 25;
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+      transition: transform 0.1s, background 0.2s;
+    }
+    #download-html-btn:active {
+      transform: scale(0.95);
+      background: rgba(56, 189, 248, 0.4);
+    }
+    
+    .modal-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-radius: 24px;
+      padding: 35px 25px;
+      text-align: center;
+      color: white;
+      z-index: 30;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      width: 85%;
+      max-width: 380px;
+    }
+    .modal-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+      visibility: hidden;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      transform: translate(-50%, -45%);
+    }
+
+    #start-modal {
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      box-shadow: 0 10px 40px rgba(56, 189, 248, 0.15);
+      pointer-events: none; 
+    }
+    .rule-text {
+      font-size: 16px;
+      line-height: 1.8;
+      margin-bottom: 28px;
+      color: #bae6fd;
+      text-align: center;
+      font-weight: 700;
+      text-shadow: 0 0 10px rgba(56, 189, 248, 0.6);
+    }
+    .rule-title {
+      font-size: 22px;
+      font-weight: 900;
+      color: #38bdf8;
+      margin-bottom: 12px;
+      letter-spacing: 2px;
+    }
+    .blink-text {
+      font-size: 20px;
+      font-weight: 900;
+      animation: blink 2.5s infinite;
+      color: #38bdf8;
+      letter-spacing: 3px;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.5);
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.3);
+      padding: 14px 28px;
+      border-radius: 40px;
+      display: inline-block;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.7; transform: scale(0.98); }
+    }
+
+    #game-over-modal {
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+      pointer-events: auto;
+    }
+    .modal-sub { font-size: 14px; color: #fbbf24; font-weight: 800; letter-spacing: 4px; margin-bottom: 0px; }
+    .modal-score { font-size: 64px; color: #fff; font-weight: 900; text-shadow: 0 4px 10px rgba(0,0,0,0.5); margin: 15px 0; }
+    
+    .btn {
+      width: 100%;
+      background: #fbbf24;
+      color: #0f172a;
+      border: none;
+      padding: 18px 0;
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      border-radius: 12px;
+      cursor: pointer;
+      box-shadow: 0 6px 15px rgba(251, 191, 36, 0.3);
+      transition: transform 0.1s, filter 0.2s;
+      margin-top: 10px;
+    }
+    .btn:active { transform: scale(0.96); filter: brightness(0.9); }
+  </style>
+</head>
+<body>
+
+<div class="ui-layer" id="ui-layer" style="opacity: 1;">
+  <div class="score-val"><span id="score">0</span> FLOORS</div>
+</div>
+
+<div id="mute-btn">🔇</div>
+<button id="download-html-btn">📥 main.htmlを保存</button>
+
+<div id="start-modal" class="modal-overlay">
+  <div class="rule-title">高く積み上げろ！</div>
+  <div class="rule-text">
+    タップでフロアを積む<br>
+    はみ出た部分は崩れ落ちる<br>
+    ピッタリ重ねると美しい明滅
+  </div>
+  <div class="blink-text">TAP TO START</div>
+</div>
+
+<div id="game-over-modal" class="modal-overlay hidden">
+  <div class="modal-sub">BUILDING COMPLETE</div>
+  <div class="modal-score"><span id="final-score">0</span> <span style="font-size: 24px">階</span></div>
+  <button class="btn" id="restart-btn">BUILD AGAIN</button>
+</div>
+
+<canvas id="canvas" width="1290" height="2052"></canvas>
+
+<script>
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const scoreEl = document.getElementById('score');
+  const finalScoreEl = document.getElementById('final-score');
+  const gameOverModal = document.getElementById('game-over-modal');
+  const startModal = document.getElementById('start-modal');
+  const uiLayer = document.getElementById('ui-layer');
+  const restartBtn = document.getElementById('restart-btn');
+  const muteBtn = document.getElementById('mute-btn');
+  const downloadBtn = document.getElementById('download-html-btn');
+
+  // 直接ファイルをダウンロードする機能
+  if (downloadBtn) {
+    downloadBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const htmlContent = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'main.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+  }
+
+  let W, H;
+  let BLOCK_H = 34;
+  let BLOCK_D = 55;
+  let INIT_W;
+
+  let stack = [];
+  let fallingDebris = [];
+  let particles = [];
+  let currentBlock = null;
+  let score = 0;
+  
+  let gameState = 'START'; 
+
+  let cameraY = 0;
+  let targetCameraY = 0;
+  let camAngle = 0.5; 
+  let cinematicFrame = 0;
+  let startCamY = 0;
+
+  let stars = [];
+  let clouds = [];
+  let bgBuildings = [];
+  let moon = { x: 0, y: 0, s: 0 };
+  let airplane = null;
+  let airplaneTimer = 0;
+  let hasTriggeredFirstAirplane = false;
+
+  let audioCtx = null;
+  let isMuted = true;
+
+  function initAudio() {
+    if (!audioCtx) {
+      window.AudioContext = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AudioContext();
+    }
+  }
+
+  muteBtn.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
+    isMuted = !isMuted;
+    muteBtn.textContent = isMuted ? '🔇' : '🔈';
+    if (!isMuted) {
+      initAudio();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+  });
+
+  function playSound(type) {
+    if (isMuted) return;
+    initAudio();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    
+    const t = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    
+    if (type === 'place') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(250, t);
+      osc.frequency.exponentialRampToValueAtTime(80, t + 0.1);
+      gain.gain.setValueAtTime(0.3, t);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+      osc.start(t);
+      osc.stop(t + 0.1);
+    } else if (type === 'perfect') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, t); 
+      osc.frequency.exponentialRampToValueAtTime(440, t + 0.5);
+      
+      const osc2 = audioCtx.createOscillator();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(1320, t); 
+      osc2.connect(gain);
+      osc2.start(t);
+      osc2.stop(t + 0.5);
+
+      gain.gain.setValueAtTime(0.2, t);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.5);
+      osc.start(t);
+      osc.stop(t + 0.5);
+    } else if (type === 'drop') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(120, t);
+      osc.frequency.exponentialRampToValueAtTime(30, t + 0.3);
+      
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(300, t);
+      filter.frequency.exponentialRampToValueAtTime(100, t + 0.3);
+      
+      osc.disconnect();
+      osc.connect(filter);
+      filter.connect(gain);
+
+      gain.gain.setValueAtTime(0.2, t);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+      osc.start(t);
+      osc.stop(t + 0.3);
+    } else if (type === 'over') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(150, t);
+      osc.frequency.exponentialRampToValueAtTime(50, t + 1.2);
+      gain.gain.setValueAtTime(0.4, t);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + 1.2);
+      osc.start(t);
+      osc.stop(t + 1.2);
+    }
+  }
+
+  function seededRandom(seed) {
+    let x = Math.sin(seed) * 10000;
+    return x - Math.floor(x);
+  }
+
+  function initBackground() {
+    stars = Array.from({length: 70}, () => ({
+      x: Math.random() * (W || 500),
+      y: Math.random() * (H || 800),
+      s: Math.random() * 1.8 + 0.4,
+      baseA: Math.random() * 0.6 + 0.3, 
+      phase: Math.random() * Math.PI * 2,
+      isBright: Math.random() > 0.8
+    }));
+    
+    clouds = Array.from({length: 4}, () => ({
+      x: Math.random() * (W || 500),
+      y: Math.random() * (H * 0.45),
+      w: 220 + Math.random() * 250,
+      h: 18 + Math.random() * 25,
+      speed: 0.03 + Math.random() * 0.05,
+      a: 0.02 + Math.random() * 0.025
+    }));
+
+    moon = { x: W * 0.78, y: H * 0.18, s: 35 };
+
+    let moonCoverBuildingHeight = H - moon.y + moon.s * 0.4;
+
+    bgBuildings = [
+      { x: -60, w: 90, h: 360, z: 0.03, layer: 'far', color: '#0d1629' },
+      { x: 30, w: 110, h: 420, z: 0.04, layer: 'far', color: '#0e182b' },
+      { x: 420, w: 100, h: 390, z: 0.035, layer: 'far', color: '#0d1629' },
+      { x: 620, w: 120, h: 410, z: 0.03, layer: 'far', color: '#0c1527' },
+
+      { x: 120, w: 65, h: 340, z: 0.12, layer: 'mid', color: '#111d33' },
+      { x: 250, w: 75, h: 370, z: 0.11, layer: 'mid', color: '#122038' },
+      { x: 360, w: 60, h: 320, z: 0.13, layer: 'mid', color: '#111d33' },
+      { x: 530, w: 70, h: 350, z: 0.12, layer: 'mid', color: '#122038' },
+
+      { x: -20, w: 80, h: 280, z: 0.32, layer: 'near', color: '#162540' },
+      { x: 80, w: 70, h: 220, z: 0.38, layer: 'near', color: '#182948' },
+      { x: 190, w: 85, h: 310, z: 0.28, layer: 'near', color: '#14223d' },
+      { x: moon.x - 45, w: 90, h: moonCoverBuildingHeight, z: 0.35, layer: 'near', color: '#1a2c4e' },
+      { x: 320, w: 75, h: 250, z: 0.34, layer: 'near', color: '#182948' },
+      { x: 470, w: 80, h: 290, z: 0.30, layer: 'near', color: '#162540' },
+      { x: 580, w: 70, h: 210, z: 0.36, layer: 'near', color: '#182948' },
+      { x: 710, w: 90, h: 330, z: 0.28, layer: 'near', color: '#14223d' }
+    ];
+
+    bgBuildings.forEach(b => {
+      b.windows = [];
+      let winStepY = b.layer === 'far' ? 14 : (b.layer === 'mid' ? 18 : 22);
+      let winStepX = b.layer === 'far' ? 8 : (b.layer === 'mid' ? 11 : 14);
+      for (let wy = 15; wy < b.h - 10; wy += winStepY) {
+        for (let wx = 6; wx < b.w - 6; wx += winStepX) {
+          if (Math.random() > 0.45) b.windows.push({ x: wx, y: wy });
+        }
+      }
+    });
+
+    bgBuildings.sort((a, b) => a.z - b.z);
+  }
+
+  function resize() {
+    W = window.innerWidth;
+    H = window.innerHeight;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    ctx.scale(dpr, dpr);
+    INIT_W = Math.min(W * 0.75, 320); 
+
+    if (gameState === 'START' && stack.length > 0 && currentBlock) {
+      INIT_W = Math.min(W * 0.75, 320);
+      stack[0].w = INIT_W;
+      stack[0].x = (W - INIT_W) / 2;
+      stack[0].y = H - BLOCK_H - 60;
+      
+      if (stack[0].foundation) {
+        stack[0].foundation.w = INIT_W + 30;
+        stack[0].foundation.d = BLOCK_D + 20;
+        stack[0].foundation.x = stack[0].x - 15;
+      }
+
+      currentBlock.w = INIT_W;
+      currentBlock.x = (W - INIT_W) / 2;
+      currentBlock.y = stack[0].y - BLOCK_H;
+      updateCamera();
+      cameraY = targetCameraY;
+      
+      initBackground();
+    }
+  }
+  window.addEventListener('resize', resize);
+
+  function poly(ctx, points, fillStyle, strokeStyle, lineWidth = 1) {
+    ctx.beginPath();
+    ctx.moveTo(points[0][0], points[0][1]);
+    for (let i = 1; i < points.length; i++) ctx.lineTo(points[i][0], points[i][1]);
+    ctx.closePath();
+    if (fillStyle && fillStyle !== 'transparent') {
+      ctx.fillStyle = fillStyle;
+      ctx.fill();
+    }
+    if (strokeStyle && strokeStyle !== 'transparent') {
+      ctx.strokeStyle = strokeStyle;
+      ctx.lineWidth = lineWidth;
+      ctx.stroke();
+    }
+  }
+
+  function drawBuildingFloor(ctx, x, y, w, h, d, angle, seed, time, flash = 0, isPerfect = false, isFoundation = false) {
+    const cx = W / 2;
+    const cz = d / 2;
+
+    const rot = (px, pz) => ({
+      x: cx + (px - cx) * Math.cos(angle) - (pz - cz) * Math.sin(angle),
+      z: cz + (pz - cz) * Math.cos(angle) + (px - cx) * Math.sin(angle)
+    });
+
+    const to2D = (p, py) => [p.x, py - p.z * 0.5];
+
+    const p00 = rot(x, 0);
+    const p10 = rot(x+w, 0);
+    const p11 = rot(x+w, d);
+    const p01 = rot(x, d);
+
+    const A = to2D(p00, y);
+    const B = to2D(p10, y);
+    const C = to2D(p10, y + h);
+    const D = to2D(p00, y + h);
+    const E = to2D(p01, y);
+    const F = to2D(p11, y);
+    const G = to2D(p11, y + h);
+    const H = to2D(p01, y + h);
+
+    let normFront = Math.max(0.1, 0.7 - 0.5 * Math.sin(angle));
+    let normBack  = Math.max(0.1, 0.7 + 0.5 * Math.sin(angle));
+    let normRight = Math.max(0.1, 0.7 + 0.5 * Math.cos(angle));
+    let normLeft  = Math.max(0.1, 0.7 - 0.5 * Math.cos(angle));
+
+    poly(ctx, [D, C, G, H], 'rgba(0,0,0,0.7)', null);
+
+    const sides = [
+      { id: 0, pts: [F, E, H, G], norm: normBack,  O: {x:x+w, y, z:d}, dU: {x:-1, z:0}, dV: {y:1}, lenU: w, lenV: h },
+      { id: 1, pts: [A, B, C, D], norm: normFront, O: {x, y, z:0}, dU: {x:1,  z:0}, dV: {y:1}, lenU: w, lenV: h },
+      { id: 2, pts: [E, A, D, H], norm: normLeft,  O: {x, y, z:d}, dU: {x:0,  z:-1}, dV: {y:1}, lenU: d, lenV: h },
+      { id: 3, pts: [B, F, G, C], norm: normRight, O: {x:x+w, y, z:0}, dU: {x:0,  z:1}, dV: {y:1}, lenU: d, lenV: h }
+    ];
+
+    const baseHue = 215; 
+
+    for (let side of sides) {
+      const p = side.pts;
+      const cross = (p[1][0] - p[0][0]) * (p[2][1] - p[1][1]) - (p[1][1] - p[0][1]) * (p[2][0] - p[1][0]);
+      
+      if (cross > 0) {
+        const wallLight = side.norm * 30 + (isFoundation ? 15 : 30);
+        const grad = ctx.createLinearGradient(p[0][0], p[0][1], p[3][0], p[3][1]);
+        grad.addColorStop(0, `hsl(${baseHue}, 15%, ${wallLight}%)`);
+        grad.addColorStop(1, `hsl(${baseHue}, 15%, ${Math.max(10, wallLight - 10)}%)`);
+        const edgeColor = `hsl(${baseHue}, 20%, 15%)`; 
+        
+        poly(ctx, p, grad, edgeColor, 1.5);
+
+        if (side.id === 3 || side.id === 1) {
+          const moonHighlight = ctx.createLinearGradient(p[1][0], p[1][1], p[0][0], p[0][1]);
+          moonHighlight.addColorStop(0, 'rgba(254, 240, 138, 0.16)');
+          moonHighlight.addColorStop(0.6, 'rgba(254, 240, 138, 0.03)');
+          moonHighlight.addColorStop(1, 'rgba(0, 0, 0, 0)');
+          poly(ctx, p, moonHighlight, null);
+        }
+
+        if (isFoundation) continue;
+
+        const slabLight = wallLight - 10;
+        const slabGrad = ctx.createLinearGradient(p[0][0], p[0][1], p[1][0], p[1][1]);
+        slabGrad.addColorStop(0, `hsl(${baseHue}, 10%, ${slabLight}%)`);
+        slabGrad.addColorStop(1, `hsl(${baseHue}, 10%, ${Math.max(5, slabLight - 10)}%)`);
+
+        const slabH = 3.5;
+        let s0 = to2D(rot(side.O.x, side.O.z), side.O.y);
+        let s1 = to2D(rot(side.O.x + side.dU.x*side.lenU, side.O.z + side.dU.z*side.lenU), side.O.y);
+        let s2 = to2D(rot(side.O.x + side.dU.x*side.lenU, side.O.z + side.dU.z*side.lenU), side.O.y + slabH);
+        let s3 = to2D(rot(side.O.x, side.O.z), side.O.y + slabH);
+        poly(ctx, [s0, s1, s2, s3], slabGrad, edgeColor, 0.5);
+
+        s0 = to2D(rot(side.O.x, side.O.z), side.O.y + h - slabH);
+        s1 = to2D(rot(side.O.x + side.dU.x*side.lenU, side.O.z + side.dU.z*side.lenU), side.O.y + h - slabH);
+        s2 = to2D(rot(side.O.x + side.dU.x*side.lenU, side.O.z + side.dU.z*side.lenU), side.O.y + h);
+        s3 = to2D(rot(side.O.x, side.O.z), side.O.y + h);
+        poly(ctx, [s0, s1, s2, s3], slabGrad, edgeColor, 0.5);
+
+        const winSpacing = 18;
+        const winW = 9;
+        const winH = h - slabH*2 - 8; 
+        const winY = slabH + 4;
+        let numWins = Math.floor(side.lenU / winSpacing);
+        let offsetU = (side.lenU - (numWins * winSpacing - (winSpacing - winW))) / 2;
+        if (numWins === 0 && side.lenU > winW + 2) {
+          numWins = 1; offsetU = (side.lenU - winW) / 2;
+        }
+
+        const winHue = 40; 
+        
+        for(let i=0; i<numWins; i++) {
+          let u0 = offsetU + i * winSpacing;
+          let u1 = u0 + winW;
+          let v0 = winY;
+          let v1 = winY + winH;
+          
+          let w0 = to2D(rot(side.O.x + side.dU.x*u0, side.O.z + side.dU.z*u0), side.O.y + side.dV.y*v0);
+          let w1 = to2D(rot(side.O.x + side.dU.x*u1, side.O.z + side.dU.z*u1), side.O.y + side.dV.y*v0);
+          let w2 = to2D(rot(side.O.x + side.dU.x*u1, side.O.z + side.dU.z*u1), side.O.y + side.dV.y*v1);
+          let w3 = to2D(rot(side.O.x + side.dU.x*u0, side.O.z + side.dU.z*u0), side.O.y + side.dV.y*v1);
+          
+          let winHash = seededRandom(seed + side.id * 10 + i);
+          let isOn = isPerfect ? true : (winHash > 0.45); 
+
+          let winGrad = ctx.createLinearGradient(w0[0], w0[1], w2[0], w2[1]);
+
+          if (isOn) {
+            if (isPerfect) {
+              let cycle = (Math.sin(time * 0.0012) + 1) / 2; 
+              let lTop = cycle * 75; 
+              let lBtm = Math.max(0, lTop - 12);
+              winGrad.addColorStop(0, `hsl(${winHue}, 90%, ${lTop}%)`);
+              winGrad.addColorStop(1, `hsl(${winHue}, 90%, ${lBtm}%)`);
+            } else {
+              let lTop = side.norm * 20 + 60;
+              let lBtm = lTop - 10;
+              winGrad.addColorStop(0, `hsl(${winHue}, 90%, ${lTop}%)`);
+              winGrad.addColorStop(1, `hsl(${winHue}, 90%, ${lBtm}%)`);
+            }
+          } else {
+            let winColorOff = `hsl(${baseHue}, 20%, ${side.norm * 10 + 10}%)`;
+            winGrad.addColorStop(0, `hsl(${baseHue}, 20%, 15%)`); 
+            winGrad.addColorStop(1, winColorOff);
+          }
+
+          poly(ctx, [w0, w1, w2, w3], winGrad, edgeColor, 0.8);
+
+          if(!isOn && side.norm > 0.4) {
+             ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+             ctx.beginPath(); ctx.moveTo(w0[0], w0[1]+2); ctx.lineTo(w1[0]-2, w2[1]); ctx.stroke();
+          }
+        }
+      }
+    }
+
+    if (!isFoundation) {
+      const topLight = 40;
+      const topColor = `hsl(${baseHue}, 10%, ${topLight}%)`;
+      poly(ctx, [E, F, B, A], topColor, topColor, 1.5);
+      poly(ctx, [E, F, B, A], 'transparent', `hsl(${baseHue}, 15%, 20%)`, 1);
+
+      const topMoonGrad = ctx.createLinearGradient(F[0], F[1], E[0], E[1]);
+      topMoonGrad.addColorStop(0, 'rgba(254, 240, 138, 0.22)');
+      topMoonGrad.addColorStop(0.5, 'rgba(254, 240, 138, 0.04)');
+      topMoonGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      poly(ctx, [E, F, B, A], topMoonGrad, null);
+    }
+
+    if (flash > 0) {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = `rgba(255, 255, 255, ${flash * 0.35})`;
+      poly(ctx, [E, F, B, A], ctx.fillStyle, null);
+       for (let side of sides) {
+        const p = side.pts;
+        const cross = (p[1][0] - p[0][0]) * (p[2][1] - p[1][1]) - (p[1][1] - p[0][1]) * (p[2][0] - p[1][0]);
+        if (cross > 0) poly(ctx, p, ctx.fillStyle, null);
+      }
+      ctx.globalCompositeOperation = 'source-over';
+    }
+  }
+
+  class Block {
+    constructor(x, y, w, speed = 0, isPerfect = false, isFoundation = false) {
+      this.x = x;
+      this.y = y;
+      this.w = w;
+      this.speed = speed;
+      this.direction = 1;
+      this.flash = 0;
+      this.isPerfect = isPerfect;
+      this.isFoundation = isFoundation;
+      this.seed = Math.random() * 10000;
+    }
+    update() {
+      if (this.speed !== 0) {
+        let currentSpeed = this.speed;
+        if (score >= 15) {
+          let windEffect = Math.sin(Date.now() * 0.0028 + this.y * 0.05) * (1.2 + Math.min(score - 15, 25) * 0.08);
+          currentSpeed = Math.max(1.8, this.speed + windEffect);
+        }
+        
+        this.x += currentSpeed * this.direction;
+        if (this.x <= 15) { this.x = 15; this.direction = 1; }
+        else if (this.x + this.w >= W - 15) { this.x = W - 15 - this.w; this.direction = -1; }
+      }
+      if (this.flash > 0) this.flash -= 0.05;
+    }
+    draw(ctx, camY, camA, time) {
+      if (this.y + camY > H + 150 || this.y + camY < -100) return;
+      let h = this.isFoundation ? 45 : BLOCK_H;
+      let d = this.isFoundation ? BLOCK_D + 20 : BLOCK_D;
+      drawBuildingFloor(ctx, this.x, this.y + camY, this.w, h, d, camA, this.seed, time, Math.max(0, this.flash), this.isPerfect, this.isFoundation);
+    }
+  }
+
+  class Debris {
+    constructor(x, y, w, seed, vx, isPerfect = false) {
+      this.x = x;
+      this.y = y;
+      this.w = w;
+      this.seed = seed;
+      this.vx = vx + (Math.random() - 0.5) * 2;
+      this.vy = -2 - Math.random() * 2;
+      this.gravity = 0.5;
+      this.rot = (Math.random() - 0.5) * 0.15;
+      this.isPerfect = isPerfect;
+    }
+    update() {
+      this.vy += this.gravity;
+      this.x += this.vx;
+      this.y += this.vy;
+    }
+    draw(ctx, camY, camA, time) {
+      if (this.y + camY > H + 100) return;
+      drawBuildingFloor(ctx, this.x, this.y + camY, this.w, BLOCK_H, BLOCK_D, camA + this.rot, this.seed, time, 0, this.isPerfect, false);
+    }
+  }
+
+  class Particle {
+    constructor(x, y) {
+      this.x = x;
+      this.y = y;
+      this.vx = (Math.random() - 0.5) * 6;
+      this.vy = (Math.random() - 0.5) * 6 - 2;
+      this.life = 1.0;
+      this.size = Math.random() * 2 + 1.5;
+    }
+    update() {
+      this.x += this.vx;
+      this.y += this.vy;
+      this.vy += 0.15;
+      this.life -= 0.03;
+    }
+    draw(ctx, camY) {
+      if(this.life <= 0) return;
+      ctx.fillStyle = `rgba(251, 191, 36, ${this.life})`;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y + camY, this.size, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+
+  let isGameInitialized = false;
+
+  function initGame() {
+    if (window.innerWidth === 0 || window.innerHeight === 0) return;
+
+    if (!isGameInitialized) {
+      W = window.innerWidth;
+      H = window.innerHeight;
+      INIT_W = Math.min(W * 0.75, 320); 
+    }
+
+    stack = [];
+    fallingDebris = [];
+    particles = [];
+    score = 0;
+    gameState = 'START';
+    cinematicFrame = 0;
+    camAngle = 0.5;
+    airplane = null;
+    airplaneTimer = 0;
+    hasTriggeredFirstAirplane = false;
+    
+    scoreEl.textContent = score;
+    gameOverModal.classList.add('hidden');
+    startModal.classList.remove('hidden');
+    uiLayer.style.opacity = 1;
+
+    if (stars.length === 0) initBackground();
+
+    const foundationX = (W - (INIT_W + 30)) / 2;
+    const foundationY = H - 65;
+    const foundation = new Block(foundationX, foundationY, INIT_W + 30, 0, false, true);
+    stack.push(foundation);
+
+    const firstFloorY = foundationY - BLOCK_H;
+    const firstBlock = new Block((W - INIT_W) / 2, firstFloorY, INIT_W, 0, false, false);
+    firstBlock.foundation = foundation;
+    stack.push(firstBlock);
+
+    const newY = firstBlock.y - BLOCK_H;
+    currentBlock = new Block((W - INIT_W) / 2, newY, INIT_W, 0);
+
+    updateCamera();
+    cameraY = targetCameraY; 
+    isGameInitialized = true;
+  }
+
+  function startGame() {
+    if (!isGameInitialized) return;
+    gameState = 'PLAYING';
+    startModal.classList.add('hidden');
+    currentBlock.speed = 4.0;
+  }
+
+  function spawnNextBlock() {
+    const prev = stack[stack.length - 1];
+    const newY = prev.y - BLOCK_H;
+    const speed = Math.min(4.0 + score * 0.10, 8.5);
+    currentBlock = new Block(15, newY, prev.w, speed);
+  }
+
+  function updateCamera() {
+    if (!currentBlock) return;
+    targetCameraY = Math.max(0, (H * 0.6) - currentBlock.y); 
+  }
+
+  function placeBlock() {
+    if (!currentBlock) return;
+
+    const prev = stack[stack.length - 1];
+    const diff = currentBlock.x - prev.x;
+    const overlap = currentBlock.w - Math.abs(diff);
+
+    if (overlap <= 0) {
+      playSound('drop');
+      playSound('over');
+      fallingDebris.push(new Debris(currentBlock.x, currentBlock.y, currentBlock.w, currentBlock.seed, currentBlock.speed * currentBlock.direction * 0.7));
+      triggerGameOver();
+      return;
+    }
+
+    let newX = diff > 0 ? currentBlock.x : prev.x;
+    let newWidth = overlap;
+
+    if (Math.abs(diff) <= 4) {
+      newX = prev.x;
+      newWidth = prev.w;
+      playSound('perfect');
+      
+      const pb = new Block(newX, currentBlock.y, newWidth, 0, true);
+      pb.seed = currentBlock.seed; 
+      pb.flash = 0.8; 
+      stack.push(pb);
+
+      for(let i=0; i<15; i++){
+        particles.push(new Particle(newX + Math.random()*newWidth, currentBlock.y + BLOCK_H/2));
+      }
+    } else {
+      playSound('place');
+      playSound('drop');
+      
+      let debrisX = diff > 0 ? currentBlock.x + overlap : currentBlock.x;
+      let debrisWidth = currentBlock.w - overlap;
+      fallingDebris.push(new Debris(debrisX, currentBlock.y, debrisWidth, currentBlock.seed, diff > 0 ? 3.5 : -3.5));
+      
+      const nb = new Block(newX, currentBlock.y, newWidth, 0, false);
+      nb.seed = currentBlock.seed;
+      stack.push(nb);
+    }
+
+    score++;
+    scoreEl.textContent = score;
+
+    if (!hasTriggeredFirstAirplane && score >= 12) {
+      hasTriggeredFirstAirplane = true;
+      spawnAirplane();
+    } else if (hasTriggeredFirstAirplane && !airplane) {
+      airplaneTimer++;
+      if (airplaneTimer > 350 && Math.random() < 0.015) {
+        spawnAirplane();
+        airplaneTimer = 0;
+      }
+    }
+
+    spawnNextBlock();
+    updateCamera();
+  }
+
+  function spawnAirplane() {
+    let dist = 260;
+    let slope = -0.5; 
+    let startX = moon.x - dist;
+    let startY = moon.y - dist * slope; 
+    let targetX = moon.x + dist;
+    let targetY = moon.y + dist * slope; 
+
+    let dx = targetX - startX;
+    let dy = targetY - startY;
+    let angle = Math.atan2(dy, dx);
+    let speed = 0.55; 
+
+    airplane = {
+      x: startX,
+      y: startY,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      angle: angle,
+      scale: 0.85
+    };
+  }
+
+  function triggerGameOver() {
+    gameState = 'SHOWCASE';
+    currentBlock = null;
+    cinematicFrame = 0;
+    startCamY = cameraY;
+    uiLayer.style.opacity = 0;
+    finalScoreEl.textContent = score;
+  }
+
+  function drawCrane(ctx, camY) {
+    let craneX = W * 0.92; 
+    let craneBaseY = stack[0].y + BLOCK_H; 
+    let craneTopY = (currentBlock ? currentBlock.y : stack[stack.length-1].y) - 200; 
+
+    let renderBaseY = craneBaseY + camY;
+    let renderTopY = craneTopY + camY;
+
+    if (renderBaseY < -100 || renderTopY > H + 100) return;
+
+    ctx.save();
+    
+    const mastW = 24;
+    
+    let mastGrad = ctx.createLinearGradient(craneX, 0, craneX + mastW, 0);
+    mastGrad.addColorStop(0, '#c2410c');
+    mastGrad.addColorStop(0.5, '#ea580c');
+    mastGrad.addColorStop(1, '#9a3412');
+
+    ctx.fillStyle = mastGrad;
+    ctx.fillRect(craneX, renderTopY, mastW, renderBaseY - renderTopY);
+    
+    ctx.strokeStyle = '#78350f';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let y = renderTopY; y < renderBaseY; y += mastW) {
+      ctx.moveTo(craneX, y); ctx.lineTo(craneX + mastW, y + mastW);
+      ctx.moveTo(craneX + mastW, y); ctx.lineTo(craneX, y + mastW);
+      ctx.moveTo(craneX, y); ctx.lineTo(craneX + mastW, y); 
+    }
+    ctx.stroke();
+
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(craneX - 22, renderTopY + 30, 22, 28); 
+    let winGrad = ctx.createLinearGradient(craneX-20, renderTopY+33, craneX-8, renderTopY+48);
+    winGrad.addColorStop(0, '#94a3b8');
+    winGrad.addColorStop(1, '#475569');
+    ctx.fillStyle = winGrad;
+    ctx.fillRect(craneX - 20, renderTopY + 33, 12, 15);
+
+    ctx.fillStyle = mastGrad;
+    ctx.fillRect(craneX - 15, renderTopY + 58, mastW + 30, 18);
+
+    ctx.translate(craneX + mastW/2, renderTopY + 25);
+    ctx.rotate(Math.PI / 32); 
+
+    const jibL = 170; 
+    const tailL = 50;
+    const jibH = 16;
+    
+    let jibGrad = ctx.createLinearGradient(0, -jibH/2, 0, jibH/2);
+    jibGrad.addColorStop(0, '#f97316');
+    jibGrad.addColorStop(1, '#9a3412');
+
+    ctx.fillStyle = jibGrad;
+    ctx.fillRect(-jibL, -jibH/2, jibL + tailL, jibH);
+    
+    ctx.strokeStyle = '#78350f';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let x = -jibL; x < tailL - jibH; x += jibH) {
+      ctx.moveTo(x, -jibH/2); ctx.lineTo(x + jibH, jibH/2);
+      ctx.moveTo(x + jibH, -jibH/2); ctx.lineTo(x, jibH/2);
+    }
+    ctx.stroke();
+
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(tailL - 30, -jibH/2 - 15, 30, 45);
+
+    ctx.rotate(-Math.PI / 32); 
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    let wireX = -jibL * 0.85 * Math.cos(Math.PI/32);
+    let wireY = -jibL * 0.85 * Math.sin(Math.PI/32);
+    
+    ctx.moveTo(wireX - 2, wireY); ctx.lineTo(wireX - 2, wireY + 120); 
+    ctx.moveTo(wireX + 2, wireY); ctx.lineTo(wireX + 2, wireY + 120); 
+    ctx.stroke();
+
+    ctx.fillStyle = '#eab308';
+    ctx.fillRect(wireX - 8, wireY + 120, 16, 14);
+    ctx.fillStyle = '#334155';
+    ctx.beginPath();
+    ctx.arc(wireX, wireY + 138, 6, Math.PI, 0);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  function drawBackground(ctx, camY, time) {
+    let bgGrad = ctx.createLinearGradient(0, 0, 0, H);
+    bgGrad.addColorStop(0.0, '#091833'); 
+    bgGrad.addColorStop(0.5, '#13284f'); 
+    bgGrad.addColorStop(1.0, '#1f396b'); 
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, W, H);
+
+    let haloGrad = ctx.createRadialGradient(moon.x, moon.y, moon.s * 0.5, moon.x, moon.y, moon.s * 3.5);
+    haloGrad.addColorStop(0, 'rgba(254, 240, 138, 0.35)');
+    haloGrad.addColorStop(0.5, 'rgba(253, 224, 71, 0.1)');
+    haloGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = haloGrad;
+    ctx.beginPath();
+    ctx.arc(moon.x, moon.y, moon.s * 3.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.save();
+    ctx.shadowColor = '#fde047';
+    ctx.shadowBlur = 25;
+    ctx.fillStyle = '#fef08a';
+    ctx.beginPath();
+    ctx.arc(moon.x, moon.y, moon.s, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.fillStyle = 'rgba(234, 179, 8, 0.25)';
+    ctx.beginPath();
+    ctx.arc(moon.x - 8, moon.y - 6, 6, 0, Math.PI * 2);
+    ctx.arc(moon.x + 10, moon.y + 8, 4.5, 0, Math.PI * 2);
+    ctx.arc(moon.x - 5, moon.y + 12, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    stars.forEach(star => {
+      let alpha = star.baseA + Math.sin(time * 0.0015 + star.phase) * 0.25;
+      let renderY = (star.y + camY * 0.1) % H; 
+      ctx.fillStyle = star.isBright ? `rgba(255, 255, 255, ${Math.max(0.2, alpha + 0.2)})` : `rgba(255, 255, 255, ${Math.max(0, alpha)})`;
+      ctx.fillRect(star.x, renderY, star.s, star.s);
+      
+      if(star.isBright) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.5})`;
+        ctx.fillRect(star.x - 2, renderY, star.s + 4, 0.8);
+        ctx.fillRect(star.x, renderY - 2, 0.8, star.s + 4);
+      }
+    });
+
+    if (airplane) {
+      airplane.x += airplane.vx;
+      airplane.y += airplane.vy;
+      let planeRenderY = airplane.y; 
+      
+      ctx.save();
+      ctx.translate(airplane.x, planeRenderY);
+      ctx.rotate(airplane.angle);
+      ctx.scale(airplane.scale, airplane.scale);
+
+      ctx.fillStyle = '#070d19';
+      
+      ctx.beginPath();
+      ctx.moveTo(22, 0);
+      ctx.quadraticCurveTo(16, -4, -18, -3.5);
+      ctx.lineTo(-24, -11); 
+      ctx.lineTo(-28, -11);
+      ctx.lineTo(-23, -1);
+      ctx.lineTo(-27, 1);
+      ctx.quadraticCurveTo(-18, 4, 22, 0);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(4, 0);
+      ctx.lineTo(-8, -22);
+      ctx.lineTo(-13, -22);
+      ctx.lineTo(-3, 0);
+      ctx.lineTo(-13, 22);
+      ctx.lineTo(-8, 22);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(-18, 0);
+      ctx.lineTo(-24, -8);
+      ctx.lineTo(-27, -8);
+      ctx.lineTo(-23, 0);
+      ctx.lineTo(-27, 8);
+      ctx.lineTo(-24, 8);
+      ctx.closePath();
+      ctx.fill();
+
+      let blink = Math.sin(time * 0.005) > 0;
+      if (blink) {
+        ctx.save();
+        ctx.shadowColor = '#ef4444';
+        ctx.shadowBlur = 8;
+        ctx.fillStyle = '#f87171';
+        ctx.beginPath();
+        ctx.arc(-10, -22, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        ctx.save();
+        ctx.shadowColor = '#10b981';
+        ctx.shadowBlur = 8;
+        ctx.fillStyle = '#34d399';
+        ctx.beginPath();
+        ctx.arc(-10, 22, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      ctx.restore();
+
+      if (airplane.x > W + 200 || airplane.y < -150) {
+        airplane = null;
+      }
+    }
+
+    clouds.forEach(cloud => {
+      cloud.x -= cloud.speed;
+      if (cloud.x + cloud.w < 0) cloud.x = W;
+      
+      let renderY = (cloud.y + camY * 0.05) % H;
+      let cloudGrad = ctx.createLinearGradient(cloud.x, renderY - cloud.h, cloud.x, renderY + cloud.h);
+      cloudGrad.addColorStop(0, 'rgba(255, 255, 255, 0)');
+      cloudGrad.addColorStop(0.5, `rgba(255, 255, 255, ${cloud.a})`);
+      cloudGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      
+      ctx.fillStyle = cloudGrad;
+      ctx.beginPath();
+      ctx.ellipse(cloud.x, renderY, cloud.w, cloud.h, 0, 0, Math.PI*2);
+      ctx.fill();
+    });
+
+    bgBuildings.forEach(b => {
+      let dynamicZ = b.z * (1.0 + Math.min(1.8, score * 0.04));
+      let by = H - b.h + camY * dynamicZ;
+      if (by > H) return;
+      
+      let bGrad = ctx.createLinearGradient(b.x, by, b.x, H);
+      bGrad.addColorStop(0, b.color);
+      bGrad.addColorStop(1, '#091222');
+      
+      ctx.fillStyle = bGrad;
+      ctx.fillRect(b.x, by, b.w, H - by);
+
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(b.x, by);
+      ctx.lineTo(b.x, H);
+      ctx.stroke();
+
+      let winW = b.layer === 'far' ? 2 : (b.layer === 'mid' ? 2.5 : 3);
+      let winH = b.layer === 'far' ? 3 : (b.layer === 'mid' ? 4 : 5);
+      let winAlpha = b.layer === 'far' ? 0.18 : (b.layer === 'mid' ? 0.28 : 0.38);
+
+      ctx.fillStyle = `hsla(45, 85%, 60%, ${winAlpha})`;
+      b.windows.forEach(win => {
+        if (by + win.y < H) {
+           ctx.fillRect(b.x + win.x, by + win.y, winW, winH);
+        }
+      });
+    });
+  }
+
+  function gameLoop() {
+    if (!isGameInitialized) {
+      if (window.innerWidth > 0 && window.innerHeight > 0) {
+        resize();
+        initGame();
+      }
+      requestAnimationFrame(gameLoop);
+      return;
+    }
+
+    let time = Date.now();
+    drawBackground(ctx, cameraY, time);
+
+    if (gameState === 'SHOWCASE') {
+      cinematicFrame++;
+      
+      let durationFactor = Math.min(2.0, Math.max(0.8, score / 15));
+      
+      let bottomCamY = Math.max(0, H * 0.85 - stack[0].y);
+      let topCamY = Math.max(0, (H * 0.6) - stack[stack.length - 1].y);
+
+      let phase1End = Math.floor(120 * durationFactor);
+      let phase2End = Math.floor(360 * durationFactor);
+
+      if (cinematicFrame > 30 && cinematicFrame <= 30 + phase1End) {
+        let t = (cinematicFrame - 30) / phase1End;
+        let ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+        cameraY = startCamY + (bottomCamY - startCamY) * ease;
+      } 
+      else if (cinematicFrame > 30 + phase1End && cinematicFrame <= phase2End) {
+        let t = (cinematicFrame - (30 + phase1End)) / (phase2End - (30 + phase1End));
+        let ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+        cameraY = bottomCamY + (topCamY - bottomCamY) * ease;
+        camAngle = 0.5 + (Math.PI * 1.0) * ease;
+      }
+      else if (cinematicFrame > phase2End) {
+        let rotationSpeed = Math.max(0.001, 0.0025 / durationFactor); 
+        camAngle += rotationSpeed; 
+        if (cinematicFrame === phase2End + 1) gameOverModal.classList.remove('hidden');
+      }
+    } else if (gameState === 'PLAYING') {
+      cameraY += (targetCameraY - cameraY) * 0.12;
+    } else if (gameState === 'START') {
+      cameraY = targetCameraY; 
+    }
+
+    drawCrane(ctx, cameraY);
+
+    let renderList = [];
+    for (let i = 0; i < stack.length; i++) {
+      stack[i].update(); 
+      renderList.push(stack[i]);
+    }
+    
+    for (let i = fallingDebris.length - 1; i >= 0; i--) {
+      fallingDebris[i].update();
+      renderList.push(fallingDebris[i]);
+      if (fallingDebris[i].y + cameraY > H + 200) fallingDebris.splice(i, 1);
+    }
+    
+    if ((gameState === 'PLAYING' || gameState === 'START') && currentBlock) {
+      if (gameState === 'PLAYING') currentBlock.update();
+      renderList.push(currentBlock);
+    }
+
+    renderList.sort((a, b) => b.y - a.y);
+
+    for (let item of renderList) {
+      item.draw(ctx, cameraY, camAngle, time);
+    }
+
+    for (let i = particles.length - 1; i >= 0; i--) {
+      particles[i].update();
+      particles[i].draw(ctx, cameraY);
+      if (particles[i].life <= 0) particles.splice(i, 1);
+    }
+
+    requestAnimationFrame(gameLoop);
+  }
+
+  window.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('#mute-btn')) return; 
+    if (e.target.closest('#game-over-modal')) return;
+    if (e.target.closest('#download-html-btn')) return;
+    
+    if (gameState === 'START') startGame();
+    else if (gameState === 'PLAYING') placeBlock();
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') { 
+      e.preventDefault();
+      if (gameState === 'START') startGame();
+      else if (gameState === 'PLAYING') placeBlock();
+    }
+  });
+
+  restartBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    isGameInitialized = false; 
+    initGame();
+  });
+
+  let startupTriggered = false;
+  function startUp() {
+    if (startupTriggered) return;
+    startupTriggered = true;
+    resize();
+    initGame();
+    requestAnimationFrame(gameLoop);
+  }
+
+  window.addEventListener('load', startUp);
+  setTimeout(startUp, 200); 
+</script>
+
+</body></html>
