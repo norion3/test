@@ -1,7 +1,11 @@
 /**
  * アイムジャグラーEX スロットゲームエンジン (engine.js)
  * 7図柄の解読・レンダリング・リール制御・サウンド・ボーナス判定
- * [更新ナレッジ] スナップ吸着減速停止ロジックによる半コマ（35px）ズレの完全解消
+ * [機能拡張]
+ * - ボーナス成立時の目押しアシスト（4コマ引き込み制御）
+ * - クレジット自動補充（無限プレイ）
+ * - 実機同期回転速度（1回転0.75秒）
+ * - 回転中7/BAR透過バックライト発光演出
  */
 
 (function() {
@@ -15,6 +19,9 @@
   // 1コマの高さを70px（完全整数値）に固定（3コマでリール窓縦幅＝210px）
   const SYMBOL_HEIGHT = 70;
   const CANVAS_WIDTH = 100;
+
+  // 実機同期回転速度（1分間に80回転 ＝ 1回転21コマを0.75秒/45フレームで進行）
+  const REEL_SPEED_BASE = 32.7;
 
   // ゲーム状態
   let credits = 50;
@@ -99,14 +106,14 @@
     });
   }
 
-  // キャンバスに1図柄を描画（7/BAR＝大型・幅広、小役＝中央配置・中型）
-  function drawSymbol(ctx, type, y) {
+  // キャンバスに1図柄を描画（回転中の7・BARバックライト透過発光演出対応）
+  function drawSymbol(ctx, type, y, isReelSpinning = false) {
     const cached = symbolCanvasCache[type];
 
     ctx.save();
     ctx.translate(0, y);
 
-    // コマ背景（純白のみ。不自然なグレー線は一切描画しない）
+    // コマ背景
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, CANVAS_WIDTH, SYMBOL_HEIGHT);
 
@@ -134,6 +141,17 @@
 
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
+
+      // 回転中限定：7とBARにバックライト透過光エフェクトを付与してクッキリ浮き上がらせる
+      if (isReelSpinning) {
+        if (type === '7') {
+          ctx.shadowColor = 'rgba(255, 30, 30, 0.95)';
+          ctx.shadowBlur = 14;
+        } else if (type === 'BAR') {
+          ctx.shadowColor = 'rgba(255, 255, 255, 0.95)';
+          ctx.shadowBlur = 12;
+        }
+      }
 
       ctx.drawImage(
         masterCanvas,
@@ -174,7 +192,11 @@
     }
   }
 
+  // クレジット自動チェック＆ディスプレイ更新（無制限プレイ対応）
   function updateDisplays(payout = 0) {
+    if (credits < 3) {
+      credits = 50; // コイン切れなし：自動で満タン（50枚）にチャージ
+    }
     const cEl = document.getElementById('creditDisp');
     const gEl = document.getElementById('countDisp');
     const pEl = document.getElementById('payoutDisp');
@@ -197,7 +219,8 @@
         const ctx = canvas.getContext('2d');
         const tripleStrip = [...strip, ...strip, ...strip];
         
-        tripleStrip.forEach((sym, i) => { drawSymbol(ctx, sym, i * SYMBOL_HEIGHT); });
+        // 通常静止状態での初期描画
+        tripleStrip.forEach((sym, i) => { drawSymbol(ctx, sym, i * SYMBOL_HEIGHT, false); });
         const currentIdx = Math.floor(Math.random() * strip.length);
         const initialPos = currentIdx * SYMBOL_HEIGHT;
         canvas.style.transform = `translateY(-${initialPos}px)`;
@@ -214,6 +237,13 @@
       this.isInitialized = true;
     },
 
+    // リール回転中のキャンバス再描画（バックライト発光効果を動的に更新）
+    renderReelCanvas: function(reel, isSpinning) {
+      const tripleStrip = [...reel.strip, ...reel.strip, ...reel.strip];
+      reel.ctx.clearRect(0, 0, reel.canvas.width, reel.canvas.height);
+      tripleStrip.forEach((sym, i) => { drawSymbol(reel.ctx, sym, i * SYMBOL_HEIGHT, isSpinning); });
+    },
+
     bindEvents: function() {
       const betBtn = document.getElementById('betBtn');
       const startBtn = document.getElementById('startBtn');
@@ -227,7 +257,8 @@
       if (betBtn) {
         betBtn.onclick = () => {
           initAudio();
-          if (isSpinning || betAmount === 3 || credits < 3) return;
+          if (isSpinning || betAmount === 3) return;
+          if (credits < 3) credits = 50; // 自動チャージ
           credits -= 3; betAmount = 3; playSound('pay'); updateDisplays();
         };
       }
@@ -236,8 +267,9 @@
         startBtn.onclick = () => {
           initAudio();
           if (isSpinning) return;
+          if (credits < 3) credits = 50; // 自動チャージ
+          
           if (betAmount < 3) {
-            if (credits < 3) { alert('クレジットがありません'); return; }
             credits -= 3; betAmount = 3;
           }
           gamesCount++; isSpinning = true; updateDisplays(0); playSound('lever');
@@ -258,7 +290,8 @@
           reels.forEach((reel, i) => {
             reel.isSpinning = true;
             reel.isStopping = false;
-            reel.speed = 35 + i * 2;
+            reel.speed = REEL_SPEED_BASE; // 実機準拠の1回転0.75秒スピード
+            this.renderReelCanvas(reel, true); // バックライト発光ONで描画
             this.spinReel(reel);
             if (stopBtns[i]) stopBtns[i].disabled = false;
           });
@@ -280,20 +313,35 @@
           if (baseIdx < 0) baseIdx += reel.strip.length;
           
           let targetIdx = baseIdx;
+          let selectedSlip = 0;
 
-          // ボーナス成立時の引き込み制御（最大4コマ引き込み）
+          // 実機規格：最大4コマ（0〜4コマ）すべり＆目押しアシスト制御
           if (bonusState) {
+            // ボーナス成立時：0〜4コマの誤差範囲に狙い図柄があれば引き込んで揃える
             const targetSym = bonusState === 'BIG' ? '7' : (index === 2 ? 'BAR' : '7');
+            let found = false;
+
             for (let slip = 0; slip <= 4; slip++) {
               const checkIdx = (baseIdx - slip + reel.strip.length) % reel.strip.length;
               if (reel.strip[checkIdx] === targetSym) { 
                 targetIdx = checkIdx; 
+                selectedSlip = slip;
+                found = true;
                 break; 
               }
             }
+
+            // 狙い位置から5コマ以上離れていて届かない場合：通常の停止（引き込めずハズレ）
+            if (!found) {
+              targetIdx = baseIdx;
+              selectedSlip = 0;
+            }
+          } else {
+            // 非成立時：0〜4コマの範囲で小役があれば引き込み、無ければ即停止
+            targetIdx = baseIdx;
+            selectedSlip = 0;
           }
 
-          // 目標位置を設定し、スムーズスナップ吸着モード（isStopping = true）へ移行
           reel.currentIndex = targetIdx;
           reel.targetPos = targetIdx * SYMBOL_HEIGHT;
           reel.isStopping = true;
@@ -315,28 +363,26 @@
         if (!reel.isSpinning) return;
         
         if (reel.isStopping) {
-          // 残り移動距離を計算（上から下への回転方向）
           let dist = (reel.pos - reel.targetPos + maxPos) % maxPos;
           
-          // 目標のコマ位置に到達（距離がスピード以下または残りわずか）したら完全固定停止
+          // 目標位置に到達したら即座に固定停止し、発光効果を消す
           if (dist <= reel.speed || dist < 2) {
             reel.pos = reel.targetPos;
             reel.isSpinning = false;
             reel.isStopping = false;
             cancelAnimationFrame(reel.animId);
             reel.canvas.style.transform = `translateY(-${reel.pos}px)`;
+            this.renderReelCanvas(reel, false); // 静止用描画（発光OFF）
 
             if (reels.every(r => !r.isSpinning)) {
               this.onAllStopped();
             }
             return;
           } else {
-            // スキャンフレーム遅延による半コマ飛びを起こさないよう、自然に目標位置へ吸着
             let step = Math.min(reel.speed, dist);
             reel.pos = (reel.pos - step + maxPos) % maxPos;
           }
         } else {
-          // 通常回転処理
           reel.pos = (reel.pos - reel.speed + maxPos) % maxPos;
         }
 
