@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>アイムジャグラーEX 完全再現ドットスロット</title>
+  <style>
+    :root {
+      --bg-color: #08080a;
+      --cabinet-silver: linear-gradient(180deg, #e6e6e6 0%, #b8b8b8 40%, #8a8a8a 70%, #5e5e5e 100%);
+      --gold: #f5cf47;
+      --led-red: #ff1111;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: #fff;
+      font-family: "Hiragino Kaku Gothic ProN", "Meiryo", -apple-system, sans-serif;
+      margin: 0;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* 筐体フレーム */
+    .cabinet {
+      position: relative;
+      width: 100%;
+      max-width: 410px;
+      background: #111;
+      border: 4px solid #666;
+      border-radius: 12px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.95), inset 0 2px 6px rgba(255,255,255,0.5);
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* 筐体最上部 (KITAC グリーンランプ) */
+    .kitac-top {
+      width: 100%;
+      height: 28px;
+      background: linear-gradient(180deg, #d31b22 0%, #900a0f 100%);
+      border: 2px solid #555;
+      border-radius: 8px 8px 0 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .kitac-lamp {
+      width: 70%;
+      height: 16px;
+      background: radial-gradient(ellipse at center, #80ff80 0%, #2e7d32 70%, #003300 100%);
+      border: 2px solid #a5d6a7;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #4caf50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 900;
+      color: #003300;
+      letter-spacing: 1px;
+    }
+
+    /* 上部パネル */
+    .top-panel {
+      width: 100%;
+      background: linear-gradient(180deg, #e62229 0%, #a80e14 70%, #5e0205 100%);
+      border: 3px solid var(--gold);
+      border-radius: 4px;
+      padding: 6px;
+      text-align: center;
+      margin-top: 4px;
+      box-shadow: inset 0 0 12px rgba(0,0,0,0.7);
+    }
+
+    .big-chance-text {
+      font-size: 20px;
+      font-weight: 900;
+      font-style: italic;
+      color: #fff;
+      text-shadow: 0 0 8px #fff, 0 0 15px #ff0000, 2px 2px 0 #000;
+      letter-spacing: 2px;
+    }
+
+    .top-777-container {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin-top: 2px;
+    }
+
+    .top-7-img {
+      width: 60px;
+      height: 24px;
+      filter: drop-shadow(0 0 5px #ff0000);
+    }
+
+    .juggler-brand-bar {
+      width: 100%;
+      background: #000;
+      border: 1px solid var(--gold);
+      border-radius: 3px;
+      padding: 2px 0;
+      margin-top: 4px;
+      font-family: 'Impact', sans-serif;
+      font-size: 18px;
+      letter-spacing: 4px;
+      color: #fff;
+      text-shadow: 0 0 6px #fff;
+    }
+
+    /* 中央メイン枠 */
+    .center-frame {
+      position: relative;
+      width: 100%;
+      background: linear-gradient(180deg, #d31820 0%, #800a0e 100%);
+      border: 3px solid var(--gold);
+      border-radius: 6px;
+      padding: 8px;
+      margin-top: 4px;
+      box-shadow: inset 0 0 15px rgba(0,0,0,0.8);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .reels-wrapper {
+      width: 100%;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .line-numbers {
+      position: absolute;
+      left: 6px;
+      top: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      font-weight: 900;
+      font-size: 12px;
+    }
+    .line-badge {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      box-shadow: 0 0 4px rgba(0,0,0,0.9);
+      border: 1px solid #fff;
+    }
+    .badge-3 { background: #e51d24; }
+    .badge-2 { background: #2196f3; }
+    .badge-1 { background: #4caf50; }
+
+    .reels-screen {
+      width: 82%;
+      height: 160px;
+      background: #ffffff;
+      border: 3px solid #222;
+      border-radius: 4px;
+      display: flex;
+      justify-content: space-between;
+      overflow: hidden;
+      box-shadow: inset 0 12px 14px rgba(0,0,0,0.4), inset 0 -12px 14px rgba(0,0,0,0.4);
+      position: relative;
+    }
+
+    .payline-center {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: rgba(255, 0, 0, 0.4);
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .reel-column {
+      width: 32.8%;
+      height: 100%;
+      background: #fff;
+      position: relative;
+      border-right: 1px solid #ccc;
+      overflow: hidden;
+    }
+    .reel-column:last-child { border-right: none; }
+
+    .reel-canvas {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      will-change: transform;
+    }
+
+    /* ダッシュボード */
+    .dashboard-bar {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-top: 8px;
+      padding: 0 2px;
+    }
+
+    .gogo-box {
+      width: 110px; height: 60px;
+      background: #020204;
+      border: 2px solid #222;
+      border-radius: 6px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      box-shadow: inset 0 0 12px #000;
+    }
+
+    .gogo-star-bg { position: absolute; width: 90%; height: 90%; opacity: 0.15; transition: all 0.05s ease-in; }
+    .gogo-text-svg { width: 85%; height: 70%; opacity: 0.15; transition: all 0.05s ease-in; }
+
+    .gogo-box.peka {
+      background: radial-gradient(circle, #ff007f 0%, #800080 70%, #05000a 100%);
+      border-color: #ff69b4;
+      box-shadow: 0 0 20px #ff007f, 0 0 40px #ff007f, inset 0 0 15px #ffffff;
+    }
+    .gogo-box.peka .gogo-star-bg { opacity: 1; filter: drop-shadow(0 0 8px #ff007f); }
+    .gogo-box.peka .gogo-text-svg { opacity: 1; filter: drop-shadow(0 0 6px #fff) drop-shadow(0 0 12px #ff69b4); animation: pekaFlash 0.15s infinite alternate; }
+
+    @keyframes pekaFlash {
+      from { transform: scale(1); }
+      to { transform: scale(1.03); }
+    }
+
+    .led-group { display: flex; gap: 8px; }
+    .led-unit { display: flex; flex-direction: column; align-items: center; }
+    .led-label { font-size: 8px; color: var(--gold); font-weight: 900; margin-bottom: 2px; }
+    .led-screen {
+      background: #000; border: 1px solid #444; border-radius: 3px;
+      padding: 2px 5px; font-family: 'Courier New', Courier, monospace;
+      font-size: 17px; font-weight: bold; color: var(--led-red);
+      text-shadow: 0 0 6px var(--led-red); min-width: 38px; text-align: right;
+    }
+
+    /* 操作デッキ */
+    .control-deck {
+      width: 100%;
+      background: var(--cabinet-silver);
+      border: 2px solid #333; border-radius: 6px;
+      padding: 10px; margin-top: 6px;
+      display: flex; justify-content: space-between; align-items: center;
+      box-shadow: inset 0 2px 4px rgba(255,255,255,0.8), 0 4px 8px rgba(0,0,0,0.6);
+    }
+    .bet-btn {
+      width: 46px; height: 46px; border-radius: 50%;
+      background: radial-gradient(circle, #ff3333 0%, #880000 100%);
+      border: 2px solid #fff; color: #fff; font-weight: 900; font-size: 11px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.6); cursor: pointer;
+      display: flex; align-items: center; justify-content: center; text-align: center;
+    }
+    .bet-btn:active { transform: translateY(2px); }
+    .lever-btn {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: radial-gradient(circle, #ffffff 0%, #a0a0a0 100%);
+      border: 3px solid #222; box-shadow: 0 5px 10px rgba(0,0,0,0.7);
+      cursor: pointer; transition: transform 0.08s;
+    }
+    .lever-btn:active { transform: translateY(6px) scale(0.95); }
+    .stop-btn-group { display: flex; gap: 8px; }
+    .stop-btn {
+      width: 42px; height: 42px; border-radius: 50%;
+      background: radial-gradient(circle, #e62229 0%, #8a0b10 100%);
+      border: 2px solid #ffcccc; color: #fff; font-weight: 900; font-size: 13px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.6); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .stop-btn:disabled {
+      background: radial-gradient(circle, #555 0%, #222 100%);
+      border-color: #777; opacity: 0.5; cursor: not-allowed; box-shadow: none;
+    }
+    .stop-btn:not(:disabled):active { transform: translateY(2px); }
+
+    .clown-bottom-panel {
+      width: 100%; background: linear-gradient(180deg, #d31820 0%, #7d080d 100%);
+      border: 3px solid var(--gold); border-radius: 6px;
+      margin-top: 6px; padding: 10px 6px;
+      display: flex; flex-direction: column; align-items: center;
+      box-shadow: inset 0 0 12px rgba(0,0,0,0.7);
+    }
+    .clown-svg-graphic { width: 100%; max-height: 110px; }
+    .sound-btn { margin-top: 6px; background: #222; border: 1px solid #555; color: #ccc; padding: 4px 12px; border-radius: 12px; font-size: 11px; cursor: pointer; }
+  </style>
+
+  <!-- index.htmlと同階層（./）の明示的パス指定による標準スクリプトタグ -->
+  <script src="./symbol_7.js"></script>
+  <script src="./symbol_BAR.js"></script>
+  <script src="./symbol_GRAPE.js"></script>
+  <script src="./symbol_CHERRY.js"></script>
+  <script src="./symbol_BELL.js"></script>
+  <script src="./symbol_RHINO.js"></script>
+  <script src="./symbol_CLOWN.js"></script>
+  <script src="./engine.js"></script>
+</head>
+<body>
+
+  <div class="cabinet">
+    <!-- KITAC ランプ -->
+    <div class="kitac-top"><div class="kitac-lamp">KITAC</div></div>
+
+    <!-- 上部パネル -->
+    <div class="top-panel">
+      <div class="big-chance-text">BIG CHANCE!</div>
+      <div class="top-777-container">
+        <svg class="top-7-img" viewBox="0 0 100 40"><path d="M10,5 L90,5 L50,38 L30,38 L60,18 L10,18 Z" fill="#e51d24" stroke="#fff" stroke-width="2"/><polygon points="50,8 53,14 60,14 55,18 57,24 50,20 43,24 45,18 40,14 47,14" fill="#ffee00"/></svg>
+        <svg class="top-7-img" viewBox="0 0 100 40"><path d="M10,5 L90,5 L50,38 L30,38 L60,18 L10,18 Z" fill="#e51d24" stroke="#fff" stroke-width="2"/><polygon points="50,8 53,14 60,14 55,18 57,24 50,20 43,24 45,18 40,14 47,14" fill="#ffee00"/></svg>
+        <svg class="top-7-img" viewBox="0 0 100 40"><path d="M10,5 L90,5 L50,38 L30,38 L60,18 L10,18 Z" fill="#e51d24" stroke="#fff" stroke-width="2"/><polygon points="50,8 53,14 60,14 55,18 57,24 50,20 43,24 45,18 40,14 47,14" fill="#ffee00"/></svg>
+      </div>
+      <div class="juggler-brand-bar">I'm JUGGLER</div>
+    </div>
+
+    <!-- メインフレーム -->
+    <div class="center-frame">
+      <div class="reels-wrapper">
+        <div class="line-numbers">
+          <div class="line-badge badge-3">3</div>
+          <div class="line-badge badge-2">2</div>
+          <div class="line-badge badge-1">1</div>
+        </div>
+
+        <div class="reels-screen">
+          <div class="payline-center"></div>
+          <div class="reel-column"><canvas id="reelCanvas0" class="reel-canvas"></canvas></div>
+          <div class="reel-column"><canvas id="reelCanvas1" class="reel-canvas"></canvas></div>
+          <div class="reel-column"><canvas id="reelCanvas2" class="reel-canvas"></canvas></div>
+        </div>
+      </div>
+
+      <!-- ダッシュボード -->
+      <div class="dashboard-bar">
+        <div id="gogoBox" class="gogo-box">
+          <svg class="gogo-star-bg" viewBox="0 0 100 60">
+            <polygon points="50,2 62,15 78,5 80,22 98,20 90,35 100,48 82,52 80,68 65,58 50,68 35,58 20,68 18,52 0,48 10,35 2,20 20,22 22,5 38,15" fill="#ff007f"/>
+          </svg>
+          <svg class="gogo-text-svg" viewBox="0 0 100 60">
+            <text x="50" y="24" font-family="'Impact', sans-serif" font-size="22" fill="#ffffff" font-style="italic" text-anchor="middle" letter-spacing="1">GOGO!</text>
+            <text x="50" y="48" font-family="'Impact', sans-serif" font-size="13" fill="#ffcc00" text-anchor="middle" letter-spacing="2">CHANCE</text>
+          </svg>
+        </div>
+
+        <div class="led-group">
+          <div class="led-unit"><div class="led-label">CREDIT</div><div id="creditDisp" class="led-screen">50</div></div>
+          <div class="led-unit"><div class="led-label">COUNT</div><div id="countDisp" class="led-screen">0</div></div>
+          <div class="led-unit"><div class="led-label">PAYOUT</div><div id="payoutDisp" class="led-screen">0</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- コントロールデッキ -->
+    <div class="control-deck">
+      <button id="betBtn" class="bet-btn">3<br>BET</button>
+      <button id="startBtn" class="lever-btn" title="START"></button>
+      <div class="stop-btn-group">
+        <button id="stopBtn0" class="stop-btn" disabled>1</button>
+        <button id="stopBtn1" class="stop-btn" disabled>2</button>
+        <button id="stopBtn2" class="stop-btn" disabled>3</button>
+      </div>
+    </div>
+
+    <!-- 下部パネル -->
+    <div class="clown-bottom-panel">
+      <svg class="clown-svg-graphic" viewBox="0 0 300 110">
+        <g fill="#ffeb3b" opacity="0.8">
+          <polygon points="30,20 33,28 40,28 35,32 37,38 30,34 23,38 25,32 20,28 27,28"/>
+          <polygon points="270,20 273,28 280,28 275,32 277,38 270,34 263,38 265,32 260,28 267,28"/>
+        </g>
+        <path d="M 30,80 Q 150,105 270,80 L 260,60 Q 150,85 40,60 Z" fill="#e6a100" stroke="#fff" stroke-width="2"/>
+        <text x="150" y="80" font-family="'Impact', sans-serif" font-size="24" fill="#ffffff" text-anchor="middle" letter-spacing="2">I'm JUGGLER</text>
+        <g transform="translate(100, 5)">
+          <rect x="25" y="5" width="50" height="25" fill="#1976d2" stroke="#000" stroke-width="1.5"/>
+          <rect x="35" y="5" width="10" height="25" fill="#e51d24"/>
+          <rect x="55" y="5" width="10" height="25" fill="#e51d24"/>
+          <polygon points="50,8 52,12 56,12 53,15 54,19 50,17 46,19 47,15 44,12 48,12" fill="#fff"/>
+          <rect x="15" y="28" width="70" height="7" rx="3" fill="#1565c0" stroke="#000"/>
+          <circle cx="18" cy="45" r="12" fill="#ffeb3b"/>
+          <circle cx="82" cy="45" r="12" fill="#ffeb3b"/>
+          <circle cx="50" cy="50" r="20" fill="#ffffff" stroke="#333" stroke-width="1.5"/>
+          <circle cx="50" cy="50" r="7" fill="#e51d24"/>
+          <circle cx="40" cy="42" r="3" fill="#000"/>
+          <circle cx="60" cy="42" r="3" fill="#000"/>
+          <path d="M 35,60 Q 50,70 65,60" fill="none" stroke="#e51d24" stroke-width="3"/>
+        </g>
+      </svg>
+    </div>
+
+    <button id="soundToggle" class="sound-btn">🔊 サウンド: ON</button>
+  </div>
+
+  <script>
+    // 確実な安全起動処理（DOMContentLoaded / window.onload の二重ガード）
+    function bootEngine() {
+      if (window.JUGGLER_ENGINE && !window.JUGGLER_ENGINE.isInitialized) {
+        window.JUGGLER_ENGINE.init();
+      }
+    }
+
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+      bootEngine();
+    } else {
+      window.addEventListener('DOMContentLoaded', bootEngine);
+      window.addEventListener('load', bootEngine);
+    }
+  </script>
+</body>
+</html>
+
