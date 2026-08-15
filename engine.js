@@ -11,8 +11,8 @@
     ['GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', '7', 'BAR', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO']
   ];
 
-  // 1コマの高さを完全な整数値（70px）に固定して計算誤差をゼロ化（リール枠縦＝210px＝3コマ分）
-  const SYMBOL_HEIGHT = 70; 
+  // 1コマの高さを70px（整数値）に完全固定（3コマでリール窓縦幅＝210px）
+  const SYMBOL_HEIGHT = 70;
   const CANVAS_WIDTH = 100;
 
   // ゲーム状態
@@ -82,7 +82,6 @@
           meta: dataStore[id]
         };
       } else {
-        // フォールバック表示（テキスト）
         const cvs = document.createElement('canvas');
         cvs.width = 128; cvs.height = 128;
         const ctx = cvs.getContext('2d');
@@ -99,14 +98,14 @@
     });
   }
 
-  // キャンバスに1図柄を描画（限界最大サイズ描画＆アスペクト比完全保持）
+  // キャンバスに1図柄を描画（実機画像に基づく「7/BAR＝大型」「その他＝中型」サイズ打ち分け）
   function drawSymbol(ctx, type, y) {
     const cached = symbolCanvasCache[type];
 
     ctx.save();
     ctx.translate(0, y);
 
-    // コマ背景（純白＆薄い境界線）
+    // コマ背景（純白＆区切り境界線）
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, CANVAS_WIDTH, SYMBOL_HEIGHT);
     ctx.strokeStyle = "rgba(0,0,0,0.08)";
@@ -117,9 +116,16 @@
       const masterCanvas = cached.canvas;
       const meta = cached.meta;
 
-      // コマ枠（100px × 70px）の限界ギリギリまで大きく拡大表示する倍率計算
-      const maxW = CANVAS_WIDTH * 0.98;   // コマ横幅に対してほぼ100%限界
-      const maxH = SYMBOL_HEIGHT * 0.94;  // コマ縦幅に対してほぼ100%限界
+      let maxW, maxH;
+      if (type === '7' || type === 'BAR') {
+        // 大型図柄（7・BAR）：コマ横幅の約90%を使用する幅広・迫力表示
+        maxW = CANVAS_WIDTH * 0.90;
+        maxH = SYMBOL_HEIGHT * 0.88;
+      } else {
+        // 中型図柄（ぶどう・チェリー・ベル・ツノッチ・ピエロ）：コマ横幅の約58%に収まるスマート表示
+        maxW = CANVAS_WIDTH * 0.58;
+        maxH = SYMBOL_HEIGHT * 0.70;
+      }
 
       const scale = Math.min(maxW / meta.w, maxH / meta.h);
       const drawW = meta.w * scale;
@@ -131,7 +137,6 @@
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
 
-      // 抽出した128x128ピクセル原画からダイナミックに描画
       ctx.drawImage(
         masterCanvas,
         meta.x, meta.y, meta.w, meta.h,
@@ -275,7 +280,8 @@
           btn.disabled = true;
           playSound('stop');
 
-          // 小数点計算誤差を無くし、完全な整数コマ位置へ一発補正
+          // 現在位置から最も近い整数のコマ位置へ一発計算
+          const maxPos = reel.strip.length * SYMBOL_HEIGHT;
           let baseIdx = Math.round(reel.pos / SYMBOL_HEIGHT) % reel.strip.length;
           if (baseIdx < 0) baseIdx += reel.strip.length;
           
@@ -293,7 +299,7 @@
             }
           }
 
-          // 磁石のように格子枠にピタッと吸い付く完全スナップ停止
+          // 完全グリッド吸着（縦3コマ枠内にピッタリズレなしで整列停止）
           reel.currentIndex = targetIdx;
           reel.pos = targetIdx * SYMBOL_HEIGHT;
           reel.canvas.style.transform = `translateY(-${reel.pos}px)`;
