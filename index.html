@@ -3,931 +3,310 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>アイムジャグラーEX 完全再現ドットスロット</title>
+  <title>アイムジャグラーEX 実写オーバーレイ完全版</title>
   <style>
-    :root {
-      --bg-color: #08080a;
-      --cabinet-silver: linear-gradient(180deg, #e6e6e6 0%, #b8b8b8 40%, #8a8a8a 70%, #5e5e5e 100%);
-      --gold: #f5cf47;
-      --led-red: #ff1111;
-      --led-green: #00ff66;
-    }
-
+    /* ---------------------------------------------------
+       1. 基本設定＆スマホ誤操作防止プロテクト
+    --------------------------------------------------- */
     * {
       box-sizing: border-box;
-      /* スマホ操作完全プロテクト: テキスト選択・長押しメニュー禁止 */
       user-select: none;
       -webkit-user-select: none;
       -webkit-touch-callout: none;
     }
 
     body {
-      background-color: var(--bg-color);
+      background-color: #050508;
       color: #fff;
       font-family: "Hiragino Kaku Gothic ProN", "Meiryo", -apple-system, sans-serif;
       margin: 0;
-      padding: 10px;
+      padding: 10px 0;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
       min-height: 100vh;
-      /* バウンス(引っ張り)スクロールとズームをCSSレベルで完全遮断 */
       overflow: hidden; 
       overscroll-behavior: none;
-      touch-action: none;
+      touch-action: none; /* スマホのスクロール・ズームを遮断 */
     }
 
-    /* 筐体フレーム */
-    .cabinet {
+    /* ---------------------------------------------------
+       2. 画像に対するオーバーレイ相対位置 (パーセンテージ)
+       ※写真の位置と合致するようにパーセンテージで定義
+    --------------------------------------------------- */
+    :root {
+      /* リール窓位置 */
+      --reel-top: 29.3%;
+      --reel-left: 17.2%;
+      --reel-width: 65.6%;
+      --reel-height: 20.2%;
+      
+      /* GOGO! CHANCE ランプ位置 */
+      --gogo-top: 41.2%;
+      --gogo-left: 8.8%;
+      --gogo-width: 17.5%;
+      --gogo-height: 8.2%;
+
+      /* 7セグLED (CREDIT / COUNT / PAYOUT) 位置 */
+      --seg-top: 51.8%;
+      --seg-credit-left: 32.2%;
+      --seg-count-left: 45.2%;
+      --seg-payout-left: 58.2%;
+      --seg-width: 9.5%;
+      --seg-height: 4.8%;
+
+      /* 操作部 (BET / レバー / ストップ1・2・3) 位置 */
+      --bet-top: 55.2%;
+      --bet-left: 3.2%;
+      --bet-width: 9.2%;
+      --bet-height: 5.2%;
+
+      --lever-top: 53.8%;
+      --lever-left: 13.5%;
+      --lever-width: 10.8%;
+      --lever-height: 6.2%;
+
+      --stop-top: 54.2%;
+      --stop-width: 10.2%;
+      --stop-height: 5.8%;
+      --stop1-left: 34.8%;
+      --stop2-left: 49.2%;
+      --stop3-left: 63.8%;
+    }
+
+    /* ---------------------------------------------------
+       3. 筐体メインコンテナ (実写写真ベース)
+    --------------------------------------------------- */
+    .cabinet-container {
       position: relative;
       width: 100%;
-      max-width: 410px;
-      background: #111;
-      border: 4px solid #666;
-      border-radius: 12px;
-      box-shadow: 0 20px 50px rgba(0,0,0,0.95), inset 0 2px 6px rgba(255,255,255,0.5);
-      padding: 8px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+      max-width: 440px; /* 画面サイズに合わせた上限 */
+      margin: 0 auto;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.9);
+      border-radius: 8px;
+      overflow: hidden;
     }
 
-    /* 筐体最上部 (KITAC グリーンランプ) */
-    .kitac-top {
+    .cabinet-bg {
+      display: block;
       width: 100%;
-      height: 28px;
-      background: linear-gradient(180deg, #d31b22 0%, #900a0f 100%);
-      border: 2px solid #555;
-      border-radius: 8px 8px 0 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      height: auto;
+      pointer-events: none; /* 背景画像の誤タッチ防止 */
     }
 
-    .kitac-lamp {
-      width: 70%;
-      height: 16px;
-      background: radial-gradient(ellipse at center, #80ff80 0%, #2e7d32 70%, #003300 100%);
-      border: 2px solid #a5d6a7;
-      border-radius: 10px;
-      box-shadow: 0 0 10px #4caf50;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 10px;
-      font-weight: 900;
-      color: #003300;
-      letter-spacing: 1px;
-    }
-
-    /* 上部パネル */
-    .top-panel {
-      width: 100%;
-      background: linear-gradient(180deg, #e62229 0%, #a80e14 70%, #5e0205 100%);
-      border: 3px solid var(--gold);
-      border-radius: 4px;
-      padding: 6px;
-      text-align: center;
-      margin-top: 4px;
-      box-shadow: inset 0 0 12px rgba(0,0,0,0.7);
-    }
-
-    .big-chance-text {
-      font-size: 20px;
-      font-weight: 900;
-      font-style: italic;
-      color: #fff;
-      text-shadow: 0 0 8px #fff, 0 0 15px #ff0000, 2px 2px 0 #000;
-      letter-spacing: 2px;
-    }
-
-    .top-777-container {
-      display: flex;
-      justify-content: center;
-      gap: 15px;
-      margin-top: 2px;
-    }
-
-    .top-7-img {
-      width: 60px;
-      height: 24px;
-      filter: drop-shadow(0 0 5px #ff0000);
-    }
-
-    .juggler-brand-bar {
-      width: 100%;
-      background: #000;
-      border: 1px solid var(--gold);
-      border-radius: 3px;
-      padding: 2px 0;
-      margin-top: 4px;
-      font-family: 'Impact', sans-serif;
-      font-size: 18px;
-      letter-spacing: 4px;
-      color: #fff;
-      text-shadow: 0 0 6px #fff;
-    }
-
-    /* 中央メイン枠 */
-    .center-frame {
-      position: relative;
-      width: 100%;
-      background: linear-gradient(180deg, #d31820 0%, #800a0e 100%);
-      border: 3px solid var(--gold);
-      border-radius: 6px;
-      padding: 8px;
-      margin-top: 4px;
-      box-shadow: inset 0 0 15px rgba(0,0,0,0.8);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    .reels-wrapper {
-      width: 100%;
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-    }
-
-    .line-numbers {
+    /* ---------------------------------------------------
+       4. リール窓（写真のリール位置に正確に重ね合わせ）
+    --------------------------------------------------- */
+    .reels-overlay {
       position: absolute;
-      left: 6px;
-      top: 35px;
-      display: flex;
-      flex-direction: column;
-      gap: 30px;
-      font-weight: 900;
-      font-size: 12px;
-    }
-    .line-badge {
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
+      top: var(--reel-top);
+      left: var(--reel-left);
+      width: var(--reel-width);
+      height: var(--reel-height);
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #fff;
-      box-shadow: 0 0 4px rgba(0,0,0,0.9);
-      border: 1px solid #fff;
+      background: #000;
+      border-radius: 2px;
+      overflow: hidden;
+      box-shadow: inset 0 8px 12px rgba(0,0,0,0.8), inset 0 -8px 12px rgba(0,0,0,0.8);
     }
-    .badge-3 { background: #e51d24; }
-    .badge-2 { background: #2196f3; }
-    .badge-1 { background: #4caf50; }
 
-    /* リール窓：レスポンシブ縮小によるズレを防止する「絶対固定ピクセル(304x210)」 */
-    .reels-screen {
-      width: 304px;  /* 100px×3列 ＋ 隙間2px×2 ＝ 304px */
-      height: 210px; /* 70px×3コマ ＝ 210px */
-      box-sizing: content-box;
-      background: #111; /* リール間の隙間を実機同様の黒に */
-      border: 3px solid #222;
-      border-radius: 4px;
+    .reels-container {
+      width: 100%;
+      height: 100%;
       display: flex;
       justify-content: space-between;
-      overflow: hidden;
-      box-shadow: inset 0 12px 14px rgba(0,0,0,0.4), inset 0 -12px 14px rgba(0,0,0,0.4);
-      position: relative;
     }
 
-    /* 各リール列：グレー線削除済、完全な純白100px幅 */
     .reel-column {
-      width: 100px;
+      width: 32.8%;
       height: 100%;
-      background: #fff;
+      background: #ffffff;
       position: relative;
       overflow: hidden;
     }
 
     .reel-canvas {
-      position: absolute;
-      top: 0; left: 0;
       width: 100%;
+      position: absolute;
+      top: 0; 
+      left: 0;
       will-change: transform;
     }
 
-    /* ダッシュボード */
-    .dashboard-bar {
-      width: 100%;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      margin-top: 8px;
-      padding: 0 2px;
-    }
-
-    .gogo-box {
-      width: 110px; height: 60px;
-      background: #020204;
-      border: 2px solid #222;
-      border-radius: 6px;
-      position: relative;
+    /* ---------------------------------------------------
+       5. 7セグLED & GOGO! CHANCE 発光部
+    --------------------------------------------------- */
+    .seg-overlay {
+      position: absolute;
+      top: var(--seg-top);
+      width: var(--seg-width);
+      height: var(--seg-height);
       display: flex;
       align-items: center;
       justify-content: center;
-      overflow: hidden;
-      box-shadow: inset 0 0 12px #000;
+      color: #ff1111;
+      font-family: 'Courier New', Courier, monospace;
+      font-weight: 900;
+      font-size: clamp(12px, 3.8vw, 18px);
+      text-shadow: 0 0 6px #ff1111, 0 0 10px #ff1111;
+      pointer-events: none;
     }
 
-    .gogo-star-bg { position: absolute; width: 90%; height: 90%; opacity: 0.15; transition: all 0.05s ease-in; }
-    .gogo-text-svg { width: 85%; height: 70%; opacity: 0.15; transition: all 0.05s ease-in; }
+    .seg-credit { left: var(--seg-credit-left); }
+    .seg-count { left: var(--seg-count-left); }
+    .seg-payout { left: var(--seg-payout-left); }
 
-    .gogo-box.peka {
-      background: radial-gradient(circle, #ff007f 0%, #800080 70%, #05000a 100%);
-      border-color: #ff69b4;
-      box-shadow: 0 0 20px #ff007f, 0 0 40px #ff007f, inset 0 0 15px #ffffff;
+    .gogo-overlay {
+      position: absolute;
+      top: var(--gogo-top);
+      left: var(--gogo-left);
+      width: var(--gogo-width);
+      height: var(--gogo-height);
+      opacity: 0;
+      transition: opacity 0.05s ease-in;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      mix-blend-mode: screen; /* 写真背景になじませる透過合成 */
     }
-    .gogo-box.peka .gogo-star-bg { opacity: 1; filter: drop-shadow(0 0 8px #ff007f); }
-    .gogo-box.peka .gogo-text-svg { opacity: 1; filter: drop-shadow(0 0 6px #fff) drop-shadow(0 0 12px #ff69b4); animation: pekaFlash 0.15s infinite alternate; }
+
+    .gogo-overlay.peka {
+      opacity: 1;
+      animation: pekaFlash 0.15s infinite alternate;
+      background: radial-gradient(ellipse, rgba(255, 0, 127, 0.95) 0%, rgba(255, 0, 127, 0.2) 65%, transparent 100%);
+    }
 
     @keyframes pekaFlash {
-      from { transform: scale(1); }
-      to { transform: scale(1.03); }
+      from { filter: brightness(1); }
+      to { filter: brightness(1.35); }
     }
 
-    .led-group { display: flex; gap: 6px; }
-    .led-unit { display: flex; flex-direction: column; align-items: center; }
-    .led-label { font-size: 8px; color: var(--gold); font-weight: 900; margin-bottom: 2px; }
-    .led-screen {
-      background: #000; border: 1px solid #444; border-radius: 3px;
-      padding: 2px 4px; font-family: 'Courier New', Courier, monospace;
-      font-size: 15px; font-weight: bold; color: var(--led-red);
-      text-shadow: 0 0 6px var(--led-red); min-width: 32px; text-align: right;
-    }
-    .led-screen.green {
-      color: var(--led-green);
-      text-shadow: 0 0 6px var(--led-green);
+    .gogo-svg {
+      width: 92%;
+      height: 92%;
+      filter: drop-shadow(0 0 6px #ff007f);
     }
 
-    /* 操作デッキ */
-    .control-deck {
-      width: 100%;
-      background: var(--cabinet-silver);
-      border: 2px solid #333; border-radius: 6px;
-      padding: 10px; margin-top: 6px;
-      display: flex; justify-content: space-between; align-items: center;
-      box-shadow: inset 0 2px 4px rgba(255,255,255,0.8), 0 4px 8px rgba(0,0,0,0.6);
-    }
-    .bet-btn {
-      width: 46px; height: 46px; border-radius: 50%;
-      background: radial-gradient(circle, #ff3333 0%, #880000 100%);
-      border: 2px solid #fff; color: #fff; font-weight: 900; font-size: 11px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.6); cursor: pointer;
-      display: flex; align-items: center; justify-content: center; text-align: center;
+    /* ---------------------------------------------------
+       6. 透明操作ボタン（写真のボタン上に配置）
+    --------------------------------------------------- */
+    .touch-btn {
+      position: absolute;
+      border-radius: 50%;
+      background: transparent;
+      outline: none;
+      border: none;
+      cursor: pointer;
       touch-action: manipulation;
+      z-index: 10;
+      transition: background 0.05s, box-shadow 0.05s;
     }
-    .bet-btn:active { transform: translateY(2px); }
-    .lever-btn {
-      width: 44px; height: 44px; border-radius: 50%;
-      background: radial-gradient(circle, #ffffff 0%, #a0a0a0 100%);
-      border: 3px solid #222; box-shadow: 0 5px 10px rgba(0,0,0,0.7);
-      cursor: pointer; transition: transform 0.08s;
-      touch-action: manipulation;
-    }
-    .lever-btn:active { transform: translateY(6px) scale(0.95); }
-    .stop-btn-group { display: flex; gap: 8px; }
-    .stop-btn {
-      width: 42px; height: 42px; border-radius: 50%;
-      background: radial-gradient(circle, #e62229 0%, #8a0b10 100%);
-      border: 2px solid #ffcccc; color: #fff; font-weight: 900; font-size: 13px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.6); cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      touch-action: manipulation;
-    }
-    .stop-btn:disabled {
-      background: radial-gradient(circle, #555 0%, #222 100%);
-      border-color: #777; opacity: 0.5; cursor: not-allowed; box-shadow: none;
-    }
-    .stop-btn:not(:disabled):active { transform: translateY(2px); }
 
-    .clown-bottom-panel {
-      width: 100%; background: linear-gradient(180deg, #d31820 0%, #7d080d 100%);
-      border: 3px solid var(--gold); border-radius: 6px;
-      margin-top: 6px; padding: 8px 6px;
-      display: flex; flex-direction: column; align-items: center;
-      box-shadow: inset 0 0 12px rgba(0,0,0,0.7);
+    /* タップした瞬間にボタンが沈み込む影のリアル演出 */
+    .touch-btn:active {
+      background: rgba(0, 0, 0, 0.35);
+      box-shadow: inset 0 4px 12px rgba(0,0,0,0.8);
     }
-    .clown-svg-graphic { width: 100%; max-height: 100px; }
-    
+
+    .touch-btn:disabled {
+      background: transparent;
+      cursor: not-allowed;
+    }
+
+    .btn-bet { top: var(--bet-top); left: var(--bet-left); width: var(--bet-width); height: var(--bet-height); }
+    .btn-lever { top: var(--lever-top); left: var(--lever-left); width: var(--lever-width); height: var(--lever-height); }
+    .btn-stop1 { top: var(--stop-top); left: var(--stop1-left); width: var(--stop-width); height: var(--stop-height); }
+    .btn-stop2 { top: var(--stop-top); left: var(--stop2-left); width: var(--stop-width); height: var(--stop-height); }
+    .btn-stop3 { top: var(--stop-top); left: var(--stop3-left); width: var(--stop-width); height: var(--stop-height); }
+
+    /* ---------------------------------------------------
+       7. 筐体下部サブコントロール
+    --------------------------------------------------- */
     .bottom-controls {
       display: flex;
       gap: 12px;
-      margin-top: 6px;
+      margin-top: 12px;
       align-items: center;
     }
 
-    .sound-btn, .setting-btn {
-      background: #222; border: 1px solid #555; color: #ccc;
-      padding: 4px 12px; border-radius: 12px; font-size: 11px; cursor: pointer;
+    .ctrl-btn {
+      background: #1e1e24;
+      border: 1px solid #444;
+      color: #ddd;
+      padding: 6px 14px;
+      border-radius: 16px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.5);
     }
-    .setting-btn { color: var(--gold); border-color: var(--gold); font-weight: bold; }
+
+    .ctrl-btn.setting {
+      color: #f5cf47;
+      border-color: #f5cf47;
+    }
   </style>
 
-  <!-- 図柄データのみ外部ファイル参照 -->
-  <script src="./symbol_7.js?v=6"></script>
-  <script src="./symbol_BAR.js?v=6"></script>
-  <script src="./symbol_GRAPE.js?v=6"></script>
-  <script src="./symbol_CHERRY.js?v=6"></script>
-  <script src="./symbol_BELL.js?v=6"></script>
-  <script src="./symbol_RHINO.js?v=6"></script>
-  <script src="./symbol_CLOWN.js?v=6"></script>
+  <!-- 各種スクリプトデータの読み込み -->
+  <script src="./symbol_7.js"></script>
+  <script src="./symbol_BAR.js"></script>
+  <script src="./symbol_GRAPE.js"></script>
+  <script src="./symbol_CHERRY.js"></script>
+  <script src="./symbol_BELL.js"></script>
+  <script src="./symbol_RHINO.js"></script>
+  <script src="./symbol_CLOWN.js"></script>
+  <script src="./engine.js"></script>
 </head>
 <body>
 
-  <div class="cabinet">
-    <div class="kitac-top"><div class="kitac-lamp">KITAC</div></div>
+  <!-- 実写筐体コンテナ -->
+  <div class="cabinet-container">
+    <!-- 背景：実写写真 -->
+    <img src="./image.png" alt="アイムジャグラーEX 筐体写真" class="cabinet-bg" id="cabinetBg">
 
-    <div class="top-panel">
-      <div class="big-chance-text">BIG CHANCE!</div>
-      <div class="top-777-container">
-        <svg class="top-7-img" viewBox="0 0 100 40"><path d="M10,5 L90,5 L50,38 L30,38 L60,18 L10,18 Z" fill="#e51d24" stroke="#fff" stroke-width="2"/><polygon points="50,8 53,14 60,14 55,18 57,24 50,20 43,24 45,18 40,14 47,14" fill="#ffee00"/></svg>
-        <svg class="top-7-img" viewBox="0 0 100 40"><path d="M10,5 L90,5 L50,38 L30,38 L60,18 L10,18 Z" fill="#e51d24" stroke="#fff" stroke-width="2"/><polygon points="50,8 53,14 60,14 55,18 57,24 50,20 43,24 45,18 40,14 47,14" fill="#ffee00"/></svg>
-        <svg class="top-7-img" viewBox="0 0 100 40"><path d="M10,5 L90,5 L50,38 L30,38 L60,18 L10,18 Z" fill="#e51d24" stroke="#fff" stroke-width="2"/><polygon points="50,8 53,14 60,14 55,18 57,24 50,20 43,24 45,18 40,14 47,14" fill="#ffee00"/></svg>
-      </div>
-      <div class="juggler-brand-bar">I'm JUGGLER</div>
-    </div>
-
-    <div class="center-frame">
-      <div class="reels-wrapper">
-        <div class="line-numbers">
-          <div class="line-badge badge-3">3</div>
-          <div class="line-badge badge-2">2</div>
-          <div class="line-badge badge-1">1</div>
-        </div>
-
-        <div class="reels-screen">
-          <div class="reel-column"><canvas id="reelCanvas0" class="reel-canvas"></canvas></div>
-          <div class="reel-column"><canvas id="reelCanvas1" class="reel-canvas"></canvas></div>
-          <div class="reel-column"><canvas id="reelCanvas2" class="reel-canvas"></canvas></div>
-        </div>
-      </div>
-
-      <div class="dashboard-bar">
-        <div id="gogoBox" class="gogo-box">
-          <svg class="gogo-star-bg" viewBox="0 0 100 60">
-            <polygon points="50,2 62,15 78,5 80,22 98,20 90,35 100,48 82,52 80,68 65,58 50,68 35,58 20,68 18,52 0,48 10,35 2,20 22,5 38,15" fill="#ff007f"/>
-          </svg>
-          <svg class="gogo-text-svg" viewBox="0 0 100 60">
-            <text x="50" y="24" font-family="'Impact', sans-serif" font-size="22" fill="#ffffff" font-style="italic" text-anchor="middle" letter-spacing="1">GOGO!</text>
-            <text x="50" y="48" font-family="'Impact', sans-serif" font-size="13" fill="#ffcc00" text-anchor="middle" letter-spacing="2">CHANCE</text>
-          </svg>
-        </div>
-
-        <div class="led-group">
-          <div class="led-unit"><div class="led-label">CREDIT</div><div id="creditDisp" class="led-screen">50</div></div>
-          <div class="led-unit"><div class="led-label">COUNT</div><div id="countDisp" class="led-screen">0</div></div>
-          <div class="led-unit"><div class="led-label">PAYOUT</div><div id="payoutDisp" class="led-screen">0</div></div>
-          <div class="led-unit"><div class="led-label">SETTING</div><div id="settingDisp" class="led-screen green">6</div></div>
-        </div>
+    <!-- リール窓オーバーレイ -->
+    <div class="reels-overlay">
+      <div class="reels-container">
+        <div class="reel-column"><canvas id="reelCanvas0" class="reel-canvas"></canvas></div>
+        <div class="reel-column"><canvas id="reelCanvas1" class="reel-canvas"></canvas></div>
+        <div class="reel-column"><canvas id="reelCanvas2" class="reel-canvas"></canvas></div>
       </div>
     </div>
 
-    <div class="control-deck">
-      <button id="betBtn" class="bet-btn">3<br>BET</button>
-      <button id="startBtn" class="lever-btn" title="START"></button>
-      <div class="stop-btn-group">
-        <button id="stopBtn0" class="stop-btn" disabled>1</button>
-        <button id="stopBtn1" class="stop-btn" disabled>2</button>
-        <button id="stopBtn2" class="stop-btn" disabled>3</button>
-      </div>
-    </div>
+    <!-- 7セグLED表示 (CREDIT / COUNT / PAYOUT) -->
+    <div class="seg-overlay seg-credit" id="creditDisp">50</div>
+    <div class="seg-overlay seg-count" id="countDisp">0</div>
+    <div class="seg-overlay seg-payout" id="payoutDisp">0</div>
 
-    <div class="clown-bottom-panel">
-      <svg class="clown-svg-graphic" viewBox="0 0 300 110">
-        <g fill="#ffeb3b" opacity="0.8">
-          <polygon points="30,20 33,28 40,28 35,32 37,38 30,34 23,38 25,32 20,28 27,28"/>
-          <polygon points="270,20 273,28 280,28 275,32 277,38 270,34 263,38 265,32 260,28 267,28"/>
-        </g>
-        <path d="M 30,80 Q 150,105 270,80 L 260,60 Q 150,85 40,60 Z" fill="#e6a100" stroke="#fff" stroke-width="2"/>
-        <text x="150" y="80" font-family="'Impact', sans-serif" font-size="24" fill="#ffffff" text-anchor="middle" letter-spacing="2">I'm JUGGLER</text>
-        <g transform="translate(100, 5)">
-          <rect x="25" y="5" width="50" height="25" fill="#1976d2" stroke="#000" stroke-width="1.5"/>
-          <rect x="35" y="5" width="10" height="25" fill="#e51d24"/>
-          <rect x="55" y="5" width="10" height="25" fill="#e51d24"/>
-          <polygon points="50,8 52,12 56,12 53,15 54,19 50,17 46,19 47,15 44,12 48,12" fill="#fff"/>
-          <rect x="15" y="28" width="70" height="7" rx="3" fill="#1565c0" stroke="#000"/>
-          <circle cx="18" cy="45" r="12" fill="#ffeb3b"/>
-          <circle cx="82" cy="45" r="12" fill="#ffeb3b"/>
-          <circle cx="50" cy="50" r="20" fill="#ffffff" stroke="#333" stroke-width="1.5"/>
-          <circle cx="50" cy="50" r="7" fill="#e51d24"/>
-          <circle cx="40" cy="42" r="3" fill="#000"/>
-          <circle cx="60" cy="42" r="3" fill="#000"/>
-          <path d="M 35,60 Q 50,70 65,60" fill="none" stroke="#e51d24" stroke-width="3"/>
-        </g>
+    <!-- GOGO! CHANCE ランプ発光層 -->
+    <div class="gogo-overlay" id="gogoBox">
+      <svg class="gogo-svg" viewBox="0 0 100 60">
+        <polygon points="50,2 62,15 78,5 80,22 98,20 90,35 100,48 82,52 80,68 65,58 50,68 35,58 20,68 18,52 0,48 10,35 2,20 22,5 38,15" fill="#ff007f"/>
+        <text x="50" y="26" font-family="'Impact', sans-serif" font-size="22" fill="#ffffff" font-style="italic" text-anchor="middle" filter="drop-shadow(0 0 3px #fff)">GOGO!</text>
+        <text x="50" y="48" font-family="'Impact', sans-serif" font-size="12" fill="#ffcc00" text-anchor="middle">CHANCE</text>
       </svg>
     </div>
 
-    <div class="bottom-controls">
-      <button id="soundToggle" class="sound-btn">🔊 サウンド: ON</button>
-      <button id="settingToggle" class="setting-btn">⚙️ 設定: 6</button>
-    </div>
+    <!-- 透明タッチボタン（実機写真のボタン位置に重ね配置） -->
+    <button id="betBtn" class="touch-btn btn-bet" title="3BET"></button>
+    <button id="startBtn" class="touch-btn btn-lever" title="START"></button>
+    <button id="stopBtn0" class="touch-btn btn-stop1" title="STOP 1" disabled></button>
+    <button id="stopBtn1" class="touch-btn btn-stop2" title="STOP 2" disabled></button>
+    <button id="stopBtn2" class="touch-btn btn-stop3" title="STOP 3" disabled></button>
+  </div>
+
+  <!-- 下部補助コントロール -->
+  <div class="bottom-controls">
+    <button id="soundToggle" class="ctrl-btn">🔊 サウンド: ON</button>
+    <button id="settingToggle" class="ctrl-btn setting">⚙️ 設定: 6</button>
   </div>
 
   <script>
-    // --- スマホ操作プロテクト ---
-    document.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
-    document.addEventListener('gesturestart', function(e) { e.preventDefault(); });
-    document.addEventListener('dblclick', function(e) { e.preventDefault(); }, { passive: false });
-
-    // --- メインスロットエンジン ---
-    const REEL_STRIPS = [
-      ['BAR', 'GRAPE', 'RHINO', 'GRAPE', 'BELL', '7', 'RHINO', 'GRAPE', 'RHINO', 'GRAPE', 'BAR', 'CHERRY', 'GRAPE', 'RHINO', 'GRAPE', '7', 'CLOWN', 'GRAPE', 'RHINO', 'GRAPE', 'CHERRY'],
-      ['RHINO', 'BELL', 'GRAPE', 'CHERRY', 'RHINO', '7', 'GRAPE', 'CHERRY', 'RHINO', 'BELL', 'GRAPE', 'CHERRY', 'RHINO', 'BAR', 'GRAPE', 'CHERRY', 'CLOWN', 'RHINO', '7', 'GRAPE', 'CHERRY'],
-      ['GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', '7', 'BAR', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO']
-    ];
-
-    const SYMBOL_HEIGHT = 70;
-    const CANVAS_WIDTH = 100;
-    const REEL_SPEED_BASE = 33; // 1回転0.75秒の実機同期スピード
-
-    // P-WORLD記載 SアイムジャグラーEX 実機確率テーブル
-    const PROBABILITY_TABLE = {
-      1: { big: 1/273.1, reg: 1/439.8 },
-      2: { big: 1/269.7, reg: 1/399.6 },
-      3: { big: 1/269.7, reg: 1/330.7 },
-      4: { big: 1/259.0, reg: 1/315.1 },
-      5: { big: 1/259.0, reg: 1/255.0 },
-      6: { big: 1/255.0, reg: 1/255.0 }
-    };
-
-    let currentSetting = 6;
-    let credits = 50;
-    let betAmount = 0;
-    let gamesCount = 0;
-    let isSpinning = false;
-    let bonusState = null; // 'BIG' | 'REG' | null
-    let isPeka = false;
-    let pekaTiming = null; // 'LEVER' | 'STOP1' | 'STOP3_DOWN' | 'STOP3_UP'
-    let isReplay = false;
-    let soundOn = true;
-    let audioCtx = null;
-    let reels = [];
-
-    const symbolCanvasCache = {};
-
-    function decodeRLEToCanvas(symData) {
-      const cvs = document.createElement('canvas');
-      cvs.width = 128; cvs.height = 128;
-      const ctx = cvs.getContext('2d');
-      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, 128, 128);
-      if (!symData || !symData.rle) return cvs;
-
-      const imgData = ctx.createImageData(symData.w, symData.h);
-      const data = imgData.data;
-      const palette = symData.palette;
-      const chunks = symData.rle.split(',');
-
-      let pixelIndex = 0;
-      for (let i = 0; i < chunks.length; i++) {
-        const parts = chunks[i].split(':');
-        const colorIdx = parseInt(parts[0], 10);
-        const count = parseInt(parts[1], 10);
-        const hex = palette[colorIdx] || '#ffffff';
-
-        const r = parseInt(hex.substring(1, 3), 16) || 255;
-        const g = parseInt(hex.substring(3, 5), 16) || 255;
-        const b = parseInt(hex.substring(5, 7), 16) || 255;
-
-        for (let c = 0; c < count; c++) {
-          const idx = pixelIndex * 4;
-          data[idx] = r; data[idx+1] = g; data[idx+2] = b; data[idx+3] = 255;
-          pixelIndex++;
-        }
-      }
-      ctx.putImageData(imgData, symData.x, symData.y);
-      return cvs;
-    }
-
-    function initSymbolCache() {
-      const ALL_IDS = ['7', 'BAR', 'GRAPE', 'CHERRY', 'BELL', 'RHINO', 'CLOWN'];
-      const dataStore = window.SLOT_SYMBOLS_DATA || {};
-
-      ALL_IDS.forEach(id => {
-        if (dataStore[id]) {
-          symbolCanvasCache[id] = { canvas: decodeRLEToCanvas(dataStore[id]), meta: dataStore[id] };
-        } else {
-          const cvs = document.createElement('canvas');
-          cvs.width = 128; cvs.height = 128;
-          const ctx = cvs.getContext('2d');
-          ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, 128, 128);
-          ctx.fillStyle = '#000000'; ctx.font = 'bold 24px sans-serif';
-          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          ctx.fillText(id, 64, 64);
-          symbolCanvasCache[id] = { canvas: cvs, meta: { x: 0, y: 0, w: 128, h: 128 } };
-        }
-      });
-    }
-
-    // キャンバス描画（7・BARの回転中透過面発光＆強いバックライト演出）
-    function drawSymbol(ctx, type, y, isReelSpinning = false) {
-      const cached = symbolCanvasCache[type];
-      ctx.save();
-      ctx.translate(0, y);
-
-      if (isReelSpinning && type === '7') {
-        ctx.fillStyle = "rgba(255, 210, 210, 0.9)";
-      } else if (isReelSpinning && type === 'BAR') {
-        ctx.fillStyle = "rgba(255, 255, 255, 1.0)";
-      } else {
-        ctx.fillStyle = "#ffffff";
-      }
-      ctx.fillRect(0, 0, CANVAS_WIDTH, SYMBOL_HEIGHT);
-
-      if (cached) {
-        let maxW = (type === '7' || type === 'BAR') ? CANVAS_WIDTH * 0.88 : CANVAS_WIDTH * 0.45;
-        let maxH = (type === '7' || type === 'BAR') ? SYMBOL_HEIGHT * 0.88 : SYMBOL_HEIGHT * 0.50;
-
-        const scale = Math.min(maxW / cached.meta.w, maxH / cached.meta.h);
-        const drawW = cached.meta.w * scale;
-        const drawH = cached.meta.h * scale;
-        const drawX = (CANVAS_WIDTH - drawW) / 2;
-        const drawY = (SYMBOL_HEIGHT - drawH) / 2;
-
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-
-        if (isReelSpinning) {
-          if (type === '7') {
-            ctx.shadowColor = 'rgba(255, 0, 0, 1.0)';
-            ctx.shadowBlur = 20;
-            ctx.filter = 'brightness(1.3)';
-          } else if (type === 'BAR') {
-            ctx.shadowColor = 'rgba(255, 255, 255, 1.0)';
-            ctx.shadowBlur = 18;
-            ctx.filter = 'brightness(1.3)';
-          } else {
-            ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
-          }
-        } else {
-          ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
-        }
-
-        ctx.drawImage(cached.canvas, cached.meta.x, cached.meta.y, cached.meta.w, cached.meta.h, drawX, drawY, drawW, drawH);
-      }
-      ctx.restore();
-    }
-
-    function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
-
-    function playSound(type) {
-      if (!soundOn || !audioCtx) return;
-      const now = audioCtx.currentTime;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.connect(gain); gain.connect(audioCtx.destination);
-
-      if (type === 'lever') {
-        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(280, now); osc.frequency.exponentialRampToValueAtTime(50, now + 0.08);
-        gain.gain.setValueAtTime(0.3, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
-        osc.start(now); osc.stop(now + 0.08);
-      } else if (type === 'stop') {
-        osc.type = 'triangle'; osc.frequency.setValueAtTime(140, now); osc.frequency.exponentialRampToValueAtTime(30, now + 0.06);
-        gain.gain.setValueAtTime(0.4, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.06);
-        osc.start(now); osc.stop(now + 0.06);
-      } else if (type === 'gako') {
-        osc.type = 'square'; osc.frequency.setValueAtTime(750, now); osc.frequency.exponentialRampToValueAtTime(90, now + 0.14);
-        gain.gain.setValueAtTime(0.8, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.14);
-        osc.start(now); osc.stop(now + 0.14);
-      } else if (type === 'pay') {
-        osc.type = 'sine'; osc.frequency.setValueAtTime(880, now); osc.frequency.setValueAtTime(1760, now + 0.04);
-        gain.gain.setValueAtTime(0.2, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
-        osc.start(now); osc.stop(now + 0.08);
-      }
-    }
-
-    function updateDisplays(payout = 0) {
-      if (credits < 3) credits = 50; // オートチャージ
-      const cEl = document.getElementById('creditDisp');
-      const gEl = document.getElementById('countDisp');
-      const pEl = document.getElementById('payoutDisp');
-      const sEl = document.getElementById('settingDisp');
-      if (cEl) cEl.textContent = credits;
-      if (gEl) gEl.textContent = gamesCount;
-      if (pEl) pEl.textContent = isReplay ? 'REPLAY' : payout;
-      if (sEl) sEl.textContent = currentSetting;
-    }
-
-    // 告知ライト照射処理
-    function triggerPeka() {
-      if (isPeka) return;
-      isPeka = true;
-      const gogoBox = document.getElementById('gogoBox');
-      if (gogoBox) gogoBox.classList.add('peka');
-      playSound('gako');
-    }
-
-    window.JUGGLER_ENGINE = {
-      isInitialized: false,
-      init: function() {
-        if (this.isInitialized) return;
-        initSymbolCache();
-
-        reels = REEL_STRIPS.map((strip, idx) => {
-          const canvas = document.getElementById(`reelCanvas${idx}`);
-          if (!canvas) return null;
-          canvas.width = CANVAS_WIDTH;
-          canvas.height = SYMBOL_HEIGHT * strip.length * 3;
-          const ctx = canvas.getContext('2d');
-          const tripleStrip = [...strip, ...strip, ...strip];
-          
-          tripleStrip.forEach((sym, i) => { drawSymbol(ctx, sym, i * SYMBOL_HEIGHT, false); });
-          const currentIdx = Math.floor(Math.random() * strip.length);
-          const initialPos = currentIdx * SYMBOL_HEIGHT;
-          canvas.style.transform = `translateY(-${initialPos}px)`;
-
-          return {
-            id: idx, strip: strip, canvas: canvas, ctx: ctx,
-            currentIndex: currentIdx, isSpinning: false, isStopping: false,
-            speed: 0, pos: initialPos, targetPos: 0, animId: null
-          };
-        }).filter(Boolean);
-
-        updateDisplays();
-        this.bindEvents();
-        this.isInitialized = true;
-      },
-
-      renderReelCanvas: function(reel, isSpinning) {
-        const tripleStrip = [...reel.strip, ...reel.strip, ...reel.strip];
-        reel.ctx.clearRect(0, 0, reel.canvas.width, reel.canvas.height);
-        tripleStrip.forEach((sym, i) => { drawSymbol(reel.ctx, sym, i * SYMBOL_HEIGHT, isSpinning); });
-      },
-
-      bindEvents: function() {
-        const betBtn = document.getElementById('betBtn');
-        const startBtn = document.getElementById('startBtn');
-        const stopBtns = [
-          document.getElementById('stopBtn0'),
-          document.getElementById('stopBtn1'),
-          document.getElementById('stopBtn2')
-        ];
-        const soundToggle = document.getElementById('soundToggle');
-        const settingToggle = document.getElementById('settingToggle');
-
-        const attachFastTouch = (elem, handlerOnDown, handlerOnUp = null) => {
-          if (!elem) return;
-          let handled = false;
-          
-          const downTrigger = (e) => {
-            if (e.type === 'touchstart' || e.type === 'pointerdown') handled = true;
-            else if (e.type === 'click' && handled) { handled = false; return; }
-            if (handlerOnDown) handlerOnDown(e);
-          };
-
-          const upTrigger = (e) => {
-            if (handlerOnUp) handlerOnUp(e);
-          };
-
-          elem.addEventListener('touchstart', downTrigger, { passive: false });
-          elem.addEventListener('pointerdown', downTrigger);
-          elem.addEventListener('click', downTrigger);
-
-          if (handlerOnUp) {
-            elem.addEventListener('touchend', upTrigger, { passive: false });
-            elem.addEventListener('pointerup', upTrigger);
-            elem.addEventListener('mouseup', upTrigger);
-          }
-        };
-
-        attachFastTouch(betBtn, () => {
-          initAudio();
-          if (isSpinning || betAmount === 3) return;
-          if (credits < 3) credits = 50; 
-          credits -= 3; betAmount = 3; playSound('pay'); updateDisplays();
-        });
-
-        attachFastTouch(startBtn, () => {
-          initAudio();
-          if (isSpinning) return;
-          
-          if (!isReplay) {
-            if (credits < 3) credits = 50; 
-            if (betAmount < 3) {
-              credits -= 3; betAmount = 3;
-            }
-          } else {
-            betAmount = 3; // リプレイ時はBET自動消費なし
-            isReplay = false;
-          }
-
-          gamesCount++; isSpinning = true; updateDisplays(0); playSound('lever');
-
-          // 実機設定確率テーブルに基づくボーナス抽選
-          if (!bonusState) {
-            const prob = PROBABILITY_TABLE[currentSetting];
-            const rand = Math.random();
-            if (rand < prob.big) {
-              bonusState = 'BIG';
-            } else if (rand < (prob.big + prob.reg)) {
-              bonusState = 'REG';
-            }
-
-            // 告知タイミング決定 (先告知 25% : 後告知 75%)
-            if (bonusState) {
-              const pekaRand = Math.random();
-              if (pekaRand < 0.125) pekaTiming = 'LEVER';
-              else if (pekaRand < 0.1875) pekaTiming = 'STOP1';
-              else if (pekaRand < 0.25) pekaTiming = 'STOP3_DOWN';
-              else pekaTiming = 'STOP3_UP'; // 後告知 (75%)
-            }
-          }
-
-          if (bonusState && pekaTiming === 'LEVER') {
-            triggerPeka();
-          }
-
-          reels.forEach((reel, i) => {
-            reel.isSpinning = true;
-            reel.isStopping = false;
-            reel.speed = REEL_SPEED_BASE; 
-            this.renderReelCanvas(reel, true); 
-            this.spinReel(reel);
-            if (stopBtns[i]) stopBtns[i].disabled = false;
-          });
-          updateDisplays();
-        });
-
-        stopBtns.forEach((btn, index) => {
-          if (!btn) return;
-
-          attachFastTouch(btn, 
-            // 押した瞬間の処理 (DOWN)
-            (e) => {
-              if (e.cancelable) e.preventDefault();
-              const reel = reels[index];
-              if (!reel.isSpinning || reel.isStopping) return;
-              
-              btn.disabled = true;
-              playSound('stop');
-
-              // 第1停止時の先告知
-              if (index === 0 && bonusState && pekaTiming === 'STOP1') {
-                triggerPeka();
-              }
-              // 第3停止押下時の告知
-              if (index === 2 && bonusState && pekaTiming === 'STOP3_DOWN') {
-                triggerPeka();
-              }
-
-              const maxPos = reel.strip.length * SYMBOL_HEIGHT;
-              let baseIdx = Math.floor(reel.pos / SYMBOL_HEIGHT) % reel.strip.length;
-              if (baseIdx < 0) baseIdx += reel.strip.length;
-              
-              let targetIdx = baseIdx;
-
-              // 5ライン枠内引き込みアシスト制御 (0〜4コマすべり)
-              if (bonusState) {
-                const targetSym = bonusState === 'BIG' ? '7' : (index === 2 ? 'BAR' : '7');
-                let found = false;
-
-                for (let slip = 0; slip <= 4; slip++) {
-                  const checkTopIdx = (baseIdx - slip + reel.strip.length) % reel.strip.length;
-                  for (let offset = 0; offset <= 2; offset++) {
-                    const checkSymIdx = (checkTopIdx + offset) % reel.strip.length;
-                    if (reel.strip[checkSymIdx] === targetSym) {
-                      targetIdx = checkTopIdx;
-                      found = true;
-                      break;
-                    }
-                  }
-                  if (found) break;
-                }
-                if (!found) { targetIdx = baseIdx; }
-              } else {
-                targetIdx = baseIdx;
-              }
-
-              reel.currentIndex = targetIdx;
-              reel.targetPos = targetIdx * SYMBOL_HEIGHT;
-              reel.isStopping = true;
-            },
-            // 離した瞬間の処理 (UP - 後告知用)
-            (e) => {
-              if (index === 2 && bonusState && pekaTiming === 'STOP3_UP') {
-                triggerPeka();
-              }
-            }
-          );
-        });
-
-        if (soundToggle) {
-          soundToggle.onclick = () => {
-            soundOn = !soundOn;
-            soundToggle.textContent = soundOn ? '🔊 サウンド: ON' : '🔇 サウンド: OFF';
-          };
-        }
-
-        if (settingToggle) {
-          settingToggle.onclick = () => {
-            if (isSpinning) return;
-            currentSetting = (currentSetting % 6) + 1;
-            settingToggle.textContent = `⚙️ 設定: ${currentSetting}`;
-            updateDisplays();
-          };
-        }
-      },
-
-      spinReel: function(reel) {
-        const maxPos = reel.strip.length * SYMBOL_HEIGHT;
-        const animate = () => {
-          if (!reel.isSpinning) return;
-          
-          if (reel.isStopping) {
-            let dist = (reel.pos - reel.targetPos + maxPos) % maxPos;
-            
-            if (dist <= reel.speed || dist < 2) {
-              reel.pos = reel.targetPos;
-              reel.isSpinning = false;
-              reel.isStopping = false;
-              cancelAnimationFrame(reel.animId);
-              reel.canvas.style.transform = `translateY(-${reel.pos}px)`;
-              this.renderReelCanvas(reel, false);
-
-              if (reels.every(r => !r.isSpinning)) {
-                this.onAllStopped();
-              }
-              return;
-            } else {
-              let step = Math.min(reel.speed, dist);
-              reel.pos = (reel.pos - step + maxPos) % maxPos;
-            }
-          } else {
-            reel.pos = (reel.pos - reel.speed + maxPos) % maxPos;
-          }
-
-          reel.canvas.style.transform = `translateY(-${reel.pos}px)`;
-          reel.animId = requestAnimationFrame(animate);
-        };
-        animate();
-      },
-
-      // --- 実機 (SアイムジャグラーEX) 5ライン＆実機配当表準拠 ---
-      onAllStopped: function() {
-        isSpinning = false;
-        betAmount = 0;
-        const gogoBox = document.getElementById('gogoBox');
-
-        const getSym = (rIdx, offset) => {
-          const strip = reels[rIdx].strip;
-          return strip[(reels[rIdx].currentIndex + offset + strip.length) % strip.length];
-        };
-
-        const lines = [
-          [getSym(0, 0), getSym(1, 0), getSym(2, 0)], // 1: 上段
-          [getSym(0, 1), getSym(1, 1), getSym(2, 1)], // 2: 中段
-          [getSym(0, 2), getSym(1, 2), getSym(2, 2)], // 3: 下段
-          [getSym(0, 0), getSym(1, 1), getSym(2, 2)], // 4: 右下がり
-          [getSym(0, 2), getSym(1, 1), getSym(2, 0)]  // 5: 右上がり
-        ];
-
-        let payout = 0;
-        let isBigWin = false;
-        let isRegWin = false;
-        let isReplayWin = false;
-
-        lines.forEach(line => {
-          if (line.every(s => s === '7')) {
-            isBigWin = true;
-          } else if (line[0] === '7' && line[1] === '7' && line[2] === 'BAR') {
-            isRegWin = true;
-          } else if (line.every(s => s === 'RHINO')) {
-            isReplayWin = true; // ツノッチはリプレイ
-          } else {
-            if (line.every(s => s === 'GRAPE')) payout = Math.max(payout, 8); // ぶどう 8枚
-            else if (line[0] === 'CHERRY') payout = Math.max(payout, 2);      // チェリー 2枚
-            else if (line.every(s => s === 'BELL')) payout = Math.max(payout, 14);   // ベル 14枚
-            else if (line.every(s => s === 'CLOWN')) payout = Math.max(payout, 10);  // ピエロ 10枚
-          }
-        });
-
-        // 実機純増枚数 (BIG 約252枚 / REG 約96枚)
-        if (isBigWin) {
-          payout = 252; bonusState = null;
-          setTimeout(() => alert('🎉 BIG BONUS! (+252枚)'), 100);
-        } else if (isRegWin) {
-          payout = 96; bonusState = null;
-          setTimeout(() => alert('✨ REG BONUS! (+96枚)'), 100);
-        } else if (isReplayWin) {
-          isReplay = true; // リプレイ当選
-          playSound('pay');
-        }
-
-        if (!bonusState && payout >= 90 && gogoBox) {
-          isPeka = false;
-          gogoBox.classList.remove('peka');
-        }
-
-        if (payout > 0) {
-          credits += payout;
-          playSound('pay');
-        }
-
-        updateDisplays(payout);
-      }
-    };
-
+    // エンジンの安全な自動起動
     function bootEngine() {
       if (window.JUGGLER_ENGINE && !window.JUGGLER_ENGINE.isInitialized) {
         window.JUGGLER_ENGINE.init();
