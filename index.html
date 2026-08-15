@@ -10,6 +10,7 @@
       --cabinet-silver: linear-gradient(180deg, #e6e6e6 0%, #b8b8b8 40%, #8a8a8a 70%, #5e5e5e 100%);
       --gold: #f5cf47;
       --led-red: #ff1111;
+      --led-green: #00ff66;
     }
 
     * {
@@ -246,14 +247,18 @@
       to { transform: scale(1.03); }
     }
 
-    .led-group { display: flex; gap: 8px; }
+    .led-group { display: flex; gap: 6px; }
     .led-unit { display: flex; flex-direction: column; align-items: center; }
     .led-label { font-size: 8px; color: var(--gold); font-weight: 900; margin-bottom: 2px; }
     .led-screen {
       background: #000; border: 1px solid #444; border-radius: 3px;
-      padding: 2px 5px; font-family: 'Courier New', Courier, monospace;
-      font-size: 17px; font-weight: bold; color: var(--led-red);
-      text-shadow: 0 0 6px var(--led-red); min-width: 38px; text-align: right;
+      padding: 2px 4px; font-family: 'Courier New', Courier, monospace;
+      font-size: 15px; font-weight: bold; color: var(--led-red);
+      text-shadow: 0 0 6px var(--led-red); min-width: 32px; text-align: right;
+    }
+    .led-screen.green {
+      color: var(--led-green);
+      text-shadow: 0 0 6px var(--led-green);
     }
 
     /* 操作デッキ */
@@ -300,22 +305,34 @@
     .clown-bottom-panel {
       width: 100%; background: linear-gradient(180deg, #d31820 0%, #7d080d 100%);
       border: 3px solid var(--gold); border-radius: 6px;
-      margin-top: 6px; padding: 10px 6px;
+      margin-top: 6px; padding: 8px 6px;
       display: flex; flex-direction: column; align-items: center;
       box-shadow: inset 0 0 12px rgba(0,0,0,0.7);
     }
-    .clown-svg-graphic { width: 100%; max-height: 110px; }
-    .sound-btn { margin-top: 6px; background: #222; border: 1px solid #555; color: #ccc; padding: 4px 12px; border-radius: 12px; font-size: 11px; cursor: pointer; }
+    .clown-svg-graphic { width: 100%; max-height: 100px; }
+    
+    .bottom-controls {
+      display: flex;
+      gap: 12px;
+      margin-top: 6px;
+      align-items: center;
+    }
+
+    .sound-btn, .setting-btn {
+      background: #222; border: 1px solid #555; color: #ccc;
+      padding: 4px 12px; border-radius: 12px; font-size: 11px; cursor: pointer;
+    }
+    .setting-btn { color: var(--gold); border-color: var(--gold); font-weight: bold; }
   </style>
 
-  <!-- 図柄データのみ外部から読み込み -->
-  <script src="./symbol_7.js?v=5"></script>
-  <script src="./symbol_BAR.js?v=5"></script>
-  <script src="./symbol_GRAPE.js?v=5"></script>
-  <script src="./symbol_CHERRY.js?v=5"></script>
-  <script src="./symbol_BELL.js?v=5"></script>
-  <script src="./symbol_RHINO.js?v=5"></script>
-  <script src="./symbol_CLOWN.js?v=5"></script>
+  <!-- 図柄データのみ外部ファイル参照 -->
+  <script src="./symbol_7.js?v=6"></script>
+  <script src="./symbol_BAR.js?v=6"></script>
+  <script src="./symbol_GRAPE.js?v=6"></script>
+  <script src="./symbol_CHERRY.js?v=6"></script>
+  <script src="./symbol_BELL.js?v=6"></script>
+  <script src="./symbol_RHINO.js?v=6"></script>
+  <script src="./symbol_CLOWN.js?v=6"></script>
 </head>
 <body>
 
@@ -362,6 +379,7 @@
           <div class="led-unit"><div class="led-label">CREDIT</div><div id="creditDisp" class="led-screen">50</div></div>
           <div class="led-unit"><div class="led-label">COUNT</div><div id="countDisp" class="led-screen">0</div></div>
           <div class="led-unit"><div class="led-label">PAYOUT</div><div id="payoutDisp" class="led-screen">0</div></div>
+          <div class="led-unit"><div class="led-label">SETTING</div><div id="settingDisp" class="led-screen green">6</div></div>
         </div>
       </div>
     </div>
@@ -401,7 +419,10 @@
       </svg>
     </div>
 
-    <button id="soundToggle" class="sound-btn">🔊 サウンド: ON</button>
+    <div class="bottom-controls">
+      <button id="soundToggle" class="sound-btn">🔊 サウンド: ON</button>
+      <button id="settingToggle" class="setting-btn">⚙️ 設定: 6</button>
+    </div>
   </div>
 
   <script>
@@ -410,7 +431,7 @@
     document.addEventListener('gesturestart', function(e) { e.preventDefault(); });
     document.addEventListener('dblclick', function(e) { e.preventDefault(); }, { passive: false });
 
-    // --- メインエンジンロジック ---
+    // --- メインスロットエンジン ---
     const REEL_STRIPS = [
       ['BAR', 'GRAPE', 'RHINO', 'GRAPE', 'BELL', '7', 'RHINO', 'GRAPE', 'RHINO', 'GRAPE', 'BAR', 'CHERRY', 'GRAPE', 'RHINO', 'GRAPE', '7', 'CLOWN', 'GRAPE', 'RHINO', 'GRAPE', 'CHERRY'],
       ['RHINO', 'BELL', 'GRAPE', 'CHERRY', 'RHINO', '7', 'GRAPE', 'CHERRY', 'RHINO', 'BELL', 'GRAPE', 'CHERRY', 'RHINO', 'BAR', 'GRAPE', 'CHERRY', 'CLOWN', 'RHINO', '7', 'GRAPE', 'CHERRY'],
@@ -421,12 +442,25 @@
     const CANVAS_WIDTH = 100;
     const REEL_SPEED_BASE = 33; // 1回転0.75秒の実機同期スピード
 
+    // P-WORLD記載 SアイムジャグラーEX 実機確率テーブル
+    const PROBABILITY_TABLE = {
+      1: { big: 1/273.1, reg: 1/439.8 },
+      2: { big: 1/269.7, reg: 1/399.6 },
+      3: { big: 1/269.7, reg: 1/330.7 },
+      4: { big: 1/259.0, reg: 1/315.1 },
+      5: { big: 1/259.0, reg: 1/255.0 },
+      6: { big: 1/255.0, reg: 1/255.0 }
+    };
+
+    let currentSetting = 6;
     let credits = 50;
     let betAmount = 0;
     let gamesCount = 0;
     let isSpinning = false;
-    let bonusState = null;
+    let bonusState = null; // 'BIG' | 'REG' | null
     let isPeka = false;
+    let pekaTiming = null; // 'LEVER' | 'STOP1' | 'STOP3_DOWN' | 'STOP3_UP'
+    let isReplay = false;
     let soundOn = true;
     let audioCtx = null;
     let reels = [];
@@ -492,11 +526,10 @@
       ctx.save();
       ctx.translate(0, y);
 
-      // コマ背景（回転中の7/BARは後ろから強い光が面で透過する演出）
       if (isReelSpinning && type === '7') {
-        ctx.fillStyle = "rgba(255, 210, 210, 0.9)"; // 鮮やかな赤透過光
+        ctx.fillStyle = "rgba(255, 210, 210, 0.9)";
       } else if (isReelSpinning && type === 'BAR') {
-        ctx.fillStyle = "rgba(255, 255, 255, 1.0)"; // 白強光
+        ctx.fillStyle = "rgba(255, 255, 255, 1.0)";
       } else {
         ctx.fillStyle = "#ffffff";
       }
@@ -515,7 +548,6 @@
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
 
-        // 回転中：7・BAR本体にグローシャドウと1.3倍の明るさを付与
         if (isReelSpinning) {
           if (type === '7') {
             ctx.shadowColor = 'rgba(255, 0, 0, 1.0)';
@@ -525,7 +557,11 @@
             ctx.shadowColor = 'rgba(255, 255, 255, 1.0)';
             ctx.shadowBlur = 18;
             ctx.filter = 'brightness(1.3)';
+          } else {
+            ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
           }
+        } else {
+          ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
         }
 
         ctx.drawImage(cached.canvas, cached.meta.x, cached.meta.y, cached.meta.w, cached.meta.h, drawX, drawY, drawW, drawH);
@@ -561,15 +597,25 @@
       }
     }
 
-    // オートチャージ（無制限プレイ）
     function updateDisplays(payout = 0) {
-      if (credits < 3) credits = 50;
+      if (credits < 3) credits = 50; // オートチャージ
       const cEl = document.getElementById('creditDisp');
       const gEl = document.getElementById('countDisp');
       const pEl = document.getElementById('payoutDisp');
+      const sEl = document.getElementById('settingDisp');
       if (cEl) cEl.textContent = credits;
       if (gEl) gEl.textContent = gamesCount;
-      if (pEl) pEl.textContent = payout;
+      if (pEl) pEl.textContent = isReplay ? 'REPLAY' : payout;
+      if (sEl) sEl.textContent = currentSetting;
+    }
+
+    // 告知ライト照射処理
+    function triggerPeka() {
+      if (isPeka) return;
+      isPeka = true;
+      const gogoBox = document.getElementById('gogoBox');
+      if (gogoBox) gogoBox.classList.add('peka');
+      playSound('gako');
     }
 
     window.JUGGLER_ENGINE = {
@@ -618,18 +664,31 @@
           document.getElementById('stopBtn2')
         ];
         const soundToggle = document.getElementById('soundToggle');
+        const settingToggle = document.getElementById('settingToggle');
 
-        // タッチ即時反応（遅延ゼロ化ヘルパー）
-        const attachFastTouch = (elem, handler) => {
+        const attachFastTouch = (elem, handlerOnDown, handlerOnUp = null) => {
           if (!elem) return;
           let handled = false;
-          const trigger = (e) => {
-            if (e.type === 'touchstart') handled = true;
+          
+          const downTrigger = (e) => {
+            if (e.type === 'touchstart' || e.type === 'pointerdown') handled = true;
             else if (e.type === 'click' && handled) { handled = false; return; }
-            handler(e);
+            if (handlerOnDown) handlerOnDown(e);
           };
-          elem.addEventListener('touchstart', trigger, { passive: false });
-          elem.addEventListener('click', trigger);
+
+          const upTrigger = (e) => {
+            if (handlerOnUp) handlerOnUp(e);
+          };
+
+          elem.addEventListener('touchstart', downTrigger, { passive: false });
+          elem.addEventListener('pointerdown', downTrigger);
+          elem.addEventListener('click', downTrigger);
+
+          if (handlerOnUp) {
+            elem.addEventListener('touchend', upTrigger, { passive: false });
+            elem.addEventListener('pointerup', upTrigger);
+            elem.addEventListener('mouseup', upTrigger);
+          }
         };
 
         attachFastTouch(betBtn, () => {
@@ -642,24 +701,41 @@
         attachFastTouch(startBtn, () => {
           initAudio();
           if (isSpinning) return;
-          if (credits < 3) credits = 50; 
           
-          if (betAmount < 3) {
-            credits -= 3; betAmount = 3;
+          if (!isReplay) {
+            if (credits < 3) credits = 50; 
+            if (betAmount < 3) {
+              credits -= 3; betAmount = 3;
+            }
+          } else {
+            betAmount = 3; // リプレイ時はBET自動消費なし
+            isReplay = false;
           }
+
           gamesCount++; isSpinning = true; updateDisplays(0); playSound('lever');
 
+          // 実機設定確率テーブルに基づくボーナス抽選
           if (!bonusState) {
+            const prob = PROBABILITY_TABLE[currentSetting];
             const rand = Math.random();
-            if (rand < (1 / 255)) bonusState = 'BIG';
-            else if (rand < (2 / 255)) bonusState = 'REG';
+            if (rand < prob.big) {
+              bonusState = 'BIG';
+            } else if (rand < (prob.big + prob.reg)) {
+              bonusState = 'REG';
+            }
+
+            // 告知タイミング決定 (先告知 25% : 後告知 75%)
+            if (bonusState) {
+              const pekaRand = Math.random();
+              if (pekaRand < 0.125) pekaTiming = 'LEVER';
+              else if (pekaRand < 0.1875) pekaTiming = 'STOP1';
+              else if (pekaRand < 0.25) pekaTiming = 'STOP3_DOWN';
+              else pekaTiming = 'STOP3_UP'; // 後告知 (75%)
+            }
           }
 
-          const gogoBox = document.getElementById('gogoBox');
-          if (bonusState && !isPeka && Math.random() < 0.25) {
-            isPeka = true;
-            if (gogoBox) gogoBox.classList.add('peka');
-            playSound('gako');
+          if (bonusState && pekaTiming === 'LEVER') {
+            triggerPeka();
           }
 
           reels.forEach((reel, i) => {
@@ -676,57 +752,79 @@
         stopBtns.forEach((btn, index) => {
           if (!btn) return;
 
-          attachFastTouch(btn, (e) => {
-            if (e.cancelable) e.preventDefault();
-            const reel = reels[index];
-            if (!reel.isSpinning || reel.isStopping) return;
-            
-            btn.disabled = true;
-            playSound('stop');
+          attachFastTouch(btn, 
+            // 押した瞬間の処理 (DOWN)
+            (e) => {
+              if (e.cancelable) e.preventDefault();
+              const reel = reels[index];
+              if (!reel.isSpinning || reel.isStopping) return;
+              
+              btn.disabled = true;
+              playSound('stop');
 
-            // 遅延ゼロの現在コマ基準計算 (Math.floor)
-            const maxPos = reel.strip.length * SYMBOL_HEIGHT;
-            let baseIdx = Math.floor(reel.pos / SYMBOL_HEIGHT) % reel.strip.length;
-            if (baseIdx < 0) baseIdx += reel.strip.length;
-            
-            let targetIdx = baseIdx;
-
-            // --- ボーナス成立時の5ライン枠内引き込みアシスト制御 (0〜4コマすべり) ---
-            if (bonusState) {
-              const targetSym = bonusState === 'BIG' ? '7' : (index === 2 ? 'BAR' : '7');
-              let found = false;
-
-              // ボタンを押した位置から0〜4コマすべりの範囲で、枠内(上段・中段・下段)のいずれかにターゲット図柄が入るか探す
-              for (let slip = 0; slip <= 4; slip++) {
-                const checkTopIdx = (baseIdx - slip + reel.strip.length) % reel.strip.length;
-                
-                // 枠内の3コマ（上段: offset 0, 中段: offset 1, 下段: offset 2）にターゲットがあるか
-                for (let offset = 0; offset <= 2; offset++) {
-                  const checkSymIdx = (checkTopIdx + offset) % reel.strip.length;
-                  if (reel.strip[checkSymIdx] === targetSym) {
-                    targetIdx = checkTopIdx;
-                    found = true;
-                    break;
-                  }
-                }
-                if (found) break;
+              // 第1停止時の先告知
+              if (index === 0 && bonusState && pekaTiming === 'STOP1') {
+                triggerPeka();
               }
-              if (!found) { targetIdx = baseIdx; }
-            } else {
-              targetIdx = baseIdx;
-            }
+              // 第3停止押下時の告知
+              if (index === 2 && bonusState && pekaTiming === 'STOP3_DOWN') {
+                triggerPeka();
+              }
 
-            // 最大4コマ（0.15秒以内）で確実にピタッと吸着停止
-            reel.currentIndex = targetIdx;
-            reel.targetPos = targetIdx * SYMBOL_HEIGHT;
-            reel.isStopping = true;
-          });
+              const maxPos = reel.strip.length * SYMBOL_HEIGHT;
+              let baseIdx = Math.floor(reel.pos / SYMBOL_HEIGHT) % reel.strip.length;
+              if (baseIdx < 0) baseIdx += reel.strip.length;
+              
+              let targetIdx = baseIdx;
+
+              // 5ライン枠内引き込みアシスト制御 (0〜4コマすべり)
+              if (bonusState) {
+                const targetSym = bonusState === 'BIG' ? '7' : (index === 2 ? 'BAR' : '7');
+                let found = false;
+
+                for (let slip = 0; slip <= 4; slip++) {
+                  const checkTopIdx = (baseIdx - slip + reel.strip.length) % reel.strip.length;
+                  for (let offset = 0; offset <= 2; offset++) {
+                    const checkSymIdx = (checkTopIdx + offset) % reel.strip.length;
+                    if (reel.strip[checkSymIdx] === targetSym) {
+                      targetIdx = checkTopIdx;
+                      found = true;
+                      break;
+                    }
+                  }
+                  if (found) break;
+                }
+                if (!found) { targetIdx = baseIdx; }
+              } else {
+                targetIdx = baseIdx;
+              }
+
+              reel.currentIndex = targetIdx;
+              reel.targetPos = targetIdx * SYMBOL_HEIGHT;
+              reel.isStopping = true;
+            },
+            // 離した瞬間の処理 (UP - 後告知用)
+            (e) => {
+              if (index === 2 && bonusState && pekaTiming === 'STOP3_UP') {
+                triggerPeka();
+              }
+            }
+          );
         });
 
         if (soundToggle) {
           soundToggle.onclick = () => {
             soundOn = !soundOn;
             soundToggle.textContent = soundOn ? '🔊 サウンド: ON' : '🔇 サウンド: OFF';
+          };
+        }
+
+        if (settingToggle) {
+          settingToggle.onclick = () => {
+            if (isSpinning) return;
+            currentSetting = (currentSetting % 6) + 1;
+            settingToggle.textContent = `⚙️ 設定: ${currentSetting}`;
+            updateDisplays();
           };
         }
       },
@@ -745,7 +843,7 @@
               reel.isStopping = false;
               cancelAnimationFrame(reel.animId);
               reel.canvas.style.transform = `translateY(-${reel.pos}px)`;
-              this.renderReelCanvas(reel, false); // 発光OFFの静止画へ
+              this.renderReelCanvas(reel, false);
 
               if (reels.every(r => !r.isSpinning)) {
                 this.onAllStopped();
@@ -765,59 +863,58 @@
         animate();
       },
 
-      // --- 実機準拠「全5ライン（上・中・下・ナナメ2本）判定」ロジック ---
+      // --- 実機 (SアイムジャグラーEX) 5ライン＆実機配当表準拠 ---
       onAllStopped: function() {
         isSpinning = false;
         betAmount = 0;
         const gogoBox = document.getElementById('gogoBox');
-
-        if (bonusState && !isPeka) {
-          isPeka = true;
-          if (gogoBox) gogoBox.classList.add('peka');
-          playSound('gako');
-        }
 
         const getSym = (rIdx, offset) => {
           const strip = reels[rIdx].strip;
           return strip[(reels[rIdx].currentIndex + offset + strip.length) % strip.length];
         };
 
-        // 5つの有効判定ライン
         const lines = [
-          [getSym(0, 0), getSym(1, 0), getSym(2, 0)], // 1: 上段横
-          [getSym(0, 1), getSym(1, 1), getSym(2, 1)], // 2: 中段横
-          [getSym(0, 2), getSym(1, 2), getSym(2, 2)], // 3: 下段横
-          [getSym(0, 0), getSym(1, 1), getSym(2, 2)], // 4: 右下がりナナメ
-          [getSym(0, 2), getSym(1, 1), getSym(2, 0)]  // 5: 右上がりナナメ
+          [getSym(0, 0), getSym(1, 0), getSym(2, 0)], // 1: 上段
+          [getSym(0, 1), getSym(1, 1), getSym(2, 1)], // 2: 中段
+          [getSym(0, 2), getSym(1, 2), getSym(2, 2)], // 3: 下段
+          [getSym(0, 0), getSym(1, 1), getSym(2, 2)], // 4: 右下がり
+          [getSym(0, 2), getSym(1, 1), getSym(2, 0)]  // 5: 右上がり
         ];
 
         let payout = 0;
         let isBigWin = false;
         let isRegWin = false;
+        let isReplayWin = false;
 
-        // 5ラインをすべて走査
         lines.forEach(line => {
           if (line.every(s => s === '7')) {
             isBigWin = true;
           } else if (line[0] === '7' && line[1] === '7' && line[2] === 'BAR') {
             isRegWin = true;
+          } else if (line.every(s => s === 'RHINO')) {
+            isReplayWin = true; // ツノッチはリプレイ
           } else {
-            if (line.every(s => s === 'GRAPE')) payout = Math.max(payout, 7);
-            else if (line[0] === 'CHERRY') payout = Math.max(payout, 2);
-            else if (line.every(s => s === 'BELL')) payout = Math.max(payout, 14);
-            else if (line.every(s => s === 'RHINO')) payout = Math.max(payout, 3);
+            if (line.every(s => s === 'GRAPE')) payout = Math.max(payout, 8); // ぶどう 8枚
+            else if (line[0] === 'CHERRY') payout = Math.max(payout, 2);      // チェリー 2枚
+            else if (line.every(s => s === 'BELL')) payout = Math.max(payout, 14);   // ベル 14枚
+            else if (line.every(s => s === 'CLOWN')) payout = Math.max(payout, 10);  // ピエロ 10枚
           }
         });
 
+        // 実機純増枚数 (BIG 約252枚 / REG 約96枚)
         if (isBigWin) {
-          payout = 312; bonusState = null;
-          setTimeout(() => alert('🎉 BIG BONUS! (+312枚)'), 100);
+          payout = 252; bonusState = null;
+          setTimeout(() => alert('🎉 BIG BONUS! (+252枚)'), 100);
         } else if (isRegWin) {
-          payout = 104; bonusState = null;
-          setTimeout(() => alert('✨ REG BONUS! (+104枚)'), 100);
+          payout = 96; bonusState = null;
+          setTimeout(() => alert('✨ REG BONUS! (+96枚)'), 100);
+        } else if (isReplayWin) {
+          isReplay = true; // リプレイ当選
+          playSound('pay');
         }
 
-        if (!bonusState && payout >= 100 && gogoBox) {
+        if (!bonusState && payout >= 90 && gogoBox) {
           isPeka = false;
           gogoBox.classList.remove('peka');
         }
