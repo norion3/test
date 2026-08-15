@@ -11,7 +11,7 @@
     ['GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', '7', 'BAR', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO']
   ];
 
-  // 1コマの高さを70px（完全整数値）に固定
+  // 1コマの高さを70px、幅を100pxの完全整数値に固定
   const SYMBOL_HEIGHT = 70;
   const CANVAS_WIDTH = 100;
 
@@ -98,14 +98,14 @@
     });
   }
 
-  // キャンバスに1図柄を描画（実機のプロポーションを完全再現＆不要な枠線除去）
+  // キャンバスに1図柄を描画（実機プロポーションの完全再現＆不要な枠線削除）
   function drawSymbol(ctx, type, y) {
     const cached = symbolCanvasCache[type];
 
     ctx.save();
     ctx.translate(0, y);
 
-    // コマ背景（純白のみ。不自然なグレーの枠線は削除）
+    // コマ背景（純白のみ。不自然なグレー枠線は完全除去）
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, CANVAS_WIDTH, SYMBOL_HEIGHT);
 
@@ -115,11 +115,11 @@
 
       let maxW, maxH;
       if (type === '7' || type === 'BAR') {
-        // 大型図柄（7・BAR）：横幅いっぱいの超大型表示
+        // 大型図柄（7・BAR）：横幅いっぱいの超大型表示（88%幅）
         maxW = CANVAS_WIDTH * 0.88;
         maxH = SYMBOL_HEIGHT * 0.88;
       } else {
-        // 小役・キャラ図柄：実機写真通り、コマ中央にこぢんまりと収まる中型表示
+        // 小役・キャラ図柄：実機配列通り、コマ中央にこぢんまりと収まる中型表示（45%幅）
         maxW = CANVAS_WIDTH * 0.45;
         maxH = SYMBOL_HEIGHT * 0.50;
       }
@@ -281,11 +281,11 @@
           
           let targetIdx = baseIdx;
 
-          // ボーナス成立時の引き込み制御（最大4コマ）
+          // ボーナス成立時の引き込み制御（最大4コマ引き込み）
           if (bonusState) {
             const targetSym = bonusState === 'BIG' ? '7' : (index === 2 ? 'BAR' : '7');
             for (let slip = 0; slip <= 4; slip++) {
-              // posが減る方向（上から下）へ回っているため、配列インデックスを遡って引き込む
+              // Y座標が減少方向（上から下）へ回るため、これから降ってくる未来の図柄（インデックスが小さい側）へ引き込む
               const checkIdx = (baseIdx - slip + reel.strip.length) % reel.strip.length;
               if (reel.strip[checkIdx] === targetSym) { 
                 targetIdx = checkIdx; 
@@ -294,7 +294,7 @@
             }
           }
 
-          // 完全グリッド吸着（縦3コマ枠内に1pxのズレもなく整列停止）
+          // 完全グリッド吸着（縦3コマ・横3列の枠内に1ピクセルズレなく絶対固定停止）
           reel.currentIndex = targetIdx;
           reel.pos = targetIdx * SYMBOL_HEIGHT;
           reel.canvas.style.transform = `translateY(-${reel.pos}px)`;

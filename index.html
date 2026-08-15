@@ -14,12 +14,12 @@
 
     * {
       box-sizing: border-box;
+      /* テキスト選択や長押しポップアップを強制禁止 */
       user-select: none;
       -webkit-user-select: none;
       -webkit-touch-callout: none;
     }
 
-    /* スマホバウンス（引っ張り）や意図せぬ拡大を完全にブロック */
     body {
       background-color: var(--bg-color);
       color: #fff;
@@ -31,6 +31,7 @@
       align-items: center;
       justify-content: center;
       min-height: 100vh;
+      /* バウンス(引っ張り)スクロールと拡大をCSSレベルで遮断 */
       overflow: hidden; 
       overscroll-behavior: none;
       touch-action: manipulation;
@@ -175,12 +176,12 @@
     .badge-2 { background: #2196f3; }
     .badge-1 { background: #4caf50; }
 
-    /* 物理的な見切れ・ズレを完全解消するための box-sizing: content-box 指定 */
+    /* リール窓：幅と高さを「絶対固定値」にし、画面伸縮によるズレを完全にシャットアウト */
     .reels-screen {
-      width: 82%;
-      height: 210px;
+      width: 304px;  /* 100px×3列 ＋ 隙間2px×2 ＝ 304px固定 */
+      height: 210px; /* 70px×3コマ ＝ 210px固定 */
       box-sizing: content-box;
-      background: #ffffff;
+      background: #111; /* リール間の隙間を黒色で表現し、グレー縦線を撤去 */
       border: 3px solid #222;
       border-radius: 4px;
       display: flex;
@@ -190,15 +191,14 @@
       position: relative;
     }
 
+    /* 各リール列：グレーのborder-right線を削除し、実機同様の継ぎ目に */
     .reel-column {
-      width: 32.8%;
+      width: 100px; /* 横幅100px固定 */
       height: 100%;
       background: #fff;
       position: relative;
-      border-right: 1px solid #ccc;
       overflow: hidden;
     }
-    .reel-column:last-child { border-right: none; }
 
     .reel-canvas {
       position: absolute;
@@ -305,14 +305,15 @@
     .sound-btn { margin-top: 6px; background: #222; border: 1px solid #555; color: #ccc; padding: 4px 12px; border-radius: 12px; font-size: 11px; cursor: pointer; }
   </style>
 
-  <script src="./symbol_7.js"></script>
-  <script src="./symbol_BAR.js"></script>
-  <script src="./symbol_GRAPE.js"></script>
-  <script src="./symbol_CHERRY.js"></script>
-  <script src="./symbol_BELL.js"></script>
-  <script src="./symbol_RHINO.js"></script>
-  <script src="./symbol_CLOWN.js"></script>
-  <script src="./engine.js"></script>
+  <!-- キャッシュクリア機構: パラメータ(?v=2)をつけて強制的に最新版を読み込ませる -->
+  <script src="./symbol_7.js?v=2"></script>
+  <script src="./symbol_BAR.js?v=2"></script>
+  <script src="./symbol_GRAPE.js?v=2"></script>
+  <script src="./symbol_CHERRY.js?v=2"></script>
+  <script src="./symbol_BELL.js?v=2"></script>
+  <script src="./symbol_RHINO.js?v=2"></script>
+  <script src="./symbol_CLOWN.js?v=2"></script>
+  <script src="./engine.js?v=2"></script>
 </head>
 <body>
 
@@ -402,6 +403,23 @@
   </div>
 
   <script>
+    // --- スマホ操作プロテクト用 JavaScript ---
+    // iOS Safari等のスクロール・引っ張りを強制遮断
+    document.addEventListener('touchmove', function(event) {
+      event.preventDefault();
+    }, { passive: false });
+
+    // ピンチズーム（2本指での拡大）を強制遮断
+    document.addEventListener('gesturestart', function(event) {
+      event.preventDefault();
+    });
+
+    // ダブルタップでの意図せぬ画面拡大を強制遮断
+    document.addEventListener('dblclick', function(event) {
+      event.preventDefault();
+    }, { passive: false });
+    // ----------------------------------------
+
     function bootEngine() {
       if (window.JUGGLER_ENGINE && !window.JUGGLER_ENGINE.isInitialized) {
         window.JUGGLER_ENGINE.init();
