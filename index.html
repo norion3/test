@@ -14,7 +14,7 @@
 
     * {
       box-sizing: border-box;
-      /* テキスト選択や長押しポップアップを強制禁止 */
+      /* スマホ操作完全プロテクト: テキスト選択・長押しメニュー禁止 */
       user-select: none;
       -webkit-user-select: none;
       -webkit-touch-callout: none;
@@ -31,10 +31,10 @@
       align-items: center;
       justify-content: center;
       min-height: 100vh;
-      /* バウンス(引っ張り)スクロールと拡大をCSSレベルで遮断 */
+      /* バウンス(引っ張り)スクロールとズームをCSSレベルで完全遮断 */
       overflow: hidden; 
       overscroll-behavior: none;
-      touch-action: manipulation;
+      touch-action: none;
     }
 
     /* 筐体フレーム */
@@ -176,12 +176,12 @@
     .badge-2 { background: #2196f3; }
     .badge-1 { background: #4caf50; }
 
-    /* リール窓：幅と高さを絶対固定値にし、画面伸縮によるズレを完全にシャットアウト */
+    /* リール窓：レスポンシブ縮小によるズレを防止する「絶対固定ピクセル(304x210)」 */
     .reels-screen {
-      width: 304px;  /* 100px×3列 ＋ 隙間2px×2 ＝ 304px固定 */
-      height: 210px; /* 70px×3コマ ＝ 210px固定 */
+      width: 304px;  /* 100px×3列 ＋ 隙間2px×2 ＝ 304px */
+      height: 210px; /* 70px×3コマ ＝ 210px */
       box-sizing: content-box;
-      background: #111; /* リール間の隙間を黒色で表現 */
+      background: #111; /* リール間の隙間を実機同様の黒に */
       border: 3px solid #222;
       border-radius: 4px;
       display: flex;
@@ -191,7 +191,7 @@
       position: relative;
     }
 
-    /* 各リール列：グレー枠線を廃止し、自然な実機同様の継ぎ目に */
+    /* 各リール列：グレー線削除済、完全な純白100px幅 */
     .reel-column {
       width: 100px;
       height: 100%;
@@ -305,15 +305,14 @@
     .sound-btn { margin-top: 6px; background: #222; border: 1px solid #555; color: #ccc; padding: 4px 12px; border-radius: 12px; font-size: 11px; cursor: pointer; }
   </style>
 
-  <!-- キャッシュ強制クリアパラメータ(?v=3)を設定 -->
-  <script src="./symbol_7.js?v=3"></script>
-  <script src="./symbol_BAR.js?v=3"></script>
-  <script src="./symbol_GRAPE.js?v=3"></script>
-  <script src="./symbol_CHERRY.js?v=3"></script>
-  <script src="./symbol_BELL.js?v=3"></script>
-  <script src="./symbol_RHINO.js?v=3"></script>
-  <script src="./symbol_CLOWN.js?v=3"></script>
-  <script src="./engine.js?v=3"></script>
+  <!-- 図柄データのみ外部から読み込み (キャッシュ防止パラメータ付与) -->
+  <script src="./symbol_7.js?v=4"></script>
+  <script src="./symbol_BAR.js?v=4"></script>
+  <script src="./symbol_GRAPE.js?v=4"></script>
+  <script src="./symbol_CHERRY.js?v=4"></script>
+  <script src="./symbol_BELL.js?v=4"></script>
+  <script src="./symbol_RHINO.js?v=4"></script>
+  <script src="./symbol_CLOWN.js?v=4"></script>
 </head>
 <body>
 
@@ -402,21 +401,402 @@
     <button id="soundToggle" class="sound-btn">🔊 サウンド: ON</button>
   </div>
 
+  <!-- 【重要】エンジンロジックを全てここに統合し、キャッシュ問題を完全撲滅 -->
   <script>
-    // --- スマホ操作プロテクト用 JavaScript ---
+    // --- スマホ操作プロテクト用スクリプト ---
+    // iOS Safari等のスクロール・引っ張りを強制遮断
     document.addEventListener('touchmove', function(event) {
       event.preventDefault();
     }, { passive: false });
 
+    // ピンチズーム（2本指での拡大）を強制遮断
     document.addEventListener('gesturestart', function(event) {
       event.preventDefault();
     });
 
+    // ダブルタップでの意図せぬ画面拡大を強制遮断
     document.addEventListener('dblclick', function(event) {
       event.preventDefault();
     }, { passive: false });
-    // ----------------------------------------
 
+
+    // --- メインエンジンロジック ---
+    const REEL_STRIPS = [
+      ['BAR', 'GRAPE', 'RHINO', 'GRAPE', 'BELL', '7', 'RHINO', 'GRAPE', 'RHINO', 'GRAPE', 'BAR', 'CHERRY', 'GRAPE', 'RHINO', 'GRAPE', '7', 'CLOWN', 'GRAPE', 'RHINO', 'GRAPE', 'CHERRY'],
+      ['RHINO', 'BELL', 'GRAPE', 'CHERRY', 'RHINO', '7', 'GRAPE', 'CHERRY', 'RHINO', 'BELL', 'GRAPE', 'CHERRY', 'RHINO', 'BAR', 'GRAPE', 'CHERRY', 'CLOWN', 'RHINO', '7', 'GRAPE', 'CHERRY'],
+      ['GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', '7', 'BAR', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO']
+    ];
+
+    const SYMBOL_HEIGHT = 70;
+    const CANVAS_WIDTH = 100;
+    const REEL_SPEED_BASE = 33; // 整数値で1回転0.75秒の実機同期スピード
+
+    let credits = 50;
+    let betAmount = 0;
+    let gamesCount = 0;
+    let isSpinning = false;
+    let bonusState = null;
+    let isPeka = false;
+    let soundOn = true;
+    let audioCtx = null;
+    let reels = [];
+
+    const symbolCanvasCache = {};
+
+    function decodeRLEToCanvas(symData) {
+      const cvs = document.createElement('canvas');
+      cvs.width = 128; cvs.height = 128;
+      const ctx = cvs.getContext('2d');
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, 128, 128);
+      if (!symData || !symData.rle) return cvs;
+
+      const imgData = ctx.createImageData(symData.w, symData.h);
+      const data = imgData.data;
+      const palette = symData.palette;
+      const chunks = symData.rle.split(',');
+
+      let pixelIndex = 0;
+      for (let i = 0; i < chunks.length; i++) {
+        const parts = chunks[i].split(':');
+        const colorIdx = parseInt(parts[0], 10);
+        const count = parseInt(parts[1], 10);
+        const hex = palette[colorIdx] || '#ffffff';
+
+        const r = parseInt(hex.substring(1, 3), 16) || 255;
+        const g = parseInt(hex.substring(3, 5), 16) || 255;
+        const b = parseInt(hex.substring(5, 7), 16) || 255;
+
+        for (let c = 0; c < count; c++) {
+          const idx = pixelIndex * 4;
+          data[idx] = r; data[idx+1] = g; data[idx+2] = b; data[idx+3] = 255;
+          pixelIndex++;
+        }
+      }
+      ctx.putImageData(imgData, symData.x, symData.y);
+      return cvs;
+    }
+
+    function initSymbolCache() {
+      const ALL_IDS = ['7', 'BAR', 'GRAPE', 'CHERRY', 'BELL', 'RHINO', 'CLOWN'];
+      const dataStore = window.SLOT_SYMBOLS_DATA || {};
+
+      ALL_IDS.forEach(id => {
+        if (dataStore[id]) {
+          symbolCanvasCache[id] = { canvas: decodeRLEToCanvas(dataStore[id]), meta: dataStore[id] };
+        } else {
+          const cvs = document.createElement('canvas');
+          cvs.width = 128; cvs.height = 128;
+          const ctx = cvs.getContext('2d');
+          ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, 128, 128);
+          ctx.fillStyle = '#000000'; ctx.font = 'bold 24px sans-serif';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText(id, 64, 64);
+          symbolCanvasCache[id] = { canvas: cvs, meta: { x: 0, y: 0, w: 128, h: 128 } };
+        }
+      });
+    }
+
+    function drawSymbol(ctx, type, y, isReelSpinning = false) {
+      const cached = symbolCanvasCache[type];
+      ctx.save();
+      ctx.translate(0, y);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, CANVAS_WIDTH, SYMBOL_HEIGHT);
+
+      if (cached) {
+        let maxW = (type === '7' || type === 'BAR') ? CANVAS_WIDTH * 0.88 : CANVAS_WIDTH * 0.45;
+        let maxH = (type === '7' || type === 'BAR') ? SYMBOL_HEIGHT * 0.88 : SYMBOL_HEIGHT * 0.50;
+
+        const scale = Math.min(maxW / cached.meta.w, maxH / cached.meta.h);
+        const drawW = cached.meta.w * scale;
+        const drawH = cached.meta.h * scale;
+        const drawX = (CANVAS_WIDTH - drawW) / 2;
+        const drawY = (SYMBOL_HEIGHT - drawH) / 2;
+
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+
+        // 7とBARの回転中透過発光エフェクト
+        if (isReelSpinning) {
+          if (type === '7') {
+            ctx.shadowColor = 'rgba(255, 30, 30, 0.95)';
+            ctx.shadowBlur = 14;
+          } else if (type === 'BAR') {
+            ctx.shadowColor = 'rgba(255, 255, 255, 0.95)';
+            ctx.shadowBlur = 12;
+          } else {
+            ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+          }
+        } else {
+          ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+        }
+
+        ctx.drawImage(cached.canvas, cached.meta.x, cached.meta.y, cached.meta.w, cached.meta.h, drawX, drawY, drawW, drawH);
+      }
+      ctx.restore();
+    }
+
+    function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+
+    function playSound(type) {
+      if (!soundOn || !audioCtx) return;
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain); gain.connect(audioCtx.destination);
+
+      if (type === 'lever') {
+        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(280, now); osc.frequency.exponentialRampToValueAtTime(50, now + 0.08);
+        gain.gain.setValueAtTime(0.3, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
+        osc.start(now); osc.stop(now + 0.08);
+      } else if (type === 'stop') {
+        osc.type = 'triangle'; osc.frequency.setValueAtTime(140, now); osc.frequency.exponentialRampToValueAtTime(30, now + 0.06);
+        gain.gain.setValueAtTime(0.4, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.06);
+        osc.start(now); osc.stop(now + 0.06);
+      } else if (type === 'gako') {
+        osc.type = 'square'; osc.frequency.setValueAtTime(750, now); osc.frequency.exponentialRampToValueAtTime(90, now + 0.14);
+        gain.gain.setValueAtTime(0.8, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.14);
+        osc.start(now); osc.stop(now + 0.14);
+      } else if (type === 'pay') {
+        osc.type = 'sine'; osc.frequency.setValueAtTime(880, now); osc.frequency.setValueAtTime(1760, now + 0.04);
+        gain.gain.setValueAtTime(0.2, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
+        osc.start(now); osc.stop(now + 0.08);
+      }
+    }
+
+    // オートチャージ機能搭載（クレジットが3未満なら自動で50に補給）
+    function updateDisplays(payout = 0) {
+      if (credits < 3) credits = 50;
+      const cEl = document.getElementById('creditDisp');
+      const gEl = document.getElementById('countDisp');
+      const pEl = document.getElementById('payoutDisp');
+      if (cEl) cEl.textContent = credits;
+      if (gEl) gEl.textContent = gamesCount;
+      if (pEl) pEl.textContent = payout;
+    }
+
+    window.JUGGLER_ENGINE = {
+      isInitialized: false,
+      init: function() {
+        if (this.isInitialized) return;
+        initSymbolCache();
+
+        reels = REEL_STRIPS.map((strip, idx) => {
+          const canvas = document.getElementById(`reelCanvas${idx}`);
+          if (!canvas) return null;
+          canvas.width = CANVAS_WIDTH;
+          canvas.height = SYMBOL_HEIGHT * strip.length * 3;
+          const ctx = canvas.getContext('2d');
+          const tripleStrip = [...strip, ...strip, ...strip];
+          
+          tripleStrip.forEach((sym, i) => { drawSymbol(ctx, sym, i * SYMBOL_HEIGHT, false); });
+          const currentIdx = Math.floor(Math.random() * strip.length);
+          const initialPos = currentIdx * SYMBOL_HEIGHT;
+          canvas.style.transform = `translateY(-${initialPos}px)`;
+
+          return {
+            id: idx, strip: strip, canvas: canvas, ctx: ctx,
+            currentIndex: currentIdx, isSpinning: false, isStopping: false,
+            speed: 0, pos: initialPos, targetPos: 0, animId: null
+          };
+        }).filter(Boolean);
+
+        updateDisplays();
+        this.bindEvents();
+        this.isInitialized = true;
+      },
+
+      renderReelCanvas: function(reel, isSpinning) {
+        const tripleStrip = [...reel.strip, ...reel.strip, ...reel.strip];
+        reel.ctx.clearRect(0, 0, reel.canvas.width, reel.canvas.height);
+        tripleStrip.forEach((sym, i) => { drawSymbol(reel.ctx, sym, i * SYMBOL_HEIGHT, isSpinning); });
+      },
+
+      bindEvents: function() {
+        const betBtn = document.getElementById('betBtn');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtns = [
+          document.getElementById('stopBtn0'),
+          document.getElementById('stopBtn1'),
+          document.getElementById('stopBtn2')
+        ];
+        const soundToggle = document.getElementById('soundToggle');
+
+        if (betBtn) {
+          betBtn.onclick = () => {
+            initAudio();
+            if (isSpinning || betAmount === 3) return;
+            if (credits < 3) credits = 50; 
+            credits -= 3; betAmount = 3; playSound('pay'); updateDisplays();
+          };
+        }
+
+        if (startBtn) {
+          startBtn.onclick = () => {
+            initAudio();
+            if (isSpinning) return;
+            if (credits < 3) credits = 50; 
+            
+            if (betAmount < 3) {
+              credits -= 3; betAmount = 3;
+            }
+            gamesCount++; isSpinning = true; updateDisplays(0); playSound('lever');
+
+            if (!bonusState) {
+              const rand = Math.random();
+              if (rand < (1 / 255)) bonusState = 'BIG';
+              else if (rand < (2 / 255)) bonusState = 'REG';
+            }
+
+            const gogoBox = document.getElementById('gogoBox');
+            if (bonusState && !isPeka && Math.random() < 0.25) {
+              isPeka = true;
+              if (gogoBox) gogoBox.classList.add('peka');
+              playSound('gako');
+            }
+
+            reels.forEach((reel, i) => {
+              reel.isSpinning = true;
+              reel.isStopping = false;
+              reel.speed = REEL_SPEED_BASE; 
+              this.renderReelCanvas(reel, true); 
+              this.spinReel(reel);
+              if (stopBtns[i]) stopBtns[i].disabled = false;
+            });
+            updateDisplays();
+          };
+        }
+
+        stopBtns.forEach((btn, index) => {
+          if (!btn) return;
+          btn.onclick = () => {
+            const reel = reels[index];
+            if (!reel.isSpinning || reel.isStopping) return;
+            
+            btn.disabled = true;
+            playSound('stop');
+
+            // 【完全解決ロジック】Math.floorを用いて「確実にこれから降ってくる未来のコマ」をロックオン
+            const maxPos = reel.strip.length * SYMBOL_HEIGHT;
+            let baseIdx = Math.floor(reel.pos / SYMBOL_HEIGHT) % reel.strip.length;
+            if (baseIdx < 0) baseIdx += reel.strip.length;
+            
+            let targetIdx = baseIdx;
+
+            // ボーナス成立時：最大4コマ引き込みアシスト制御
+            if (bonusState) {
+              const targetSym = bonusState === 'BIG' ? '7' : (index === 2 ? 'BAR' : '7');
+              let found = false;
+
+              for (let slip = 0; slip <= 4; slip++) {
+                const checkIdx = (baseIdx - slip + reel.strip.length) % reel.strip.length;
+                if (reel.strip[checkIdx] === targetSym) { 
+                  targetIdx = checkIdx; 
+                  found = true;
+                  break; 
+                }
+              }
+              if (!found) { targetIdx = baseIdx; }
+            } else {
+              targetIdx = baseIdx;
+            }
+
+            // 最大4コマ（0.15秒）以内で確実に停止するスナップモードへ移行
+            reel.currentIndex = targetIdx;
+            reel.targetPos = targetIdx * SYMBOL_HEIGHT;
+            reel.isStopping = true;
+          };
+        });
+
+        if (soundToggle) {
+          soundToggle.onclick = () => {
+            soundOn = !soundOn;
+            soundToggle.textContent = soundOn ? '🔊 サウンド: ON' : '🔇 サウンド: OFF';
+          };
+        }
+      },
+
+      spinReel: function(reel) {
+        const maxPos = reel.strip.length * SYMBOL_HEIGHT;
+        const animate = () => {
+          if (!reel.isSpinning) return;
+          
+          if (reel.isStopping) {
+            let dist = (reel.pos - reel.targetPos + maxPos) % maxPos;
+            
+            if (dist <= reel.speed || dist < 2) {
+              reel.pos = reel.targetPos;
+              reel.isSpinning = false;
+              reel.isStopping = false;
+              cancelAnimationFrame(reel.animId);
+              reel.canvas.style.transform = `translateY(-${reel.pos}px)`;
+              this.renderReelCanvas(reel, false);
+
+              if (reels.every(r => !r.isSpinning)) {
+                this.onAllStopped();
+              }
+              return;
+            } else {
+              let step = Math.min(reel.speed, dist);
+              reel.pos = (reel.pos - step + maxPos) % maxPos;
+            }
+          } else {
+            reel.pos = (reel.pos - reel.speed + maxPos) % maxPos;
+          }
+
+          reel.canvas.style.transform = `translateY(-${reel.pos}px)`;
+          reel.animId = requestAnimationFrame(animate);
+        };
+        animate();
+      },
+
+      onAllStopped: function() {
+        isSpinning = false;
+        betAmount = 0;
+        const gogoBox = document.getElementById('gogoBox');
+
+        if (bonusState && !isPeka) {
+          isPeka = true;
+          if (gogoBox) gogoBox.classList.add('peka');
+          playSound('gako');
+        }
+
+        const getSym = (rIdx, offset) => {
+          const strip = reels[rIdx].strip;
+          return strip[(reels[rIdx].currentIndex + offset + strip.length) % strip.length];
+        };
+
+        const center = [getSym(0, 1), getSym(1, 1), getSym(2, 1)];
+        let payout = 0;
+
+        if (center.every(s => s === '7')) {
+          payout = 312; bonusState = null;
+          setTimeout(() => alert('🎉 BIG BONUS! (+312枚)'), 100);
+        } else if (center[0] === '7' && center[1] === '7' && center[2] === 'BAR') {
+          payout = 104; bonusState = null;
+          setTimeout(() => alert('✨ REG BONUS! (+104枚)'), 100);
+        } else {
+          if (center.every(s => s === 'GRAPE')) payout = 7;
+          else if (center[0] === 'CHERRY') payout = 2;
+          else if (center.every(s => s === 'BELL')) payout = 14;
+          else if (center.every(s => s === 'RHINO')) payout = 3;
+        }
+
+        if (!bonusState && payout >= 100 && gogoBox) {
+          isPeka = false;
+          gogoBox.classList.remove('peka');
+        }
+
+        if (payout > 0) {
+          credits += payout;
+          playSound('pay');
+        }
+
+        updateDisplays(payout);
+      }
+    };
+
+    // --- 完全安全な起動スクリプト ---
     function bootEngine() {
       if (window.JUGGLER_ENGINE && !window.JUGGLER_ENGINE.isInitialized) {
         window.JUGGLER_ENGINE.init();
@@ -432,4 +812,5 @@
   </script>
 </body>
 </html>
+
 
