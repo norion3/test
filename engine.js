@@ -11,7 +11,7 @@
     ['GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', '7', 'BAR', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO']
   ];
 
-  // 1コマの高さを70px（整数値）に完全固定（3コマでリール窓縦幅＝210px）
+  // 1コマの高さを70px（完全整数値）に固定
   const SYMBOL_HEIGHT = 70;
   const CANVAS_WIDTH = 100;
 
@@ -28,7 +28,7 @@
 
   const symbolCanvasCache = {};
 
-  // RLE展開デコーダー (128x128キャンバス復元)
+  // RLE展開デコーダー
   function decodeRLEToCanvas(symData) {
     const cvs = document.createElement('canvas');
     cvs.width = 128;
@@ -70,7 +70,7 @@
     return cvs;
   }
 
-  // 7図柄キャッシュ初期化
+  // 図柄キャッシュ初期化
   function initSymbolCache() {
     const ALL_IDS = ['7', 'BAR', 'GRAPE', 'CHERRY', 'BELL', 'RHINO', 'CLOWN'];
     const dataStore = window.SLOT_SYMBOLS_DATA || {};
@@ -98,19 +98,16 @@
     });
   }
 
-  // キャンバスに1図柄を描画（実機画像に基づく「7/BAR＝大型」「その他＝中型」サイズ打ち分け）
+  // キャンバスに1図柄を描画（実機のプロポーションを完全再現＆不要な枠線除去）
   function drawSymbol(ctx, type, y) {
     const cached = symbolCanvasCache[type];
 
     ctx.save();
     ctx.translate(0, y);
 
-    // コマ背景（純白＆区切り境界線）
+    // コマ背景（純白のみ。不自然なグレーの枠線は削除）
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, CANVAS_WIDTH, SYMBOL_HEIGHT);
-    ctx.strokeStyle = "rgba(0,0,0,0.08)";
-    ctx.lineWidth = 1;
-    ctx.strokeRect(0, 0, CANVAS_WIDTH, SYMBOL_HEIGHT);
 
     if (cached) {
       const masterCanvas = cached.canvas;
@@ -118,13 +115,13 @@
 
       let maxW, maxH;
       if (type === '7' || type === 'BAR') {
-        // 大型図柄（7・BAR）：コマ横幅の約90%を使用する幅広・迫力表示
-        maxW = CANVAS_WIDTH * 0.90;
+        // 大型図柄（7・BAR）：横幅いっぱいの超大型表示
+        maxW = CANVAS_WIDTH * 0.88;
         maxH = SYMBOL_HEIGHT * 0.88;
       } else {
-        // 中型図柄（ぶどう・チェリー・ベル・ツノッチ・ピエロ）：コマ横幅の約58%に収まるスマート表示
-        maxW = CANVAS_WIDTH * 0.58;
-        maxH = SYMBOL_HEIGHT * 0.70;
+        // 小役・キャラ図柄：実機写真通り、コマ中央にこぢんまりと収まる中型表示
+        maxW = CANVAS_WIDTH * 0.45;
+        maxH = SYMBOL_HEIGHT * 0.50;
       }
 
       const scale = Math.min(maxW / meta.w, maxH / meta.h);
@@ -146,7 +143,6 @@
     ctx.restore();
   }
 
-  // オーディオ初期化＆再生
   function initAudio() {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   }
@@ -177,7 +173,6 @@
     }
   }
 
-  // ディスプレイ更新
   function updateDisplays(payout = 0) {
     const cEl = document.getElementById('creditDisp');
     const gEl = document.getElementById('countDisp');
@@ -187,7 +182,6 @@
     if (pEl) pEl.textContent = payout;
   }
 
-  // スロットエンジンの公開API＆初期化
   window.JUGGLER_ENGINE = {
     isInitialized: false,
     init: function() {
@@ -280,17 +274,18 @@
           btn.disabled = true;
           playSound('stop');
 
-          // 現在位置から最も近い整数のコマ位置へ一発計算
+          // スナップ（ピタ止め）計算
           const maxPos = reel.strip.length * SYMBOL_HEIGHT;
           let baseIdx = Math.round(reel.pos / SYMBOL_HEIGHT) % reel.strip.length;
           if (baseIdx < 0) baseIdx += reel.strip.length;
           
           let targetIdx = baseIdx;
 
-          // ボーナス成立時の引き込み制御（最大4コマ引き込み）
+          // ボーナス成立時の引き込み制御（最大4コマ）
           if (bonusState) {
             const targetSym = bonusState === 'BIG' ? '7' : (index === 2 ? 'BAR' : '7');
             for (let slip = 0; slip <= 4; slip++) {
+              // posが減る方向（上から下）へ回っているため、配列インデックスを遡って引き込む
               const checkIdx = (baseIdx - slip + reel.strip.length) % reel.strip.length;
               if (reel.strip[checkIdx] === targetSym) { 
                 targetIdx = checkIdx; 
@@ -299,7 +294,7 @@
             }
           }
 
-          // 完全グリッド吸着（縦3コマ枠内にピッタリズレなしで整列停止）
+          // 完全グリッド吸着（縦3コマ枠内に1pxのズレもなく整列停止）
           reel.currentIndex = targetIdx;
           reel.pos = targetIdx * SYMBOL_HEIGHT;
           reel.canvas.style.transform = `translateY(-${reel.pos}px)`;
@@ -377,4 +372,5 @@
     }
   };
 })();
+
 

@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>アイムジャグラーEX 完全再現ドットスロット</title>
   <style>
     :root {
@@ -16,8 +16,10 @@
       box-sizing: border-box;
       user-select: none;
       -webkit-user-select: none;
+      -webkit-touch-callout: none;
     }
 
+    /* スマホバウンス（引っ張り）や意図せぬ拡大を完全にブロック */
     body {
       background-color: var(--bg-color);
       color: #fff;
@@ -29,7 +31,9 @@
       align-items: center;
       justify-content: center;
       min-height: 100vh;
-      overflow-x: hidden;
+      overflow: hidden; 
+      overscroll-behavior: none;
+      touch-action: manipulation;
     }
 
     /* 筐体フレーム */
@@ -171,10 +175,11 @@
     .badge-2 { background: #2196f3; }
     .badge-1 { background: #4caf50; }
 
-    /* リール窓（高さ210px＝1コマ70px×3段の完全ピクセル表示） */
+    /* 物理的な見切れ・ズレを完全解消するための box-sizing: content-box 指定 */
     .reels-screen {
       width: 82%;
       height: 210px;
+      box-sizing: content-box;
       background: #ffffff;
       border: 3px solid #222;
       border-radius: 4px;
@@ -300,7 +305,6 @@
     .sound-btn { margin-top: 6px; background: #222; border: 1px solid #555; color: #ccc; padding: 4px 12px; border-radius: 12px; font-size: 11px; cursor: pointer; }
   </style>
 
-  <!-- 明示的同階層パス指定によるスクリプト参照 -->
   <script src="./symbol_7.js"></script>
   <script src="./symbol_BAR.js"></script>
   <script src="./symbol_GRAPE.js"></script>
@@ -313,10 +317,8 @@
 <body>
 
   <div class="cabinet">
-    <!-- KITAC ランプ -->
     <div class="kitac-top"><div class="kitac-lamp">KITAC</div></div>
 
-    <!-- 上部パネル -->
     <div class="top-panel">
       <div class="big-chance-text">BIG CHANCE!</div>
       <div class="top-777-container">
@@ -327,7 +329,6 @@
       <div class="juggler-brand-bar">I'm JUGGLER</div>
     </div>
 
-    <!-- メインフレーム -->
     <div class="center-frame">
       <div class="reels-wrapper">
         <div class="line-numbers">
@@ -343,7 +344,6 @@
         </div>
       </div>
 
-      <!-- ダッシュボード -->
       <div class="dashboard-bar">
         <div id="gogoBox" class="gogo-box">
           <svg class="gogo-star-bg" viewBox="0 0 100 60">
@@ -363,7 +363,6 @@
       </div>
     </div>
 
-    <!-- コントロールデッキ -->
     <div class="control-deck">
       <button id="betBtn" class="bet-btn">3<br>BET</button>
       <button id="startBtn" class="lever-btn" title="START"></button>
@@ -374,7 +373,6 @@
       </div>
     </div>
 
-    <!-- 下部パネル -->
     <div class="clown-bottom-panel">
       <svg class="clown-svg-graphic" viewBox="0 0 300 110">
         <g fill="#ffeb3b" opacity="0.8">
@@ -419,4 +417,5 @@
   </script>
 </body>
 </html>
+
 
