@@ -271,6 +271,7 @@
       border: 2px solid #fff; color: #fff; font-weight: 900; font-size: 11px;
       box-shadow: 0 4px 6px rgba(0,0,0,0.6); cursor: pointer;
       display: flex; align-items: center; justify-content: center; text-align: center;
+      touch-action: manipulation;
     }
     .bet-btn:active { transform: translateY(2px); }
     .lever-btn {
@@ -278,6 +279,7 @@
       background: radial-gradient(circle, #ffffff 0%, #a0a0a0 100%);
       border: 3px solid #222; box-shadow: 0 5px 10px rgba(0,0,0,0.7);
       cursor: pointer; transition: transform 0.08s;
+      touch-action: manipulation;
     }
     .lever-btn:active { transform: translateY(6px) scale(0.95); }
     .stop-btn-group { display: flex; gap: 8px; }
@@ -287,6 +289,7 @@
       border: 2px solid #ffcccc; color: #fff; font-weight: 900; font-size: 13px;
       box-shadow: 0 4px 6px rgba(0,0,0,0.6); cursor: pointer;
       display: flex; align-items: center; justify-content: center;
+      touch-action: manipulation;
     }
     .stop-btn:disabled {
       background: radial-gradient(circle, #555 0%, #222 100%);
@@ -305,14 +308,14 @@
     .sound-btn { margin-top: 6px; background: #222; border: 1px solid #555; color: #ccc; padding: 4px 12px; border-radius: 12px; font-size: 11px; cursor: pointer; }
   </style>
 
-  <!-- 図柄データのみ外部から読み込み (キャッシュ防止パラメータ付与) -->
-  <script src="./symbol_7.js?v=4"></script>
-  <script src="./symbol_BAR.js?v=4"></script>
-  <script src="./symbol_GRAPE.js?v=4"></script>
-  <script src="./symbol_CHERRY.js?v=4"></script>
-  <script src="./symbol_BELL.js?v=4"></script>
-  <script src="./symbol_RHINO.js?v=4"></script>
-  <script src="./symbol_CLOWN.js?v=4"></script>
+  <!-- 図柄データのみ外部から読み込み -->
+  <script src="./symbol_7.js?v=5"></script>
+  <script src="./symbol_BAR.js?v=5"></script>
+  <script src="./symbol_GRAPE.js?v=5"></script>
+  <script src="./symbol_CHERRY.js?v=5"></script>
+  <script src="./symbol_BELL.js?v=5"></script>
+  <script src="./symbol_RHINO.js?v=5"></script>
+  <script src="./symbol_CLOWN.js?v=5"></script>
 </head>
 <body>
 
@@ -401,24 +404,11 @@
     <button id="soundToggle" class="sound-btn">🔊 サウンド: ON</button>
   </div>
 
-  <!-- 【重要】エンジンロジックを全てここに統合し、キャッシュ問題を完全撲滅 -->
   <script>
-    // --- スマホ操作プロテクト用スクリプト ---
-    // iOS Safari等のスクロール・引っ張りを強制遮断
-    document.addEventListener('touchmove', function(event) {
-      event.preventDefault();
-    }, { passive: false });
-
-    // ピンチズーム（2本指での拡大）を強制遮断
-    document.addEventListener('gesturestart', function(event) {
-      event.preventDefault();
-    });
-
-    // ダブルタップでの意図せぬ画面拡大を強制遮断
-    document.addEventListener('dblclick', function(event) {
-      event.preventDefault();
-    }, { passive: false });
-
+    // --- スマホ操作プロテクト ---
+    document.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
+    document.addEventListener('gesturestart', function(e) { e.preventDefault(); });
+    document.addEventListener('dblclick', function(e) { e.preventDefault(); }, { passive: false });
 
     // --- メインエンジンロジック ---
     const REEL_STRIPS = [
@@ -429,7 +419,7 @@
 
     const SYMBOL_HEIGHT = 70;
     const CANVAS_WIDTH = 100;
-    const REEL_SPEED_BASE = 33; // 整数値で1回転0.75秒の実機同期スピード
+    const REEL_SPEED_BASE = 33; // 1回転0.75秒の実機同期スピード
 
     let credits = 50;
     let betAmount = 0;
@@ -496,11 +486,20 @@
       });
     }
 
+    // キャンバス描画（7・BARの回転中透過面発光＆強いバックライト演出）
     function drawSymbol(ctx, type, y, isReelSpinning = false) {
       const cached = symbolCanvasCache[type];
       ctx.save();
       ctx.translate(0, y);
-      ctx.fillStyle = "#ffffff";
+
+      // コマ背景（回転中の7/BARは後ろから強い光が面で透過する演出）
+      if (isReelSpinning && type === '7') {
+        ctx.fillStyle = "rgba(255, 210, 210, 0.9)"; // 鮮やかな赤透過光
+      } else if (isReelSpinning && type === 'BAR') {
+        ctx.fillStyle = "rgba(255, 255, 255, 1.0)"; // 白強光
+      } else {
+        ctx.fillStyle = "#ffffff";
+      }
       ctx.fillRect(0, 0, CANVAS_WIDTH, SYMBOL_HEIGHT);
 
       if (cached) {
@@ -516,19 +515,17 @@
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
 
-        // 7とBARの回転中透過発光エフェクト
+        // 回転中：7・BAR本体にグローシャドウと1.3倍の明るさを付与
         if (isReelSpinning) {
           if (type === '7') {
-            ctx.shadowColor = 'rgba(255, 30, 30, 0.95)';
-            ctx.shadowBlur = 14;
+            ctx.shadowColor = 'rgba(255, 0, 0, 1.0)';
+            ctx.shadowBlur = 20;
+            ctx.filter = 'brightness(1.3)';
           } else if (type === 'BAR') {
-            ctx.shadowColor = 'rgba(255, 255, 255, 0.95)';
-            ctx.shadowBlur = 12;
-          } else {
-            ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+            ctx.shadowColor = 'rgba(255, 255, 255, 1.0)';
+            ctx.shadowBlur = 18;
+            ctx.filter = 'brightness(1.3)';
           }
-        } else {
-          ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
         }
 
         ctx.drawImage(cached.canvas, cached.meta.x, cached.meta.y, cached.meta.w, cached.meta.h, drawX, drawY, drawW, drawH);
@@ -564,7 +561,7 @@
       }
     }
 
-    // オートチャージ機能搭載（クレジットが3未満なら自動で50に補給）
+    // オートチャージ（無制限プレイ）
     function updateDisplays(payout = 0) {
       if (credits < 3) credits = 50;
       const cEl = document.getElementById('creditDisp');
@@ -622,90 +619,108 @@
         ];
         const soundToggle = document.getElementById('soundToggle');
 
-        if (betBtn) {
-          betBtn.onclick = () => {
-            initAudio();
-            if (isSpinning || betAmount === 3) return;
-            if (credits < 3) credits = 50; 
-            credits -= 3; betAmount = 3; playSound('pay'); updateDisplays();
+        // タッチ即時反応（遅延ゼロ化ヘルパー）
+        const attachFastTouch = (elem, handler) => {
+          if (!elem) return;
+          let handled = false;
+          const trigger = (e) => {
+            if (e.type === 'touchstart') handled = true;
+            else if (e.type === 'click' && handled) { handled = false; return; }
+            handler(e);
           };
-        }
+          elem.addEventListener('touchstart', trigger, { passive: false });
+          elem.addEventListener('click', trigger);
+        };
 
-        if (startBtn) {
-          startBtn.onclick = () => {
-            initAudio();
-            if (isSpinning) return;
-            if (credits < 3) credits = 50; 
-            
-            if (betAmount < 3) {
-              credits -= 3; betAmount = 3;
-            }
-            gamesCount++; isSpinning = true; updateDisplays(0); playSound('lever');
+        attachFastTouch(betBtn, () => {
+          initAudio();
+          if (isSpinning || betAmount === 3) return;
+          if (credits < 3) credits = 50; 
+          credits -= 3; betAmount = 3; playSound('pay'); updateDisplays();
+        });
 
-            if (!bonusState) {
-              const rand = Math.random();
-              if (rand < (1 / 255)) bonusState = 'BIG';
-              else if (rand < (2 / 255)) bonusState = 'REG';
-            }
+        attachFastTouch(startBtn, () => {
+          initAudio();
+          if (isSpinning) return;
+          if (credits < 3) credits = 50; 
+          
+          if (betAmount < 3) {
+            credits -= 3; betAmount = 3;
+          }
+          gamesCount++; isSpinning = true; updateDisplays(0); playSound('lever');
 
-            const gogoBox = document.getElementById('gogoBox');
-            if (bonusState && !isPeka && Math.random() < 0.25) {
-              isPeka = true;
-              if (gogoBox) gogoBox.classList.add('peka');
-              playSound('gako');
-            }
+          if (!bonusState) {
+            const rand = Math.random();
+            if (rand < (1 / 255)) bonusState = 'BIG';
+            else if (rand < (2 / 255)) bonusState = 'REG';
+          }
 
-            reels.forEach((reel, i) => {
-              reel.isSpinning = true;
-              reel.isStopping = false;
-              reel.speed = REEL_SPEED_BASE; 
-              this.renderReelCanvas(reel, true); 
-              this.spinReel(reel);
-              if (stopBtns[i]) stopBtns[i].disabled = false;
-            });
-            updateDisplays();
-          };
-        }
+          const gogoBox = document.getElementById('gogoBox');
+          if (bonusState && !isPeka && Math.random() < 0.25) {
+            isPeka = true;
+            if (gogoBox) gogoBox.classList.add('peka');
+            playSound('gako');
+          }
+
+          reels.forEach((reel, i) => {
+            reel.isSpinning = true;
+            reel.isStopping = false;
+            reel.speed = REEL_SPEED_BASE; 
+            this.renderReelCanvas(reel, true); 
+            this.spinReel(reel);
+            if (stopBtns[i]) stopBtns[i].disabled = false;
+          });
+          updateDisplays();
+        });
 
         stopBtns.forEach((btn, index) => {
           if (!btn) return;
-          btn.onclick = () => {
+
+          attachFastTouch(btn, (e) => {
+            if (e.cancelable) e.preventDefault();
             const reel = reels[index];
             if (!reel.isSpinning || reel.isStopping) return;
             
             btn.disabled = true;
             playSound('stop');
 
-            // 【完全解決ロジック】Math.floorを用いて「確実にこれから降ってくる未来のコマ」をロックオン
+            // 遅延ゼロの現在コマ基準計算 (Math.floor)
             const maxPos = reel.strip.length * SYMBOL_HEIGHT;
             let baseIdx = Math.floor(reel.pos / SYMBOL_HEIGHT) % reel.strip.length;
             if (baseIdx < 0) baseIdx += reel.strip.length;
             
             let targetIdx = baseIdx;
 
-            // ボーナス成立時：最大4コマ引き込みアシスト制御
+            // --- ボーナス成立時の5ライン枠内引き込みアシスト制御 (0〜4コマすべり) ---
             if (bonusState) {
               const targetSym = bonusState === 'BIG' ? '7' : (index === 2 ? 'BAR' : '7');
               let found = false;
 
+              // ボタンを押した位置から0〜4コマすべりの範囲で、枠内(上段・中段・下段)のいずれかにターゲット図柄が入るか探す
               for (let slip = 0; slip <= 4; slip++) {
-                const checkIdx = (baseIdx - slip + reel.strip.length) % reel.strip.length;
-                if (reel.strip[checkIdx] === targetSym) { 
-                  targetIdx = checkIdx; 
-                  found = true;
-                  break; 
+                const checkTopIdx = (baseIdx - slip + reel.strip.length) % reel.strip.length;
+                
+                // 枠内の3コマ（上段: offset 0, 中段: offset 1, 下段: offset 2）にターゲットがあるか
+                for (let offset = 0; offset <= 2; offset++) {
+                  const checkSymIdx = (checkTopIdx + offset) % reel.strip.length;
+                  if (reel.strip[checkSymIdx] === targetSym) {
+                    targetIdx = checkTopIdx;
+                    found = true;
+                    break;
+                  }
                 }
+                if (found) break;
               }
               if (!found) { targetIdx = baseIdx; }
             } else {
               targetIdx = baseIdx;
             }
 
-            // 最大4コマ（0.15秒）以内で確実に停止するスナップモードへ移行
+            // 最大4コマ（0.15秒以内）で確実にピタッと吸着停止
             reel.currentIndex = targetIdx;
             reel.targetPos = targetIdx * SYMBOL_HEIGHT;
             reel.isStopping = true;
-          };
+          });
         });
 
         if (soundToggle) {
@@ -730,7 +745,7 @@
               reel.isStopping = false;
               cancelAnimationFrame(reel.animId);
               reel.canvas.style.transform = `translateY(-${reel.pos}px)`;
-              this.renderReelCanvas(reel, false);
+              this.renderReelCanvas(reel, false); // 発光OFFの静止画へ
 
               if (reels.every(r => !r.isSpinning)) {
                 this.onAllStopped();
@@ -750,6 +765,7 @@
         animate();
       },
 
+      // --- 実機準拠「全5ライン（上・中・下・ナナメ2本）判定」ロジック ---
       onAllStopped: function() {
         isSpinning = false;
         betAmount = 0;
@@ -766,20 +782,39 @@
           return strip[(reels[rIdx].currentIndex + offset + strip.length) % strip.length];
         };
 
-        const center = [getSym(0, 1), getSym(1, 1), getSym(2, 1)];
-        let payout = 0;
+        // 5つの有効判定ライン
+        const lines = [
+          [getSym(0, 0), getSym(1, 0), getSym(2, 0)], // 1: 上段横
+          [getSym(0, 1), getSym(1, 1), getSym(2, 1)], // 2: 中段横
+          [getSym(0, 2), getSym(1, 2), getSym(2, 2)], // 3: 下段横
+          [getSym(0, 0), getSym(1, 1), getSym(2, 2)], // 4: 右下がりナナメ
+          [getSym(0, 2), getSym(1, 1), getSym(2, 0)]  // 5: 右上がりナナメ
+        ];
 
-        if (center.every(s => s === '7')) {
+        let payout = 0;
+        let isBigWin = false;
+        let isRegWin = false;
+
+        // 5ラインをすべて走査
+        lines.forEach(line => {
+          if (line.every(s => s === '7')) {
+            isBigWin = true;
+          } else if (line[0] === '7' && line[1] === '7' && line[2] === 'BAR') {
+            isRegWin = true;
+          } else {
+            if (line.every(s => s === 'GRAPE')) payout = Math.max(payout, 7);
+            else if (line[0] === 'CHERRY') payout = Math.max(payout, 2);
+            else if (line.every(s => s === 'BELL')) payout = Math.max(payout, 14);
+            else if (line.every(s => s === 'RHINO')) payout = Math.max(payout, 3);
+          }
+        });
+
+        if (isBigWin) {
           payout = 312; bonusState = null;
           setTimeout(() => alert('🎉 BIG BONUS! (+312枚)'), 100);
-        } else if (center[0] === '7' && center[1] === '7' && center[2] === 'BAR') {
+        } else if (isRegWin) {
           payout = 104; bonusState = null;
           setTimeout(() => alert('✨ REG BONUS! (+104枚)'), 100);
-        } else {
-          if (center.every(s => s === 'GRAPE')) payout = 7;
-          else if (center[0] === 'CHERRY') payout = 2;
-          else if (center.every(s => s === 'BELL')) payout = 14;
-          else if (center.every(s => s === 'RHINO')) payout = 3;
         }
 
         if (!bonusState && payout >= 100 && gogoBox) {
@@ -796,7 +831,6 @@
       }
     };
 
-    // --- 完全安全な起動スクリプト ---
     function bootEngine() {
       if (window.JUGGLER_ENGINE && !window.JUGGLER_ENGINE.isInitialized) {
         window.JUGGLER_ENGINE.init();
@@ -812,5 +846,4 @@
   </script>
 </body>
 </html>
-
 
