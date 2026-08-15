@@ -11,8 +11,8 @@
     ['GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', '7', 'BAR', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO']
   ];
 
-  const SYMBOL_HEIGHT = 160 / 3;
-  const CANVAS_WIDTH = 100;
+  const SYMBOL_HEIGHT = 160 / 3; // 約53.33px（1コマの高さ）
+  const CANVAS_WIDTH = 100;     // リール1列の幅
 
   // ゲーム状態
   let credits = 50;
@@ -76,7 +76,10 @@
 
     ALL_IDS.forEach(id => {
       if (dataStore[id]) {
-        symbolCanvasCache[id] = decodeRLEToCanvas(dataStore[id]);
+        symbolCanvasCache[id] = {
+          canvas: decodeRLEToCanvas(dataStore[id]),
+          meta: dataStore[id]
+        };
       } else {
         // フォールバック表示（テキスト）
         const cvs = document.createElement('canvas');
@@ -87,33 +90,52 @@
         ctx.font = 'bold 24px sans-serif';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(id, 64, 64);
-        symbolCanvasCache[id] = cvs;
+        symbolCanvasCache[id] = {
+          canvas: cvs,
+          meta: { x: 0, y: 0, w: 128, h: 128 }
+        };
       }
     });
   }
 
-  // キャンバスに1図柄を描画
+  // キャンバスに1図柄を描画（アスペクト比保持・最適サイズスケール描画）
   function drawSymbol(ctx, type, y) {
-    const masterCanvas = symbolCanvasCache[type];
+    const cached = symbolCanvasCache[type];
 
     ctx.save();
     ctx.translate(0, y);
 
+    // コマ背景（純白＆枠線）
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, CANVAS_WIDTH, SYMBOL_HEIGHT);
     ctx.strokeStyle = "rgba(0,0,0,0.12)";
     ctx.lineWidth = 1;
     ctx.strokeRect(0, 0, CANVAS_WIDTH, SYMBOL_HEIGHT);
 
-    const drawSize = SYMBOL_HEIGHT * 0.92;
-    const drawX = (CANVAS_WIDTH - drawSize) / 2;
-    const drawY = (SYMBOL_HEIGHT - drawSize) / 2;
+    if (cached) {
+      const masterCanvas = cached.canvas;
+      const meta = cached.meta;
 
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
+      // 各図柄の本来の比率（w, h）に基づきコマ枠（100x53.33）内で最大美しく収まるスケールを計算
+      const maxW = CANVAS_WIDTH * 0.95;   // コマ横幅に対して約95%
+      const maxH = SYMBOL_HEIGHT * 0.90;  // コマ縦幅に対して約90%
 
-    if (masterCanvas) {
-      ctx.drawImage(masterCanvas, 0, 0, 128, 128, drawX, drawY, drawSize, drawSize);
+      const scale = Math.min(maxW / meta.w, maxH / meta.h);
+      const drawW = meta.w * scale;
+      const drawH = meta.h * scale;
+
+      const drawX = (CANVAS_WIDTH - drawW) / 2;
+      const drawY = (SYMBOL_HEIGHT - drawH) / 2;
+
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+
+      // ソースとなる128x128キャンバスから図柄部分のみを抽出し、計算した最適アスペクト比で描画
+      ctx.drawImage(
+        masterCanvas,
+        meta.x, meta.y, meta.w, meta.h,
+        drawX, drawY, drawW, drawH
+      );
     }
     ctx.restore();
   }
@@ -252,15 +274,26 @@
           btn.disabled = true;
           playSound('stop');
 
-          let targetIdx = Math.round(reel.pos / SYMBOL_HEIGHT) % reel.strip.length;
+          // 現在位置から最も近いコマのインデックスを求める（1コマ高サで完全に割算）
+          const maxPos = reel.strip.length * SYMBOL_HEIGHT;
+          let baseIdx = Math.round(reel.pos / SYMBOL_HEIGHT) % reel.strip.length;
+          if (baseIdx < 0) baseIdx += reel.strip.length;
+          
+          let targetIdx = baseIdx;
+
+          // ボーナス成立時の引き込み制御（最大4コマ引き込み）
           if (bonusState) {
             const targetSym = bonusState === 'BIG' ? '7' : (index === 2 ? 'BAR' : '7');
-            for (let offset = 0; offset <= 4; offset++) {
-              const checkIdx = (targetIdx + offset) % reel.strip.length;
-              if (reel.strip[checkIdx] === targetSym) { targetIdx = checkIdx; break; }
+            for (let slip = 0; slip <= 4; slip++) {
+              const checkIdx = (baseIdx - slip + reel.strip.length) % reel.strip.length;
+              if (reel.strip[checkIdx] === targetSym) { 
+                targetIdx = checkIdx; 
+                break; 
+              }
             }
           }
 
+          // リール位置を計算コマの位置にミリ単位まで完全に整列・同期（コマ枠へのスナップ）
           reel.currentIndex = targetIdx;
           reel.pos = targetIdx * SYMBOL_HEIGHT;
           reel.canvas.style.transform = `translateY(-${reel.pos}px)`;
@@ -279,11 +312,15 @@
       }
     },
 
+    // リール回転処理（「上から下」への視覚的回転を実現）
     spinReel: function(reel) {
       const maxPos = reel.strip.length * SYMBOL_HEIGHT;
       const animate = () => {
         if (!reel.isSpinning) return;
-        reel.pos = (reel.pos + reel.speed) % maxPos;
+        
+        // translateY(-pos) において pos を減少させることで、キャンバス全体が下に移動し、
+        // 上の図柄が下へ向かって滑らかに流れ落ちる（実機通りの「上から下」回転）
+        reel.pos = (reel.pos - reel.speed + maxPos) % maxPos;
         reel.canvas.style.transform = `translateY(-${reel.pos}px)`;
         reel.animId = requestAnimationFrame(animate);
       };
