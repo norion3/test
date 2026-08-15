@@ -1,6 +1,7 @@
 /**
  * アイムジャグラーEX スロットゲームエンジン (engine.js)
  * 7図柄の解読・レンダリング・リール制御・サウンド・ボーナス判定
+ * [更新ナレッジ] スナップ吸着減速停止ロジックによる半コマ（35px）ズレの完全解消
  */
 
 (function() {
@@ -11,7 +12,7 @@
     ['GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', '7', 'BAR', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO']
   ];
 
-  // 1コマの高さを70px、幅を100pxの完全整数値に固定
+  // 1コマの高さを70px（完全整数値）に固定（3コマでリール窓縦幅＝210px）
   const SYMBOL_HEIGHT = 70;
   const CANVAS_WIDTH = 100;
 
@@ -98,14 +99,14 @@
     });
   }
 
-  // キャンバスに1図柄を描画（実機プロポーションの完全再現＆不要な枠線削除）
+  // キャンバスに1図柄を描画（7/BAR＝大型・幅広、小役＝中央配置・中型）
   function drawSymbol(ctx, type, y) {
     const cached = symbolCanvasCache[type];
 
     ctx.save();
     ctx.translate(0, y);
 
-    // コマ背景（純白のみ。不自然なグレー枠線は完全除去）
+    // コマ背景（純白のみ。不自然なグレー線は一切描画しない）
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, CANVAS_WIDTH, SYMBOL_HEIGHT);
 
@@ -203,8 +204,8 @@
 
         return {
           id: idx, strip: strip, canvas: canvas, ctx: ctx,
-          currentIndex: currentIdx, isSpinning: false, speed: 0,
-          pos: initialPos, animId: null
+          currentIndex: currentIdx, isSpinning: false, isStopping: false,
+          speed: 0, pos: initialPos, targetPos: 0, animId: null
         };
       }).filter(Boolean);
 
@@ -256,6 +257,7 @@
 
           reels.forEach((reel, i) => {
             reel.isSpinning = true;
+            reel.isStopping = false;
             reel.speed = 35 + i * 2;
             this.spinReel(reel);
             if (stopBtns[i]) stopBtns[i].disabled = false;
@@ -268,13 +270,11 @@
         if (!btn) return;
         btn.onclick = () => {
           const reel = reels[index];
-          if (!reel.isSpinning) return;
-          cancelAnimationFrame(reel.animId);
-          reel.isSpinning = false;
+          if (!reel.isSpinning || reel.isStopping) return;
+          
           btn.disabled = true;
           playSound('stop');
 
-          // スナップ（ピタ止め）計算
           const maxPos = reel.strip.length * SYMBOL_HEIGHT;
           let baseIdx = Math.round(reel.pos / SYMBOL_HEIGHT) % reel.strip.length;
           if (baseIdx < 0) baseIdx += reel.strip.length;
@@ -285,7 +285,6 @@
           if (bonusState) {
             const targetSym = bonusState === 'BIG' ? '7' : (index === 2 ? 'BAR' : '7');
             for (let slip = 0; slip <= 4; slip++) {
-              // Y座標が減少方向（上から下）へ回るため、これから降ってくる未来の図柄（インデックスが小さい側）へ引き込む
               const checkIdx = (baseIdx - slip + reel.strip.length) % reel.strip.length;
               if (reel.strip[checkIdx] === targetSym) { 
                 targetIdx = checkIdx; 
@@ -294,14 +293,10 @@
             }
           }
 
-          // 完全グリッド吸着（縦3コマ・横3列の枠内に1ピクセルズレなく絶対固定停止）
+          // 目標位置を設定し、スムーズスナップ吸着モード（isStopping = true）へ移行
           reel.currentIndex = targetIdx;
-          reel.pos = targetIdx * SYMBOL_HEIGHT;
-          reel.canvas.style.transform = `translateY(-${reel.pos}px)`;
-
-          if (reels.every(r => !r.isSpinning)) {
-            this.onAllStopped();
-          }
+          reel.targetPos = targetIdx * SYMBOL_HEIGHT;
+          reel.isStopping = true;
         };
       });
 
@@ -313,13 +308,38 @@
       }
     },
 
-    // リール回転処理（実機通りの「上から下」滑らか回転）
+    // リール回転＆スムーズスナップ吸着停止アニメーション
     spinReel: function(reel) {
       const maxPos = reel.strip.length * SYMBOL_HEIGHT;
       const animate = () => {
         if (!reel.isSpinning) return;
         
-        reel.pos = (reel.pos - reel.speed + maxPos) % maxPos;
+        if (reel.isStopping) {
+          // 残り移動距離を計算（上から下への回転方向）
+          let dist = (reel.pos - reel.targetPos + maxPos) % maxPos;
+          
+          // 目標のコマ位置に到達（距離がスピード以下または残りわずか）したら完全固定停止
+          if (dist <= reel.speed || dist < 2) {
+            reel.pos = reel.targetPos;
+            reel.isSpinning = false;
+            reel.isStopping = false;
+            cancelAnimationFrame(reel.animId);
+            reel.canvas.style.transform = `translateY(-${reel.pos}px)`;
+
+            if (reels.every(r => !r.isSpinning)) {
+              this.onAllStopped();
+            }
+            return;
+          } else {
+            // スキャンフレーム遅延による半コマ飛びを起こさないよう、自然に目標位置へ吸着
+            let step = Math.min(reel.speed, dist);
+            reel.pos = (reel.pos - step + maxPos) % maxPos;
+          }
+        } else {
+          // 通常回転処理
+          reel.pos = (reel.pos - reel.speed + maxPos) % maxPos;
+        }
+
         reel.canvas.style.transform = `translateY(-${reel.pos}px)`;
         reel.animId = requestAnimationFrame(animate);
       };
@@ -372,5 +392,4 @@
     }
   };
 })();
-
 
