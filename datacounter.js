@@ -12,7 +12,7 @@
     diffMedal: 0,        // 累計差枚数
     
     history: [],         // 当選履歴リスト [{ id, type, game, totalGame, time }]
-    slumpData: [{ game: 0, diff: 0 }], // スランプグラフデータポイント
+    slumpData: [{ game: 0, diff: 0 }], // スランプグラフ用データポイント
 
     init: function() {
       this.reset();
@@ -28,7 +28,7 @@
       this.slumpData = [{ game: 0, diff: 0 }];
     },
 
-    // 1ゲーム開始時の更新 (BET枚数の引算)
+    // 1ゲーム開始時 (BET消費時)
     onGameStart: function(betCount) {
       this.totalGames++;
       this.currentGames++;
@@ -36,7 +36,7 @@
       this.recordSlumpPoint();
     },
 
-    // 払い出し発生時の更新
+    // 払い出し発生時
     onPayout: function(payout) {
       if (payout > 0) {
         this.diffMedal += payout;
@@ -55,7 +55,7 @@
       const now = new Date();
       const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-      // 最新の履歴を先頭に追加
+      // 直近の履歴を先頭に追加
       this.history.unshift({
         id: this.history.length + 1,
         type: type, // 'BIG' | 'REG'
@@ -64,12 +64,12 @@
         time: timeStr
       });
 
-      // 最大50件まで保持
+      // 最大50件保持
       if (this.history.length > 50) {
         this.history.pop();
       }
 
-      // ボーナス間ゲーム数のリセット
+      // ボーナス間ゲーム数をリセット
       this.currentGames = 0;
       this.recordSlumpPoint();
     },
@@ -77,7 +77,7 @@
     // スランプグラフ用データポイントの記録
     recordSlumpPoint: function() {
       const lastPoint = this.slumpData[this.slumpData.length - 1];
-      // 5ゲーム毎、または差枚が大きく動いた場合に記録
+      // 5ゲーム経過毎、または差枚に変動があった場合に記録
       if (!lastPoint || this.totalGames - lastPoint.game >= 5 || Math.abs(this.diffMedal - lastPoint.diff) >= 10) {
         this.slumpData.push({
           game: this.totalGames,
@@ -86,7 +86,7 @@
       }
     },
 
-    // 各種確率および統計データの取得
+    // 統計・計算結果データの取得
     getStats: function() {
       const formatProb = (count, total) => {
         if (count === 0 || total === 0) return '1/--.-';
@@ -108,14 +108,14 @@
       };
     },
 
-    // Canvasを使用した出玉スランプグラフのリアルタイム描画
+    // Canvasを使用した出玉スランプグラフ描画
     renderSlumpGraph: function(canvasElement) {
       if (!canvasElement) return;
       const ctx = canvasElement.getContext('2d');
       const width = canvasElement.width;
       const height = canvasElement.height;
 
-      // 背景クリア
+      // 背景色クリア
       ctx.fillStyle = '#111622';
       ctx.fillRect(0, 0, width, height);
 
@@ -123,7 +123,7 @@
       const graphWidth = width - padding.left - padding.right;
       const graphHeight = height - padding.top - padding.bottom;
 
-      // Y軸の表示範囲（差枚数の最大・最小値）
+      // 差枚最大・最小値のレンジ決定
       let maxDiff = 1000;
       let minDiff = -1000;
 
@@ -134,7 +134,7 @@
 
       const maxGame = Math.max(3000, this.totalGames + 200);
 
-      // 差枚0基準線のY位置
+      // ゼロ基準線のY位置
       const zeroY = padding.top + graphHeight * (maxDiff / (maxDiff - minDiff));
 
       // グリッド線描画
@@ -151,7 +151,7 @@
         ctx.lineTo(width - padding.right, y);
         ctx.stroke();
 
-        // 差枚軸目盛
+        // 目盛値表記
         ctx.fillStyle = '#7a8ba6';
         ctx.font = '10px monospace';
         ctx.textAlign = 'right';
@@ -159,7 +159,7 @@
         ctx.fillText((val > 0 ? '+' : '') + Math.round(val), padding.left - 5, y);
       }
 
-      // ゼロ基準線（赤ライン）
+      // ゼロライン（赤ライン）
       ctx.strokeStyle = '#ff4444';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
@@ -185,7 +185,7 @@
         });
         ctx.stroke();
 
-        // 最新位置に黄色いプロット点
+        // 現在位置マーク
         const lastPoint = this.slumpData[this.slumpData.length - 1];
         const lastX = padding.left + (lastPoint.game / maxGame) * graphWidth;
         const lastY = padding.top + graphHeight * ((maxDiff - lastPoint.diff) / (maxDiff - minDiff));
@@ -203,7 +203,7 @@
       ctx.fillText('ゲーム数(G)', padding.left + graphWidth / 2, height - 6);
     },
 
-    // 当選履歴テーブルHTMLの生成
+    // 当選履歴テーブルHTMLの出力
     renderHistoryHTML: function() {
       if (this.history.length === 0) {
         return '<div style="text-align:center; padding:20px; color:#666;">当選履歴はありません</div>';

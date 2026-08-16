@@ -1,6 +1,6 @@
 /**
  * アイムジャグラーEX スロットゲームエンジン (engine.js)
- * 7セグLED動的制御・実機文字ランプ（Replay/Start/Wait/3BET）・ライン表示・設定モーダル連動
+ * 図柄Auto-Crop・演出テンポ保持・本格7セグ連動・実機文字ランプ制御
  */
 
 (function() {
@@ -13,7 +13,7 @@
 
   const SYMBOL_HEIGHT = 70;
   const CANVAS_WIDTH = 100;
-  const REEL_SPEED_BASE = 33; // 1回転0.75秒
+  const REEL_SPEED_BASE = 33; // 1回転0.75秒（実機速度）
 
   // SアイムジャグラーEX 実機確率テーブル (設定1〜6)
   const PROBABILITY_TABLE = {
@@ -27,7 +27,7 @@
 
   // ゲーム内部状態
   let currentSetting = 6;
-  let autoStopOnBonus = true;  // ボーナス成立時にAUTO解除して手動復帰
+  let autoStopOnBonus = true;  // ボーナス成立時にAUTO解除
   let weightCut = false;       // ウェイトカット設定
   let masterVolume = 1.0;      // 全体音量 (0.0 〜 1.0)
 
@@ -36,14 +36,14 @@
   let isSpinning = false;
   let isAutoMode = false;
   let autoTimer = null;
-  let lastSpinTime = 0;         // 前回レバーON時刻 (ウェイト制御用)
+  let lastSpinTime = 0;         // 前回レバーON時刻
   let isWaiting = false;
 
-  // フラグ＆ボーナス消化状態
-  let bonusFlag = null;         // 内部成立中のフラグ ('BIG' | 'REG' | null)
-  let isBonusMode = false;      // ボーナス消化モード
+  // ボーナス状態
+  let bonusFlag = null;         // 'BIG' | 'REG' | null
+  let isBonusMode = false;      // ボーナスゲーム消化中
   let bonusType = null;         // 'BIG' | 'REG'
-  let bonusAcquired = 0;        // 累計純増獲得枚数
+  let bonusAcquired = 0;        // 純増獲得枚数
   let bonusTarget = 0;          // BIG: 252枚 / REG: 96枚
 
   let isPeka = false;
@@ -66,7 +66,7 @@
       if (!this.ctx) {
         this.ctx = new (window.AudioContext || window.webkitAudioContext)();
         this.masterGain = this.ctx.createGain();
-        this.masterGain.gain.setValueAtTime(masterVolume, this.ctx.currentTime);
+        this.masterGain.gain.setValueAtTime(soundOn ? masterVolume : 0, this.ctx.currentTime);
         this.masterGain.connect(this.ctx.destination);
       }
       if (this.ctx.state === 'suspended') {
@@ -105,7 +105,7 @@
           })
           .then(buf => this.ctx.decodeAudioData(buf))
           .then(decoded => { this.audioBuffers[key] = decoded; })
-          .catch(() => { /* MP3が無い場合はWebAudio内蔵音源へ */ });
+          .catch(() => { /* MP3が無い場合はWebAudio内蔵音へ自動フォールバック */ });
       });
     },
 
@@ -232,7 +232,7 @@
   };
 
   // ===================================================
-  // 2. 本格7セグメントLED描画ロジック
+  // 2. 本格7セグメントLED動的制御 (消灯セグ透け対応)
   // ===================================================
   const SEGMENT_MAP = {
     '0': ['a','b','c','d','e','f'],
@@ -258,7 +258,6 @@
       valStr = valStr.padStart(digits, ' ');
     }
 
-    // 桁数分エレメントが無ければ動的生成
     let digitElems = container.querySelectorAll('.digit7seg');
     if (digitElems.length !== digits) {
       container.innerHTML = '';
@@ -292,16 +291,17 @@
   }
 
   // ===================================================
-  // 3. リール描画＆キャッシング
+  // 3. RLEデコーダー ＆ 上下余白Auto-Crop（縦縮み解消）
   // ===================================================
-  function decodeRLEToCanvas(symData) {
-    const cvs = document.createElement('canvas');
-    cvs.width = 128; cvs.height = 128;
-    const ctx = cvs.getContext('2d');
-    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, 128, 128);
-    if (!symData || !symData.rle) return cvs;
+  function decodeRLEToCanvasWithAutoCrop(symData) {
+    const rawCvs = document.createElement('canvas');
+    rawCvs.width = 128; rawCvs.height = 128;
+    const rawCtx = rawCvs.getContext('2d');
+    rawCtx.fillStyle = '#ffffff'; rawCtx.fillRect(0, 0, 128, 128);
 
-    const imgData = ctx.createImageData(symData.w, symData.h);
+    if (!symData || !symData.rle) return { canvas: rawCvs, crop: { x:0, y:0, w:128, h:128 } };
+
+    const imgData = rawCtx.createImageData(symData.w, symData.h);
     const data = imgData.data;
     const palette = symData.palette;
     const chunks = symData.rle.split(',');
@@ -323,8 +323,43 @@
         pixelIndex++;
       }
     }
-    ctx.putImageData(imgData, symData.x, symData.y);
-    return cvs;
+    rawCtx.putImageData(imgData, symData.x, symData.y);
+
+    // ピクセル解析による上下白余白のAuto-Crop検知
+    const fullImgData = rawCtx.getImageData(0, 0, 128, 128);
+    const pixels = fullImgData.data;
+    let minX = 128, minY = 128, maxX = 0, maxY = 0;
+    let foundNonWhite = false;
+
+    for (let y = 0; y < 128; y++) {
+      for (let x = 0; x < 128; x++) {
+        const idx = (y * 128 + x) * 4;
+        const r = pixels[idx];
+        const g = pixels[idx+1];
+        const b = pixels[idx+2];
+
+        // 非白ピクセルの検知 (閾値: 各チャンネル245未満)
+        if (r < 245 || g < 245 || b < 245) {
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+          foundNonWhite = true;
+        }
+      }
+    }
+
+    if (!foundNonWhite) {
+      minX = 0; minY = 0; maxX = 127; maxY = 128;
+    }
+
+    const cropW = Math.max(10, maxX - minX + 1);
+    const cropH = Math.max(10, maxY - minY + 1);
+
+    return {
+      canvas: rawCvs,
+      crop: { x: minX, y: minY, w: cropW, h: cropH }
+    };
   }
 
   function initSymbolCache() {
@@ -333,7 +368,7 @@
 
     ALL_IDS.forEach(id => {
       if (dataStore[id]) {
-        symbolCanvasCache[id] = { canvas: decodeRLEToCanvas(dataStore[id]), meta: dataStore[id] };
+        symbolCanvasCache[id] = decodeRLEToCanvasWithAutoCrop(dataStore[id]);
       } else {
         const cvs = document.createElement('canvas');
         cvs.width = 128; cvs.height = 128;
@@ -342,12 +377,12 @@
         ctx.fillStyle = '#000000'; ctx.font = 'bold 24px sans-serif';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(id, 64, 64);
-        symbolCanvasCache[id] = { canvas: cvs, meta: { x: 0, y: 0, w: 128, h: 128 } };
+        symbolCanvasCache[id] = { canvas: cvs, crop: { x: 0, y: 0, w: 128, h: 128 } };
       }
     });
   }
 
-  // 隙間ゼロのシームレス描画
+  // Auto-Crop領域からの実機プロポーション精密描画
   function drawSymbol(ctx, type, y, isReelSpinning = false) {
     const cached = symbolCanvasCache[type];
     ctx.save();
@@ -363,12 +398,12 @@
     ctx.fillRect(0, -0.5, CANVAS_WIDTH, SYMBOL_HEIGHT + 1.0);
 
     if (cached) {
-      let maxW = (type === '7' || type === 'BAR') ? CANVAS_WIDTH * 0.88 : CANVAS_WIDTH * 0.45;
-      let maxH = (type === '7' || type === 'BAR') ? SYMBOL_HEIGHT * 0.88 : SYMBOL_HEIGHT * 0.50;
+      let maxW = (type === '7' || type === 'BAR') ? CANVAS_WIDTH * 0.90 : CANVAS_WIDTH * 0.50;
+      let maxH = (type === '7' || type === 'BAR') ? SYMBOL_HEIGHT * 0.90 : SYMBOL_HEIGHT * 0.55;
 
-      const scale = Math.min(maxW / cached.meta.w, maxH / cached.meta.h);
-      const drawW = cached.meta.w * scale;
-      const drawH = cached.meta.h * scale;
+      const scale = Math.min(maxW / cached.crop.w, maxH / cached.crop.h);
+      const drawW = cached.crop.w * scale;
+      const drawH = cached.crop.h * scale;
       const drawX = (CANVAS_WIDTH - drawW) / 2;
       const drawY = (SYMBOL_HEIGHT - drawH) / 2;
 
@@ -387,21 +422,19 @@
         }
       }
 
-      ctx.drawImage(cached.canvas, cached.meta.x, cached.meta.y, cached.meta.w, cached.meta.h, drawX, drawY, drawW, drawH);
+      ctx.drawImage(cached.canvas, cached.crop.x, cached.crop.y, cached.crop.w, cached.crop.h, drawX, drawY, drawW, drawH);
     }
     ctx.restore();
   }
 
-  // 実機パネル・ランプ表示更新
+  // 実機パネル＆7セグLED表示更新
   function updateDisplays(payout = 0) {
     if (credits < 3 && !isBonusMode) credits = 50;
 
-    // 7セグLEDの更新
     update7SegDisplay('creditDisp', credits, 2);
     update7SegDisplay('countDisp', payout > 0 ? payout : 0, 2);
     update7SegDisplay('payoutDisp', payout, 2);
 
-    // 実機文字透過パネルの更新
     const lampReplay = document.getElementById('lampReplay');
     const lampStart = document.getElementById('lampStart');
     const lampWait = document.getElementById('lampWait');
@@ -412,7 +445,6 @@
     if (lampWait) lampWait.classList.toggle('active', isWaiting);
     if (lampBet3) lampBet3.classList.toggle('active', betAmount === 3 && !isSpinning);
 
-    // ボーナス中ステータス
     const bStatusEl = document.getElementById('bonusStatusDisp');
     if (bStatusEl) {
       if (isBonusMode) {
@@ -424,7 +456,7 @@
     }
   }
 
-  // ライン表示器（①②③）の制御 (BET時点灯 / 回転時消灯)
+  // ライン表示器（①②③）制御 (BET時点灯 / 回転時消灯)
   function setLineBadgesLit(isLit) {
     const badges = document.querySelectorAll('.line-badge');
     badges.forEach(badge => {
@@ -486,7 +518,6 @@
       this.isInitialized = true;
     },
 
-    // 設定ダイアログ用ゲッター＆セッター
     getConfig: function() {
       return {
         setting: currentSetting,
@@ -515,16 +546,17 @@
     startSpin: function() {
       if (isSpinning) return;
 
-      // 実機ウェイト制御 (4.1秒固定)
       const now = Date.now();
       const elapsed = now - lastSpinTime;
-      if (!weightCut && lastSpinTime > 0 && elapsed < 4100) {
+      const targetWait = weightCut ? 200 : 4100; // ウェイトカット時でも約200msの演出「間」を保持
+
+      if (lastSpinTime > 0 && elapsed < targetWait) {
         isWaiting = true;
         updateDisplays();
         setTimeout(() => {
           isWaiting = false;
           this.executeSpin();
-        }, 4100 - elapsed);
+        }, targetWait - elapsed);
         return;
       }
 
@@ -541,7 +573,6 @@
         document.getElementById('stopBtn2')
       ];
 
-      // 【実機準拠】回転開始時にライン表示①②③を消灯
       setLineBadgesLit(false);
 
       if (isBonusMode) {
@@ -560,7 +591,7 @@
       updateDisplays(0);
       SoundEngine.play('lever');
 
-      // 通常時フラグ抽選
+      // 統一確率判定 (AUTO/MANUAL共用)
       if (!isBonusMode && !bonusFlag) {
         const prob = PROBABILITY_TABLE[currentSetting];
         const rand = Math.random();
@@ -574,7 +605,6 @@
           else if (pekaRand < 0.25) pekaTiming = 'STOP3_DOWN';
           else pekaTiming = 'STOP3_UP';
 
-          // ボーナス成立時：設定に応じてAUTO解除して手動復帰
           if (autoStopOnBonus) {
             stopAutoMode();
           }
@@ -591,7 +621,7 @@
         this.spinReel(reel);
         if (stopBtns[i]) {
           stopBtns[i].disabled = false;
-          stopBtns[i].classList.add('spinning'); // ボタン点滅LED発光
+          stopBtns[i].classList.add('spinning');
         }
       });
       updateDisplays();
@@ -601,7 +631,6 @@
       }
     },
 
-    // ストップボタン押下
     stopReelIndex: function(index) {
       const reel = reels[index];
       const stopBtns = [
@@ -679,7 +708,7 @@
         elem.addEventListener('click', downTrigger);
       };
 
-      // 3BETボタン (【実機準拠】BET完了時にライン表示①②③を点灯)
+      // 3BETボタン
       attachFastTouch(betBtn, (e) => {
         if (e.cancelable) e.preventDefault();
         SoundEngine.init();
@@ -696,7 +725,7 @@
         this.startSpin();
       });
 
-      // ストップボタン (1, 2, 3)
+      // ストップボタン
       stopBtns.forEach((btn, index) => {
         if (!btn) return;
         attachFastTouch(btn, (e) => {
@@ -777,7 +806,6 @@
 
       let payout = 0;
 
-      // ボーナス消化時
       if (isBonusMode) {
         payout = 14;
         bonusAcquired += 13;
@@ -798,7 +826,6 @@
         return;
       }
 
-      // 通常時判定
       let isBigWin = false, isRegWin = false, isReplayWin = false;
 
       lines.forEach(line => {
@@ -825,7 +852,7 @@
         if (autoStopOnBonus) stopAutoMode();
       } else if (isReplayWin) {
         isReplay = true;
-        setLineBadgesLit(true); // リプレイ時は次ゲームライン自動点灯
+        setLineBadgesLit(true);
         SoundEngine.play('replay');
       } else if (payout > 0) {
         credits += payout;
