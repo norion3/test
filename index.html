@@ -3,11 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>アイムジャグラーEX 実写オーバーレイ完全版</title>
+  <title>アイムジャグラーEX (ドットUI・ボーナス消化対応版)</title>
   <style>
     /* ---------------------------------------------------
        1. 基本設定＆スマホ誤操作防止プロテクト
     --------------------------------------------------- */
+    :root {
+      --bg-color: #08080a;
+      --gold: #f5cf47;
+      --led-red: #ff1111;
+      --led-green: #00ff66;
+    }
+
     * {
       box-sizing: border-box;
       user-select: none;
@@ -16,7 +23,7 @@
     }
 
     body {
-      background-color: #050508;
+      background-color: var(--bg-color);
       color: #fff;
       font-family: "Hiragino Kaku Gothic ProN", "Meiryo", -apple-system, sans-serif;
       margin: 0;
@@ -28,230 +35,385 @@
       min-height: 100vh;
       overflow: hidden; 
       overscroll-behavior: none;
-      touch-action: none; /* スマホのスクロール・ズームを遮断 */
+      touch-action: none; /* スクロール・ズーム完全遮断 */
     }
 
     /* ---------------------------------------------------
-       2. 画像に対するオーバーレイ相対位置 (パーセンテージ)
-       ※写真の位置と合致するようにパーセンテージで定義
+       2. ドット絵・グラフィック風 筐体メインフレーム
     --------------------------------------------------- */
-    :root {
-      /* リール窓位置 */
-      --reel-top: 29.3%;
-      --reel-left: 17.2%;
-      --reel-width: 65.6%;
-      --reel-height: 20.2%;
-      
-      /* GOGO! CHANCE ランプ位置 */
-      --gogo-top: 41.2%;
-      --gogo-left: 8.8%;
-      --gogo-width: 17.5%;
-      --gogo-height: 8.2%;
-
-      /* 7セグLED (CREDIT / COUNT / PAYOUT) 位置 */
-      --seg-top: 51.8%;
-      --seg-credit-left: 32.2%;
-      --seg-count-left: 45.2%;
-      --seg-payout-left: 58.2%;
-      --seg-width: 9.5%;
-      --seg-height: 4.8%;
-
-      /* 操作部 (BET / レバー / ストップ1・2・3) 位置 */
-      --bet-top: 55.2%;
-      --bet-left: 3.2%;
-      --bet-width: 9.2%;
-      --bet-height: 5.2%;
-
-      --lever-top: 53.8%;
-      --lever-left: 13.5%;
-      --lever-width: 10.8%;
-      --lever-height: 6.2%;
-
-      --stop-top: 54.2%;
-      --stop-width: 10.2%;
-      --stop-height: 5.8%;
-      --stop1-left: 34.8%;
-      --stop2-left: 49.2%;
-      --stop3-left: 63.8%;
-    }
-
-    /* ---------------------------------------------------
-       3. 筐体メインコンテナ (実写写真ベース)
-    --------------------------------------------------- */
-    .cabinet-container {
+    .cabinet {
       position: relative;
       width: 100%;
-      max-width: 440px; /* 画面サイズに合わせた上限 */
-      margin: 0 auto;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.9);
-      border-radius: 8px;
-      overflow: hidden;
+      max-width: 410px;
+      background: #111;
+      border: 4px solid #555;
+      border-radius: 12px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.95), inset 0 2px 6px rgba(255,255,255,0.4);
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
 
-    .cabinet-bg {
-      display: block;
+    /* TOP KITACランプ */
+    .kitac-top {
       width: 100%;
-      height: auto;
-      pointer-events: none; /* 背景画像の誤タッチ防止 */
-    }
-
-    /* ---------------------------------------------------
-       4. リール窓（写真のリール位置に正確に重ね合わせ）
-    --------------------------------------------------- */
-    .reels-overlay {
-      position: absolute;
-      top: var(--reel-top);
-      left: var(--reel-left);
-      width: var(--reel-width);
-      height: var(--reel-height);
+      height: 28px;
+      background: linear-gradient(180deg, #d31b22 0%, #900a0f 100%);
+      border: 2px solid #555;
+      border-radius: 8px 8px 0 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #000;
-      border-radius: 2px;
-      overflow: hidden;
-      box-shadow: inset 0 8px 12px rgba(0,0,0,0.8), inset 0 -8px 12px rgba(0,0,0,0.8);
     }
 
-    .reels-container {
+    .kitac-lamp {
+      width: 70%;
+      height: 16px;
+      background: radial-gradient(ellipse at center, #80ff80 0%, #2e7d32 70%, #003300 100%);
+      border: 2px solid #a5d6a7;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #4caf50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 900;
+      color: #003300;
+      letter-spacing: 1px;
+    }
+
+    /* 上部 BIG CHANCE パネル */
+    .top-panel {
       width: 100%;
-      height: 100%;
+      background: linear-gradient(180deg, #e62229 0%, #a80e14 60%, #5e0205 100%);
+      border: 3px solid var(--gold);
+      border-radius: 4px;
+      padding: 6px;
+      text-align: center;
+      margin-top: 4px;
+      box-shadow: inset 0 0 12px rgba(0,0,0,0.7);
+    }
+
+    .big-chance-text {
+      font-size: 20px;
+      font-weight: 900;
+      font-style: italic;
+      color: #fff;
+      text-shadow: 0 0 8px #fff, 0 0 15px #ff0000, 2px 2px 0 #000;
+      letter-spacing: 2px;
+    }
+
+    .juggler-brand-bar {
+      width: 100%;
+      background: #000;
+      border: 1px solid var(--gold);
+      border-radius: 3px;
+      padding: 2px 0;
+      margin-top: 4px;
+      font-family: 'Impact', sans-serif;
+      font-size: 18px;
+      letter-spacing: 4px;
+      color: #fff;
+      text-shadow: 0 0 6px #fff;
+    }
+
+    /* 中央メインパネル枠 */
+    .center-frame {
+      position: relative;
+      width: 100%;
+      background: linear-gradient(180deg, #d31820 0%, #800a0e 100%);
+      border: 3px solid var(--gold);
+      border-radius: 6px;
+      padding: 8px;
+      margin-top: 4px;
+      box-shadow: inset 0 0 15px rgba(0,0,0,0.8);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .reels-wrapper {
+      width: 100%;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .line-numbers {
+      position: absolute;
+      left: 6px;
+      top: 35px;
+      display: flex;
+      flex-direction: column;
+      gap: 30px;
+      font-weight: 900;
+      font-size: 12px;
+    }
+
+    .line-badge {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      box-shadow: 0 0 4px rgba(0,0,0,0.9);
+      border: 1px solid #fff;
+    }
+    .badge-3 { background: #e51d24; }
+    .badge-2 { background: #2196f3; }
+    .badge-1 { background: #4caf50; }
+
+    /* クッキリとしたリール窓 (304px × 210px) */
+    .reels-screen {
+      width: 304px;
+      height: 210px;
+      box-sizing: content-box;
+      background: #111;
+      border: 3px solid #222;
+      border-radius: 4px;
       display: flex;
       justify-content: space-between;
+      overflow: hidden;
+      box-shadow: inset 0 12px 14px rgba(0,0,0,0.4), inset 0 -12px 14px rgba(0,0,0,0.4);
+      position: relative;
     }
 
     .reel-column {
-      width: 32.8%;
+      width: 100px;
       height: 100%;
-      background: #ffffff;
+      background: #fff;
       position: relative;
       overflow: hidden;
     }
 
     .reel-canvas {
-      width: 100%;
       position: absolute;
       top: 0; 
       left: 0;
+      width: 100%;
       will-change: transform;
     }
 
-    /* ---------------------------------------------------
-       5. 7セグLED & GOGO! CHANCE 発光部
-    --------------------------------------------------- */
-    .seg-overlay {
-      position: absolute;
-      top: var(--seg-top);
-      width: var(--seg-width);
-      height: var(--seg-height);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #ff1111;
-      font-family: 'Courier New', Courier, monospace;
+    /* ボーナス消化ステータスインジケーター */
+    .bonus-status-banner {
+      display: none;
+      width: 100%;
+      background: linear-gradient(90deg, #ff007f 0%, #ffcc00 50%, #ff007f 100%);
+      color: #000;
       font-weight: 900;
-      font-size: clamp(12px, 3.8vw, 18px);
-      text-shadow: 0 0 6px #ff1111, 0 0 10px #ff1111;
-      pointer-events: none;
+      font-size: 13px;
+      text-align: center;
+      padding: 4px 0;
+      margin-top: 6px;
+      border-radius: 4px;
+      box-shadow: 0 0 10px #ff007f;
+      animation: bannerPulse 0.5s infinite alternate;
+    }
+    @keyframes bannerPulse {
+      from { filter: brightness(1); }
+      to { filter: brightness(1.25); }
     }
 
-    .seg-credit { left: var(--seg-credit-left); }
-    .seg-count { left: var(--seg-count-left); }
-    .seg-payout { left: var(--seg-payout-left); }
+    /* 7セグLED & GOGO! CHANCE表示器 */
+    .dashboard-bar {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-top: 8px;
+      padding: 0 2px;
+    }
 
-    .gogo-overlay {
-      position: absolute;
-      top: var(--gogo-top);
-      left: var(--gogo-left);
-      width: var(--gogo-width);
-      height: var(--gogo-height);
-      opacity: 0;
-      transition: opacity 0.05s ease-in;
-      pointer-events: none;
+    .gogo-box {
+      width: 110px; 
+      height: 60px;
+      background: #020204;
+      border: 2px solid #222;
+      border-radius: 6px;
+      position: relative;
       display: flex;
       align-items: center;
       justify-content: center;
-      mix-blend-mode: screen; /* 写真背景になじませる透過合成 */
-    }
-
-    .gogo-overlay.peka {
-      opacity: 1;
-      animation: pekaFlash 0.15s infinite alternate;
-      background: radial-gradient(ellipse, rgba(255, 0, 127, 0.95) 0%, rgba(255, 0, 127, 0.2) 65%, transparent 100%);
-    }
-
-    @keyframes pekaFlash {
-      from { filter: brightness(1); }
-      to { filter: brightness(1.35); }
+      overflow: hidden;
+      box-shadow: inset 0 0 12px #000;
     }
 
     .gogo-svg {
-      width: 92%;
-      height: 92%;
-      filter: drop-shadow(0 0 6px #ff007f);
+      width: 85%;
+      height: 85%;
+      opacity: 0.15;
+      transition: all 0.05s ease-in;
     }
 
-    /* ---------------------------------------------------
-       6. 透明操作ボタン（写真のボタン上に配置）
-    --------------------------------------------------- */
-    .touch-btn {
-      position: absolute;
-      border-radius: 50%;
-      background: transparent;
-      outline: none;
-      border: none;
-      cursor: pointer;
-      touch-action: manipulation;
-      z-index: 10;
-      transition: background 0.05s, box-shadow 0.05s;
+    .gogo-box.peka {
+      background: radial-gradient(circle, #ff007f 0%, #800080 70%, #05000a 100%);
+      border-color: #ff69b4;
+      box-shadow: 0 0 20px #ff007f, 0 0 40px #ff007f, inset 0 0 15px #ffffff;
     }
 
-    /* タップした瞬間にボタンが沈み込む影のリアル演出 */
-    .touch-btn:active {
-      background: rgba(0, 0, 0, 0.35);
-      box-shadow: inset 0 4px 12px rgba(0,0,0,0.8);
+    .gogo-box.peka .gogo-svg {
+      opacity: 1;
+      filter: drop-shadow(0 0 6px #fff) drop-shadow(0 0 12px #ff69b4);
+      animation: pekaFlash 0.15s infinite alternate;
     }
 
-    .touch-btn:disabled {
-      background: transparent;
-      cursor: not-allowed;
+    @keyframes pekaFlash {
+      from { transform: scale(1); }
+      to { transform: scale(1.03); }
     }
 
-    .btn-bet { top: var(--bet-top); left: var(--bet-left); width: var(--bet-width); height: var(--bet-height); }
-    .btn-lever { top: var(--lever-top); left: var(--lever-left); width: var(--lever-width); height: var(--lever-height); }
-    .btn-stop1 { top: var(--stop-top); left: var(--stop1-left); width: var(--stop-width); height: var(--stop-height); }
-    .btn-stop2 { top: var(--stop-top); left: var(--stop2-left); width: var(--stop-width); height: var(--stop-height); }
-    .btn-stop3 { top: var(--stop-top); left: var(--stop3-left); width: var(--stop-width); height: var(--stop-height); }
-
-    /* ---------------------------------------------------
-       7. 筐体下部サブコントロール
-    --------------------------------------------------- */
-    .bottom-controls {
+    .led-group {
       display: flex;
-      gap: 12px;
-      margin-top: 12px;
+      gap: 6px;
+    }
+
+    .led-unit {
+      display: flex;
+      flex-direction: column;
       align-items: center;
     }
 
-    .ctrl-btn {
-      background: #1e1e24;
-      border: 1px solid #444;
-      color: #ddd;
-      padding: 6px 14px;
-      border-radius: 16px;
-      font-size: 12px;
-      font-weight: bold;
-      cursor: pointer;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    .led-label {
+      font-size: 8px;
+      color: var(--gold);
+      font-weight: 900;
+      margin-bottom: 2px;
     }
 
-    .ctrl-btn.setting {
-      color: #f5cf47;
-      border-color: #f5cf47;
+    .led-screen {
+      background: #000;
+      border: 1px solid #444;
+      border-radius: 3px;
+      padding: 2px 4px;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 15px;
+      font-weight: bold;
+      color: var(--led-red);
+      text-shadow: 0 0 6px var(--led-red);
+      min-width: 32px;
+      text-align: right;
+    }
+
+    /* コントロールデッキ（メッキ調操作パーツ） */
+    .control-deck {
+      width: 100%;
+      background: linear-gradient(180deg, #e6e6e6 0%, #b8b8b8 35%, #8a8a8a 70%, #5e5e5e 100%);
+      border: 2px solid #333;
+      border-radius: 6px;
+      padding: 10px;
+      margin-top: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: inset 0 2px 4px rgba(255,255,255,0.8), 0 4px 8px rgba(0,0,0,0.6);
+    }
+
+    .bet-btn {
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #ff3333 0%, #880000 100%);
+      border: 2px solid #fff;
+      color: #fff;
+      font-weight: 900;
+      font-size: 11px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.6);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      touch-action: manipulation;
+      transition: transform 0.05s ease-out;
+    }
+
+    .bet-btn:active {
+      transform: translateY(3px) scale(0.96);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.8);
+    }
+
+    .lever-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #ffffff 0%, #a0a0a0 100%);
+      border: 3px solid #222;
+      box-shadow: 0 5px 10px rgba(0,0,0,0.7);
+      cursor: pointer;
+      transition: transform 0.08s ease-out;
+      touch-action: manipulation;
+    }
+
+    .lever-btn:active {
+      transform: translateY(6px) scale(0.92);
+    }
+
+    .stop-btn-group {
+      display: flex;
+      gap: 8px;
+    }
+
+    .stop-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #e62229 0%, #8a0b10 100%);
+      border: 2px solid #ffcccc;
+      color: #fff;
+      font-weight: 900;
+      font-size: 13px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.6);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: manipulation;
+      transition: transform 0.05s ease-out;
+    }
+
+    .stop-btn:disabled {
+      background: radial-gradient(circle, #555 0%, #222 100%);
+      border-color: #777;
+      opacity: 0.5;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .stop-btn:not(:disabled):active {
+      transform: translateY(3px) scale(0.95);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.8);
+    }
+
+    /* 筐体下部コントロール */
+    .bottom-controls {
+      display: flex;
+      gap: 12px;
+      margin-top: 10px;
+      align-items: center;
+    }
+
+    .sound-btn, .setting-btn {
+      background: #222;
+      border: 1px solid #555;
+      color: #ccc;
+      padding: 6px 14px;
+      border-radius: 14px;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .setting-btn {
+      color: var(--gold);
+      border-color: var(--gold);
     }
   </style>
 
-  <!-- 各種スクリプトデータの読み込み -->
+  <!-- 7種類の図柄データ（既存アセット） -->
   <script src="./symbol_7.js"></script>
   <script src="./symbol_BAR.js"></script>
   <script src="./symbol_GRAPE.js"></script>
@@ -259,54 +421,98 @@
   <script src="./symbol_BELL.js"></script>
   <script src="./symbol_RHINO.js"></script>
   <script src="./symbol_CLOWN.js"></script>
+  
+  <!-- スロット制御・音響エンジン -->
   <script src="./engine.js"></script>
 </head>
 <body>
 
-  <!-- 実写筐体コンテナ -->
-  <div class="cabinet-container">
-    <!-- 背景：実写写真 -->
-    <img src="./image.png" alt="アイムジャグラーEX 筐体写真" class="cabinet-bg" id="cabinetBg">
+  <!-- 実機ドット筐体 -->
+  <div class="cabinet">
+    <!-- KITAC TOPランプ -->
+    <div class="kitac-top">
+      <div class="kitac-lamp">KITAC</div>
+    </div>
 
-    <!-- リール窓オーバーレイ -->
-    <div class="reels-overlay">
-      <div class="reels-container">
-        <div class="reel-column"><canvas id="reelCanvas0" class="reel-canvas"></canvas></div>
-        <div class="reel-column"><canvas id="reelCanvas1" class="reel-canvas"></canvas></div>
-        <div class="reel-column"><canvas id="reelCanvas2" class="reel-canvas"></canvas></div>
+    <!-- 上部 BIG CHANCE パネル -->
+    <div class="top-panel">
+      <div class="big-chance-text">BIG CHANCE!</div>
+      <div class="juggler-brand-bar">JUGGLER</div>
+    </div>
+
+    <!-- 中央メインフレーム -->
+    <div class="center-frame">
+      <div class="reels-wrapper">
+        <div class="line-numbers">
+          <div class="line-badge badge-3">3</div>
+          <div class="line-badge badge-2">2</div>
+          <div class="line-badge badge-1">1</div>
+        </div>
+
+        <!-- 3列リール窓 -->
+        <div class="reels-screen">
+          <div class="reel-column"><canvas id="reelCanvas0" class="reel-canvas"></canvas></div>
+          <div class="reel-column"><canvas id="reelCanvas1" class="reel-canvas"></canvas></div>
+          <div class="reel-column"><canvas id="reelCanvas2" class="reel-canvas"></canvas></div>
+        </div>
+      </div>
+
+      <!-- ボーナス消化ステータスインジケーター -->
+      <div class="bonus-status-banner" id="bonusStatusDisp">
+        BIG BONUS GAME中 (獲得: 0/252枚)
+      </div>
+
+      <!-- 7セグLED & GOGO! CHANCEランプ -->
+      <div class="dashboard-bar">
+        <div class="gogo-box" id="gogoBox">
+          <svg class="gogo-svg" viewBox="0 0 100 60">
+            <polygon points="50,2 62,15 78,5 80,22 98,20 90,35 100,48 82,52 80,68 65,58 50,68 35,58 20,68 18,52 0,48 10,35 2,20 22,5 38,15" fill="#ff007f"/>
+            <text x="50" y="26" font-family="'Impact', sans-serif" font-size="22" fill="#ffffff" font-style="italic" text-anchor="middle">GOGO!</text>
+            <text x="50" y="48" font-family="'Impact', sans-serif" font-size="12" fill="#ffcc00" text-anchor="middle">CHANCE</text>
+          </svg>
+        </div>
+
+        <div class="led-group">
+          <div class="led-unit">
+            <div class="led-label">CREDIT</div>
+            <div class="led-screen" id="creditDisp">50</div>
+          </div>
+          <div class="led-unit">
+            <div class="led-label">COUNT</div>
+            <div class="led-screen" id="countDisp">0</div>
+          </div>
+          <div class="led-unit">
+            <div class="led-label">PAYOUT</div>
+            <div class="led-screen" id="payoutDisp">0</div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- 7セグLED表示 (CREDIT / COUNT / PAYOUT) -->
-    <div class="seg-overlay seg-credit" id="creditDisp">50</div>
-    <div class="seg-overlay seg-count" id="countDisp">0</div>
-    <div class="seg-overlay seg-payout" id="payoutDisp">0</div>
-
-    <!-- GOGO! CHANCE ランプ発光層 -->
-    <div class="gogo-overlay" id="gogoBox">
-      <svg class="gogo-svg" viewBox="0 0 100 60">
-        <polygon points="50,2 62,15 78,5 80,22 98,20 90,35 100,48 82,52 80,68 65,58 50,68 35,58 20,68 18,52 0,48 10,35 2,20 22,5 38,15" fill="#ff007f"/>
-        <text x="50" y="26" font-family="'Impact', sans-serif" font-size="22" fill="#ffffff" font-style="italic" text-anchor="middle" filter="drop-shadow(0 0 3px #fff)">GOGO!</text>
-        <text x="50" y="48" font-family="'Impact', sans-serif" font-size="12" fill="#ffcc00" text-anchor="middle">CHANCE</text>
-      </svg>
+    <!-- コントロールデッキ（立体操作パーツ） -->
+    <div class="control-deck">
+      <button id="betBtn" class="bet-btn">3<br>BET</button>
+      <button id="startBtn" class="lever-btn" title="START"></button>
+      <div class="stop-btn-group">
+        <button id="stopBtn0" class="stop-btn" disabled>1</button>
+        <button id="stopBtn1" class="stop-btn" disabled>2</button>
+        <button id="stopBtn2" class="stop-btn" disabled>3</button>
+      </div>
     </div>
 
-    <!-- 透明タッチボタン（実機写真のボタン位置に重ね配置） -->
-    <button id="betBtn" class="touch-btn btn-bet" title="3BET"></button>
-    <button id="startBtn" class="touch-btn btn-lever" title="START"></button>
-    <button id="stopBtn0" class="touch-btn btn-stop1" title="STOP 1" disabled></button>
-    <button id="stopBtn1" class="touch-btn btn-stop2" title="STOP 2" disabled></button>
-    <button id="stopBtn2" class="touch-btn btn-stop3" title="STOP 3" disabled></button>
-  </div>
-
-  <!-- 下部補助コントロール -->
-  <div class="bottom-controls">
-    <button id="soundToggle" class="ctrl-btn">🔊 サウンド: ON</button>
-    <button id="settingToggle" class="ctrl-btn setting">⚙️ 設定: 6</button>
+    <!-- 下部補助コントロール -->
+    <div class="bottom-controls">
+      <button id="soundToggle" class="sound-btn">🔊 サウンド: ON</button>
+      <button id="settingToggle" class="setting-btn">⚙️ 設定: 6</button>
+    </div>
   </div>
 
   <script>
-    // エンジンの安全な自動起動
+    // スマホ誤操作防止プロテクト
+    document.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
+    document.addEventListener('gesturestart', function(e) { e.preventDefault(); });
+
+    // スロットエンジンの安全起動
     function bootEngine() {
       if (window.JUGGLER_ENGINE && !window.JUGGLER_ENGINE.isInitialized) {
         window.JUGGLER_ENGINE.init();
