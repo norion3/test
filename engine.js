@@ -1,6 +1,6 @@
 /**
  * スロットゲームエンジン (engine.js)
- * 正方形リール(1:1)化・図柄Auto-Crop・演出テンポ保持・実機文字ランプ制御
+ * I'm GRAVITY 仕様・固定トリミング極限密着・3x3完全整列・自動3BET対応
  */
 
 (function() {
@@ -11,13 +11,12 @@
     ['GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', '7', 'BAR', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO']
   ];
 
-  // 【最重要修正】リール1コマを完全な正方形(1:1)に設定し、縦縮みと隙間を排除
-  const SYMBOL_HEIGHT = 100;
+  // リールコマサイズ (横幅100px × 高さ75px) - 引き締まった実機プロポーション
+  const SYMBOL_HEIGHT = 75;
   const CANVAS_WIDTH = 100;
-  // コマサイズが大きくなったため、実機の1周約0.75秒に合うよう回転速度を調整
-  const REEL_SPEED_BASE = 47; 
+  const REEL_SPEED_BASE = 36; // 1回転約0.75秒の標準スピード
 
-  // 実機確率テーブル (設定1〜6)
+  // SアイムジャグラーEX 実機確率テーブル (設定1〜6)
   const PROBABILITY_TABLE = {
     1: { big: 1/273.1, reg: 1/439.8 },
     2: { big: 1/269.7, reg: 1/399.6 },
@@ -29,7 +28,7 @@
 
   // ゲーム内部状態
   let currentSetting = 6;
-  let autoStopOnBonus = true;  // ボーナス成立時にAUTOを解除
+  let autoStopOnBonus = true;  // ボーナス成立時にAUTO解除して手動復帰
   let weightCut = false;       // ウェイトカット設定
   let masterVolume = 1.0;      // 全体音量 (0.0 〜 1.0)
 
@@ -43,10 +42,10 @@
 
   // ボーナス状態
   let bonusFlag = null;         // 'BIG' | 'REG' | null
-  let isBonusMode = false;
-  let bonusType = null;
-  let bonusAcquired = 0;
-  let bonusTarget = 0;
+  let isBonusMode = false;      // ボーナス消化モード
+  let bonusType = null;         // 'BIG' | 'REG'
+  let bonusAcquired = 0;        // 純増獲得枚数
+  let bonusTarget = 0;          // BIG: 252枚 / REG: 96枚
 
   let isPeka = false;
   let pekaTiming = null;        // 'LEVER' | 'STOP1' | 'STOP3_DOWN' | 'STOP3_UP'
@@ -140,8 +139,8 @@
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
         osc.type = 'triangle';
-        osc.frequency.setValueAtTime(320, now);
-        osc.frequency.exponentialRampToValueAtTime(60, now + 0.08);
+        osc.frequency.setValueAtTime(340, now);
+        osc.frequency.exponentialRampToValueAtTime(70, now + 0.08);
         gain.gain.setValueAtTime(0.5, now);
         gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
         osc.connect(gain); gain.connect(this.masterGain);
@@ -234,7 +233,7 @@
   };
 
   // ===================================================
-  // 2. 本格7セグメントLED動的制御 (SVGベース構造用)
+  // 2. 本格7セグメントLED制御 (SVGポリゴン用)
   // ===================================================
   const SEGMENT_MAP = {
     '0': ['a','b','c','d','e','f'],
@@ -260,40 +259,43 @@
       valStr = valStr.padStart(digits, ' ');
     }
 
-    // HTML側で用意されたSVGグループ (digit7seg) を取得
-    let digitElems = container.querySelectorAll('.digit7seg');
-    if (digitElems.length !== digits) return; // HTMLの構造と不一致の場合はスキップ
+    const digitSVGs = container.querySelectorAll('.digit7seg');
+    if (digitSVGs.length !== digits) return;
 
     for (let i = 0; i < digits; i++) {
       const char = valStr[i] || ' ';
       const litSegs = SEGMENT_MAP[char] || [];
-      const segElems = digitElems[i].querySelectorAll('.seg');
+      const segElems = digitSVGs[i].querySelectorAll('.seg');
 
       segElems.forEach(elem => {
-        // class名に 'seg-a' のように指定されていることを前提に抽出
-        const match = elem.className.baseVal ? elem.className.baseVal.match(/seg-([a-g])/) : elem.className.match(/seg-([a-g])/);
-        if (match && match[1]) {
-          const segName = match[1];
-          if (litSegs.includes(segName)) {
-            elem.classList.add('lit');
-          } else {
-            elem.classList.remove('lit');
-          }
+        let segName = '';
+        if (elem.classList) {
+          elem.classList.forEach(cls => {
+            if (cls.startsWith('seg-')) segName = cls.replace('seg-', '');
+          });
+        }
+        if (litSegs.includes(segName)) {
+          elem.classList.add('lit');
+        } else {
+          elem.classList.remove('lit');
         }
       });
     }
   }
 
   // ===================================================
-  // 3. RLEデコーダー ＆ 上下余白Auto-Crop（縦縮み解消）
+  // 3. 【最重要】固定一律トリミング (Fixed-Crop) デコーダー
+  // 3x3ズレの元凶であった動的Auto-Cropを全廃し、全図柄共通で余白カット
   // ===================================================
-  function decodeRLEToCanvasWithAutoCrop(symData) {
+  function decodeRLEToCanvasFixedCrop(symData) {
     const rawCvs = document.createElement('canvas');
     rawCvs.width = 128; rawCvs.height = 128;
     const rawCtx = rawCvs.getContext('2d');
     rawCtx.fillStyle = '#ffffff'; rawCtx.fillRect(0, 0, 128, 128);
 
-    if (!symData || !symData.rle) return { canvas: rawCvs, crop: { x:0, y:0, w:128, h:128 } };
+    if (!symData || !symData.rle) {
+      return { canvas: rawCvs, crop: { x: 0, y: 16, w: 128, h: 96 } };
+    }
 
     const imgData = rawCtx.createImageData(symData.w, symData.h);
     const data = imgData.data;
@@ -319,39 +321,11 @@
     }
     rawCtx.putImageData(imgData, symData.x, symData.y);
 
-    // ピクセル解析による上下白余白のAuto-Crop検知
-    const fullImgData = rawCtx.getImageData(0, 0, 128, 128);
-    const pixels = fullImgData.data;
-    let minX = 128, minY = 128, maxX = 0, maxY = 0;
-    let foundNonWhite = false;
-
-    for (let y = 0; y < 128; y++) {
-      for (let x = 0; x < 128; x++) {
-        const idx = (y * 128 + x) * 4;
-        const r = pixels[idx];
-        const g = pixels[idx+1];
-        const b = pixels[idx+2];
-
-        if (r < 245 || g < 245 || b < 245) {
-          if (x < minX) minX = x;
-          if (x > maxX) maxX = x;
-          if (y < minY) minY = y;
-          if (y > maxY) maxY = y;
-          foundNonWhite = true;
-        }
-      }
-    }
-
-    if (!foundNonWhite) {
-      minX = 0; minY = 0; maxX = 127; maxY = 128;
-    }
-
-    const cropW = Math.max(10, maxX - minX + 1);
-    const cropH = Math.max(10, maxY - minY + 1);
-
+    // 全図柄共通の固定トリミング範囲（上下不要部分を正確に20pxずつカット）
+    // これにより図柄中心線が全コマで完璧に一致し、3x3のラインがビシッと揃います。
     return {
       canvas: rawCvs,
-      crop: { x: minX, y: minY, w: cropW, h: cropH }
+      crop: { x: 0, y: 16, w: 128, h: 96 }
     };
   }
 
@@ -361,7 +335,7 @@
 
     ALL_IDS.forEach(id => {
       if (dataStore[id]) {
-        symbolCanvasCache[id] = decodeRLEToCanvasWithAutoCrop(dataStore[id]);
+        symbolCanvasCache[id] = decodeRLEToCanvasFixedCrop(dataStore[id]);
       } else {
         const cvs = document.createElement('canvas');
         cvs.width = 128; cvs.height = 128;
@@ -370,31 +344,25 @@
         ctx.fillStyle = '#000000'; ctx.font = 'bold 24px sans-serif';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(id, 64, 64);
-        symbolCanvasCache[id] = { canvas: cvs, crop: { x: 0, y: 0, w: 128, h: 128 } };
+        symbolCanvasCache[id] = { canvas: cvs, crop: { x: 0, y: 16, w: 128, h: 96 } };
       }
     });
   }
 
-  // Auto-Crop領域からの正方形キャンバスへのプロポーション精密描画
+  // 1コマ描画（7/BAR=特大88%, 小役=中型48% ナレッジ遵守）
   function drawSymbol(ctx, type, y, isReelSpinning = false) {
     const cached = symbolCanvasCache[type];
     ctx.save();
     ctx.translate(0, y);
 
-    if (isReelSpinning && type === '7') {
-      ctx.fillStyle = "rgba(255, 210, 210, 0.95)";
-    } else if (isReelSpinning && type === 'BAR') {
-      ctx.fillStyle = "rgba(255, 255, 255, 1.0)";
-    } else {
-      ctx.fillStyle = "#ffffff";
-    }
-    // 正方形リールに合わせて隙間を完全に塞ぐ
-    ctx.fillRect(0, -1, CANVAS_WIDTH, SYMBOL_HEIGHT + 2.0);
+    // 1コマ枠内の背景色塗り（隙間極限排除）
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, -0.5, CANVAS_WIDTH, SYMBOL_HEIGHT + 1.0);
 
     if (cached) {
-      // 100x100の正方形フレームに対する最大描画サイズ比率
-      let maxW = (type === '7' || type === 'BAR') ? CANVAS_WIDTH * 0.90 : CANVAS_WIDTH * 0.70;
-      let maxH = (type === '7' || type === 'BAR') ? SYMBOL_HEIGHT * 0.90 : SYMBOL_HEIGHT * 0.70;
+      // 7/BAR は特大、小役は適切な引き締まったサイズに打ち分け
+      let maxW = (type === '7' || type === 'BAR') ? CANVAS_WIDTH * 0.88 : CANVAS_WIDTH * 0.48;
+      let maxH = (type === '7' || type === 'BAR') ? SYMBOL_HEIGHT * 0.88 : SYMBOL_HEIGHT * 0.52;
 
       const scale = Math.min(maxW / cached.crop.w, maxH / cached.crop.h);
       const drawW = cached.crop.w * scale;
@@ -405,24 +373,13 @@
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
 
-      if (isReelSpinning) {
-        if (type === '7') {
-          ctx.shadowColor = 'rgba(255, 0, 0, 1.0)';
-          ctx.shadowBlur = 20;
-          ctx.filter = 'brightness(1.3)';
-        } else if (type === 'BAR') {
-          ctx.shadowColor = 'rgba(255, 255, 255, 1.0)';
-          ctx.shadowBlur = 18;
-          ctx.filter = 'brightness(1.3)';
-        }
-      }
-
+      // 回転中の白飛び・過剰エフェクトは全廃。クッキリ目押し可能な色濃さを保証
       ctx.drawImage(cached.canvas, cached.crop.x, cached.crop.y, cached.crop.w, cached.crop.h, drawX, drawY, drawW, drawH);
     }
     ctx.restore();
   }
 
-  // 実機パネル表示更新
+  // ディスプレイ＆ランプ状態更新
   function updateDisplays(payout = 0) {
     if (credits < 3 && !isBonusMode) credits = 50;
 
@@ -433,16 +390,23 @@
     const lampReplay = document.getElementById('lampReplay');
     const lampStart = document.getElementById('lampStart');
     const lampWait = document.getElementById('lampWait');
-    const lampBet3 = document.getElementById('lampBet3');
 
-    // 実機文字ランプのクラス制御
     if (lampReplay) lampReplay.classList.toggle('active', isReplay);
     if (lampStart) lampStart.classList.toggle('active', !isSpinning && (betAmount === 3 || isReplay || isBonusMode));
     if (lampWait) lampWait.classList.toggle('active', isWaiting);
-    if (lampBet3) lampBet3.classList.toggle('active', betAmount === 3 && !isSpinning);
+
+    const bStatusEl = document.getElementById('bonusStatusDisp');
+    if (bStatusEl) {
+      if (isBonusMode) {
+        bStatusEl.textContent = `${bonusType} BONUS GAME (獲得: ${bonusAcquired}/${bonusTarget}枚)`;
+        bStatusEl.style.display = 'block';
+      } else {
+        bStatusEl.style.display = 'none';
+      }
+    }
   }
 
-  // ラインランプ（③②①）制御 (BET時点灯 / 回転時消灯)
+  // ラインランプ（③②①）点灯/消灯制御
   function setLineBadgesLit(isLit) {
     const badges = document.querySelectorAll('.line-badge');
     badges.forEach(badge => {
@@ -464,6 +428,7 @@
     clearTimeout(autoTimer);
     const autoToggleBtn = document.getElementById('autoToggleBtn');
     if (autoToggleBtn) {
+      autoToggleBtn.textContent = '👤 MODE: MANUAL';
       autoToggleBtn.classList.remove('active');
     }
   }
@@ -482,7 +447,6 @@
         const canvas = document.getElementById(`reelCanvas${idx}`);
         if (!canvas) return null;
         canvas.width = CANVAS_WIDTH;
-        // 正方形サイズに基づきキャンバスの高さを計算
         canvas.height = SYMBOL_HEIGHT * strip.length * 3;
         const ctx = canvas.getContext('2d');
         const tripleStrip = [...strip, ...strip, ...strip];
@@ -528,13 +492,13 @@
       tripleStrip.forEach((sym, i) => { drawSymbol(reel.ctx, sym, i * SYMBOL_HEIGHT, isSpinning); });
     },
 
+    // レバーON（自動3BET処理内蔵）
     startSpin: function() {
       if (isSpinning) return;
 
       const now = Date.now();
       const elapsed = now - lastSpinTime;
-      // ウェイトカット時でも約200msの演出「間」を保持してせわしなさを解消
-      const targetWait = weightCut ? 200 : 4100; 
+      const targetWait = weightCut ? 200 : 4100;
 
       if (lastSpinTime > 0 && elapsed < targetWait) {
         isWaiting = true;
@@ -559,7 +523,7 @@
         document.getElementById('stopBtn2')
       ];
 
-      // レバーON回転開始と同時にライン表示を消灯
+      // 回転開始と同時にライン表示①②③を消灯
       setLineBadgesLit(false);
 
       if (isBonusMode) {
@@ -567,7 +531,7 @@
         if (window.DATA_COUNTER) window.DATA_COUNTER.onGameStart(1);
       } else if (!isReplay) {
         if (credits < 3) credits = 50; 
-        if (betAmount < 3) { credits -= 3; betAmount = 3; }
+        credits -= 3; betAmount = 3;
         if (window.DATA_COUNTER) window.DATA_COUNTER.onGameStart(3);
       } else {
         betAmount = 3; isReplay = false;
@@ -578,7 +542,7 @@
       updateDisplays(0);
       SoundEngine.play('lever');
 
-      // 実機確率テーブルに準じた統一抽選
+      // 統一確率抽選
       if (!isBonusMode && !bonusFlag) {
         const prob = PROBABILITY_TABLE[currentSetting];
         const rand = Math.random();
@@ -592,7 +556,6 @@
           else if (pekaRand < 0.25) pekaTiming = 'STOP3_DOWN';
           else pekaTiming = 'STOP3_UP';
 
-          // ボーナス成立時：AUTO解除
           if (autoStopOnBonus) {
             stopAutoMode();
           }
@@ -672,7 +635,6 @@
     },
 
     bindEvents: function() {
-      const betBtn = document.getElementById('betBtn');
       const startBtn = document.getElementById('startBtn');
       const stopBtns = [
         document.getElementById('stopBtn0'),
@@ -696,22 +658,19 @@
         elem.addEventListener('click', downTrigger);
       };
 
-      // 3BETボタン
-      attachFastTouch(betBtn, (e) => {
-        if (e.cancelable) e.preventDefault();
-        SoundEngine.init();
-        if (isSpinning || betAmount === 3 || isBonusMode) return;
-        if (credits < 3) credits = 50; 
-        credits -= 3; betAmount = 3; SoundEngine.play('bet');
-        setLineBadgesLit(true);
-        updateDisplays();
-      });
+      // 【リアルスタートレバー】打撃タップイベント
+      if (startBtn) {
+        const handleLeverHit = (e) => {
+          if (e.cancelable) e.preventDefault();
+          startBtn.classList.add('hit');
+          setTimeout(() => startBtn.classList.remove('hit'), 150);
+          this.startSpin();
+        };
 
-      // スタートレバー
-      attachFastTouch(startBtn, (e) => {
-        if (e.cancelable) e.preventDefault();
-        this.startSpin();
-      });
+        startBtn.addEventListener('touchstart', handleLeverHit, { passive: false });
+        startBtn.addEventListener('pointerdown', handleLeverHit);
+        startBtn.addEventListener('click', handleLeverHit);
+      }
 
       // ストップボタン
       stopBtns.forEach((btn, index) => {
@@ -722,10 +681,11 @@
         });
       });
 
-      // AUTO切替ボタン
+      // AUTO/MANUAL切替ボタン (テキスト固定＆確実な切り替え)
       if (autoToggleBtn) {
         autoToggleBtn.onclick = () => {
           isAutoMode = !isAutoMode;
+          autoToggleBtn.textContent = isAutoMode ? '🤖 AUTO: ON' : '👤 MODE: MANUAL';
           autoToggleBtn.classList.toggle('active', isAutoMode);
 
           if (isAutoMode && !isSpinning) {
@@ -750,6 +710,7 @@
       }, 220);
     },
 
+    // 標準スロット流下（上から下へ流れる正回転）
     spinReel: function(reel) {
       const maxPos = reel.strip.length * SYMBOL_HEIGHT;
       const animate = () => {
@@ -858,5 +819,4 @@
     }
   };
 })();
-
 

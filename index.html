@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>GRAVITY SLOT (GOGO! CHANCE搭載版)</title>
+  <title>I'm GRAVITY (GOGO! CHANCE搭載版)</title>
   <style>
     /* ---------------------------------------------------
        1. 基本設定 ＆ GRAVITY・全画面レスポンシブ可変対応
@@ -12,7 +12,9 @@
       --bg-color: #050508;
       --gold: #f5cf47;
       --led-red: #ff0033;
-      --led-off: #240000;
+      --led-off: #200000;
+      --cabinet-red: #d31820;
+      --cabinet-darkred: #7a060a;
     }
 
     * {
@@ -34,12 +36,12 @@
       touch-action: none;
     }
 
-    /* GRAVITY上部ヘッダー不可侵エリア対策 + 100dvhフィット */
+    /* GRAVITY上部ヘッダー不可侵エリア対策 + Dynamic Viewport Height (100dvh) */
     .app-viewport {
       width: 100vw;
       height: 100dvh;
-      padding-top: max(env(safe-area-inset-top), 10px);
-      padding-bottom: max(env(safe-area-inset-bottom), 10px);
+      padding-top: max(env(safe-area-inset-top), 8px);
+      padding-bottom: max(env(safe-area-inset-bottom), 8px);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -55,15 +57,15 @@
     }
 
     /* ---------------------------------------------------
-       2. ドット筐体 ＆ 実機完全トレースレイアウト
+       2. ドット筐体 ＆ 赤統一実機完全トレースレイアウト
     --------------------------------------------------- */
     .cabinet {
       position: relative;
       width: 360px;
-      background: #111;
-      border: 4px solid #444;
+      background: #111115;
+      border: 4px solid #333338;
       border-radius: 12px;
-      box-shadow: 0 15px 40px rgba(0,0,0,0.9), inset 0 2px 6px rgba(255,255,255,0.2);
+      box-shadow: 0 15px 40px rgba(0,0,0,0.95), inset 0 2px 6px rgba(255,255,255,0.2);
       padding: 8px;
       display: flex;
       flex-direction: column;
@@ -71,16 +73,16 @@
       transform-origin: center center;
     }
 
-    /* 縦幅が狭い端末用の自動縮小 */
-    @media (max-height: 740px) { .cabinet { transform: scale(0.9); } }
-    @media (max-height: 660px) { .cabinet { transform: scale(0.8); } }
-    @media (max-height: 580px) { .cabinet { transform: scale(0.7); } }
+    /* 画面縦幅に応じて自動縮小 */
+    @media (max-height: 740px) { .cabinet { transform: scale(0.92); } }
+    @media (max-height: 660px) { .cabinet { transform: scale(0.82); } }
+    @media (max-height: 580px) { .cabinet { transform: scale(0.72); } }
 
-    /* GRAVITY TOPランプ */
+    /* GRAVITY TOPランプ (赤・金統一) */
     .kitac-top {
       width: 100%;
       height: 24px;
-      background: linear-gradient(180deg, #1155cc 0%, #001133 100%);
+      background: linear-gradient(180deg, #d31820 0%, #600000 100%);
       border: 2px solid #555;
       border-radius: 8px 8px 0 0;
       display: flex;
@@ -91,23 +93,23 @@
     .kitac-lamp {
       width: 70%;
       height: 14px;
-      background: radial-gradient(ellipse at center, #00ffff 0%, #0088cc 70%, #002244 100%);
-      border: 1.5px solid #88ffff;
+      background: radial-gradient(ellipse at center, #80ff80 0%, #2e7d32 70%, #003300 100%);
+      border: 1.5px solid #a5d6a7;
       border-radius: 8px;
-      box-shadow: 0 0 10px #00ffff;
+      box-shadow: 0 0 10px #4caf50;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 10px;
       font-weight: 900;
-      color: #002244;
+      color: #003300;
       letter-spacing: 2px;
     }
 
     /* 上部 BIG CHANCE パネル */
     .top-panel {
       width: 100%;
-      background: linear-gradient(180deg, #e62229 0%, #a80e14 60%, #5e0205 100%);
+      background: linear-gradient(180deg, var(--cabinet-red) 0%, #a80e14 60%, var(--cabinet-darkred) 100%);
       border: 2px solid var(--gold);
       border-radius: 4px;
       padding: 4px;
@@ -139,11 +141,11 @@
       text-shadow: 0 0 6px #fff;
     }
 
-    /* メインパネル枠 (リール＋GOGO＋7セグを全て内包) */
+    /* メインパネル枠 (深紅・金フチ・リール＋GOGO＋7セグを全て内包) */
     .main-panel {
       position: relative;
       width: 100%;
-      background: linear-gradient(180deg, #d31820 0%, #7a060a 100%);
+      background: linear-gradient(180deg, var(--cabinet-red) 0%, var(--cabinet-darkred) 100%);
       border: 3px solid var(--gold);
       border-radius: 6px;
       padding: 8px 6px;
@@ -164,7 +166,7 @@
     .line-numbers {
       display: flex;
       flex-direction: column;
-      gap: 36px;
+      gap: 28px;
       font-weight: 900;
       font-size: 10px;
     }
@@ -186,10 +188,10 @@
     .line-badge.lit.badge-2 { background: #2196f3; color: #fff; border-color: #88ccff; box-shadow: 0 0 8px #2196f3; }
     .line-badge.lit.badge-1 { background: #4caf50; color: #fff; border-color: #88ff88; box-shadow: 0 0 8px #4caf50; }
 
-    /* 【重要】正方形リール窓 (100x100 * 3段 = 312x300) 隙間ゼロ */
+    /* 【引き締まった実機プロポーション】リール窓 (300px × 225px) */
     .reels-screen {
-      width: 312px;
-      height: 300px;
+      width: 304px;
+      height: 225px;
       background: #fff;
       border: 3px solid #111;
       border-radius: 4px;
@@ -197,23 +199,24 @@
       align-items: center;
       justify-content: space-between;
       overflow: hidden;
-      box-shadow: inset 0 15px 15px rgba(0,0,0,0.6), inset 0 -15px 15px rgba(0,0,0,0.6);
+      box-shadow: inset 0 12px 12px rgba(0,0,0,0.6), inset 0 -12px 12px rgba(0,0,0,0.6);
       position: relative;
     }
 
     .reel-column {
       width: 100px;
-      height: 300px;
+      height: 225px;
       background: #fff;
       position: relative;
       overflow: hidden;
     }
 
+    /* リール縦セパレータ (太い縦枠線) */
     .reel-separator {
-      width: 6px;
+      width: 2px;
       height: 100%;
-      background: linear-gradient(90deg, #0a0a0a 0%, #222 50%, #0a0a0a 100%);
-      box-shadow: inset 1px 0 3px #000, inset -1px 0 3px #000;
+      background: #0a0a0a;
+      box-shadow: inset 1px 0 2px #000;
       z-index: 5;
     }
 
@@ -228,7 +231,7 @@
     .status-panel-right {
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 12px;
     }
 
     .text-lamp {
@@ -246,19 +249,18 @@
     .text-lamp.active.lamp-replay { color: #00ff66; text-shadow: 0 0 6px #00ff66; box-shadow: 0 0 6px #00ff66; }
     .text-lamp.active.lamp-start { color: #ff3333; text-shadow: 0 0 6px #ff3333; box-shadow: 0 0 6px #ff3333; }
     .text-lamp.active.lamp-wait { color: #ffcc00; text-shadow: 0 0 6px #ffcc00; box-shadow: 0 0 6px #ffcc00; }
-    .text-lamp.active.lamp-bet3 { color: #ff9900; text-shadow: 0 0 6px #ff9900; box-shadow: 0 0 6px #ff9900; }
 
     /* 下段：GOGO & 7セグ群 */
     .main-bottom-row {
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
-      padding-top: 4px;
+      padding-top: 2px;
     }
 
     .gogo-box {
       width: 105px; 
-      height: 55px;
+      height: 52px;
       background: #020204;
       border: 2px solid #222;
       border-radius: 6px;
@@ -289,11 +291,11 @@
     @keyframes pekaFlash { from { transform: scale(1); } to { transform: scale(1.03); } }
 
     /* ---------------------------------------------------
-       3. 絶対崩れない本格 SVG 7セグメントLED
+       3. 絶対崩れないSVGベクター 7セグメントLED
     --------------------------------------------------- */
     .led-group {
       display: flex;
-      gap: 12px;
+      gap: 10px;
       margin-bottom: 2px;
     }
 
@@ -304,26 +306,25 @@
     }
 
     .led-label {
-      font-size: 9px;
+      font-size: 8.5px;
       color: var(--gold);
       font-weight: 900;
-      margin-bottom: 4px;
+      margin-bottom: 3px;
     }
 
     .led-7seg-container {
       background: #080000;
       border: 2px solid #330000;
       border-radius: 4px;
-      padding: 4px 6px;
+      padding: 3px 5px;
       display: flex;
-      gap: 4px;
+      gap: 3px;
       box-shadow: inset 0 0 8px #000;
     }
 
-    /* SVG 7セグメント スタイル */
     .digit7seg {
-      width: 16px;
-      height: 28px;
+      width: 15px;
+      height: 26px;
     }
     .seg {
       fill: var(--led-off);
@@ -354,14 +355,14 @@
     }
 
     /* ---------------------------------------------------
-       4. コントロールデッキ（人間工学・黄金比配置）
+       4. リアルな立体STARTレバー ＆ 叩いた感（Hit Action）
     --------------------------------------------------- */
     .control-deck {
       width: 100%;
-      background: linear-gradient(180deg, #eee 0%, #bbb 35%, #888 70%, #555 100%);
-      border: 2px solid #333;
+      background: linear-gradient(180deg, #dddddd 0%, #aaaaaa 35%, #777777 70%, #444444 100%);
+      border: 2px solid #222;
       border-radius: 6px;
-      padding: 10px 14px;
+      padding: 10px 18px;
       margin-top: 6px;
       display: flex;
       justify-content: space-between;
@@ -369,39 +370,84 @@
       box-shadow: inset 0 2px 4px rgba(255,255,255,0.8), 0 5px 10px rgba(0,0,0,0.7);
     }
 
-    .bet-btn {
-      width: 46px;
-      height: 46px;
-      border-radius: 50%;
-      background: radial-gradient(circle, #ff3333 0%, #880000 100%);
-      border: 2px solid #fff;
-      color: #fff;
-      font-weight: 900;
-      font-size: 11px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.6);
+    /* リアルレバーのアセンブリ構造 (台座＋金属シャフト＋赤いボール) */
+    .real-lever-assembly {
+      position: relative;
+      width: 54px;
+      height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       cursor: pointer;
+      perspective: 300px;
     }
-    .bet-btn:active { transform: translateY(3px) scale(0.96); }
 
-    .lever-btn {
-      width: 46px;
-      height: 46px;
+    /* 金属傾斜台座 */
+    .lever-housing {
+      position: absolute;
+      width: 48px;
+      height: 48px;
       border-radius: 50%;
-      background: radial-gradient(circle at 30% 30%, #ffffff 0%, #999 50%, #333 100%);
-      border: 3px solid #111;
-      box-shadow: 0 6px 12px rgba(0,0,0,0.8);
-      cursor: pointer;
+      background: radial-gradient(circle at 30% 30%, #ffffff 0%, #888888 60%, #222222 100%);
+      border: 3px solid #1a1a1a;
+      box-shadow: inset 0 3px 6px rgba(0,0,0,0.8), 0 4px 8px rgba(0,0,0,0.6);
     }
-    .lever-btn:active { transform: translateY(6px) scale(0.92); }
 
+    .lever-socket {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #111 0%, #333 100%);
+      box-shadow: inset 0 2px 4px #000;
+    }
+
+    /* シャフト＆ボール（タップ時に斜め下へガツンと沈み込むHit Action） */
+    .lever-stick {
+      position: relative;
+      width: 32px;
+      height: 44px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transform-origin: center top;
+      transition: transform 0.08s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 2;
+    }
+
+    /* 金属シャフト（棒） */
+    .lever-shaft {
+      width: 8px;
+      height: 20px;
+      background: linear-gradient(90deg, #999 0%, #fff 50%, #555 100%);
+      border-radius: 2px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+
+    /* 実機スタイルの赤い球体ノブ */
+    .lever-knob {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #ff6666 0%, #cc0000 60%, #550000 100%);
+      border: 1px solid #ffaaaa;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.7), inset 0 -2px 4px rgba(0,0,0,0.5);
+    }
+
+    /* レバー叩いた感（Hit Action）のアニメーション */
+    .real-lever-assembly.hit .lever-stick {
+      transform: rotateX(40deg) translateY(12px) scaleY(0.82);
+    }
+
+    /* ストップボタン */
     .stop-btn-group {
       display: flex;
-      gap: 10px;
+      gap: 12px;
     }
 
     .stop-btn {
-      width: 42px;
-      height: 42px;
+      width: 44px;
+      height: 44px;
       border-radius: 50%;
       background: radial-gradient(circle, #e62229 0%, #8a0b10 100%);
       border: 2px solid #ffcccc;
@@ -410,17 +456,20 @@
       font-size: 14px;
       box-shadow: 0 4px 6px rgba(0,0,0,0.6);
       cursor: pointer;
+      transition: transform 0.05s ease-out, border-color 0.1s;
     }
     .stop-btn.spinning { animation: btnPulse 0.3s infinite alternate; border-color: #ffff88; }
     @keyframes btnPulse { from { box-shadow: 0 0 4px #ff3333; } to { box-shadow: 0 0 12px #ff3333, inset 0 0 8px #ffffff; } }
-    .stop-btn:disabled { background: radial-gradient(circle, #555 0%, #222 100%); border-color: #777; opacity: 0.4; }
+    .stop-btn:disabled { background: radial-gradient(circle, #555 0%, #222 100%); border-color: #777; opacity: 0.4; box-shadow: none; animation: none; }
     .stop-btn:not(:disabled):active { transform: translateY(3px) scale(0.95); }
 
-    /* 下部オリジナルパネル */
+    /* ---------------------------------------------------
+       5. 赤統一 下部『I'm GRAVITY』パネル ＆ 固定幅ボタン
+    --------------------------------------------------- */
     .bottom-custom-panel {
       width: 100%;
       height: 45px;
-      background: linear-gradient(180deg, #1155cc 0%, #001133 100%);
+      background: linear-gradient(180deg, var(--cabinet-red) 0%, var(--cabinet-darkred) 100%);
       border: 2px solid var(--gold);
       border-radius: 6px;
       margin-top: 6px;
@@ -429,29 +478,63 @@
       justify-content: center;
       box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
     }
+
     .custom-panel-text {
       font-family: 'Impact', sans-serif;
-      font-size: 16px;
-      color: #00ffff;
+      font-size: 18px;
+      color: var(--gold);
       letter-spacing: 4px;
-      text-shadow: 0 0 8px #00ffff, 1px 1px 2px #000;
+      text-shadow: 0 0 8px #ffcc00, 1px 1px 2px #000;
     }
 
-    /* 最下部ボタン */
+    /* 最下部ボタン (AUTOボタンは固定幅 140px で枠が動かない) */
     .bottom-controls {
       display: flex;
       gap: 10px;
       margin-top: 8px;
+      justify-content: center;
+      align-items: center;
     }
-    .ctrl-btn { background: #222; border: 1px solid #555; color: #ccc; padding: 6px 14px; border-radius: 16px; font-size: 11px; font-weight: bold; }
-    .ctrl-btn.active { background: #00e5ff; color: #000; border-color: #00e5ff; box-shadow: 0 0 8px #00e5ff; }
+
+    .ctrl-btn {
+      background: #222;
+      border: 1px solid #555;
+      color: #ccc;
+      padding: 6px 10px;
+      border-radius: 16px;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    /* AUTO/MANUALボタン枠幅絶対固定 */
+    .ctrl-btn.auto-btn {
+      width: 140px;
+      display: inline-block;
+    }
+
+    .ctrl-btn.active {
+      background: #ffcc00;
+      color: #000;
+      border-color: #ffcc00;
+      box-shadow: 0 0 8px #ffcc00;
+    }
+
+    .ctrl-btn.data-btn {
+      background: linear-gradient(135deg, #8a0b10 0%, #d31820 100%);
+      color: #fff;
+      border-color: var(--gold);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    }
 
     /* ---------------------------------------------------
-       5. 共通モーダルUI (データ ＆ 設定)
+       6. 共通モーダルUI (データ ＆ 設定)
     --------------------------------------------------- */
     .modal-overlay {
       display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
       background: rgba(0,0,0,0.85); z-index: 1000; align-items: center; justify-content: center;
+      backdrop-filter: blur(4px);
     }
     .modal-overlay.active { display: flex; }
     .modal-content {
@@ -462,14 +545,15 @@
     .modal-title { font-weight: bold; color: #00e5ff; }
     .modal-close-btn { background: #222; border: 1px solid #555; color: #fff; border-radius: 50%; width: 28px; height: 28px; }
     
-    /* 設定UI */
-    .setting-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; padding: 4px 0; border-bottom: 1px solid #1a2233;}
+    .setting-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; padding: 6px 0; border-bottom: 1px solid #1a2233;}
     
-    /* データカウンターUI */
     .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
     .stat-card { background: #1a2233; border-radius: 6px; padding: 6px; text-align: center; }
     .stat-label { font-size: 9px; color: #7a8ba6; }
     .stat-value { font-size: 14px; font-weight: bold; color: #fff; }
+    .stat-value.big { color: #ff3366; }
+    .stat-value.reg { color: #33ccff; }
+    .stat-value.total { color: #ffcc00; }
     #slumpCanvas { width: 100%; height: 150px; background: #111622; }
     .history-section { max-height: 140px; overflow-y: auto; font-size: 11px; text-align: center; }
     table { width: 100%; border-collapse: collapse; }
@@ -493,7 +577,7 @@
   <div class="app-viewport">
     <div class="cabinet-scaler">
       
-      <!-- 実機ドット筐体 -->
+      <!-- 赤・金・黒統一のドット筐体 -->
       <div class="cabinet">
         
         <!-- GRAVITY TOPランプ -->
@@ -505,7 +589,7 @@
           <div class="juggler-brand-bar">G-SLOT</div>
         </div>
 
-        <!-- 【重要】メインパネル枠 (すべてを一つに統合) -->
+        <!-- メインパネル枠 (すべてを赤枠内に格納) -->
         <div class="main-panel">
           
           <div class="bonus-status-banner" id="bonusStatusDisp">BIG BONUS GAME</div>
@@ -518,7 +602,7 @@
               <div class="line-badge badge-1">1</div>
             </div>
 
-            <!-- 正方形 3列リール窓 -->
+            <!-- 引き締まった実機プロポーション 3列リール窓 (304x225) -->
             <div class="reels-screen">
               <div class="reel-column"><canvas id="reelCanvas0" class="reel-canvas"></canvas></div>
               <div class="reel-separator"></div>
@@ -532,11 +616,10 @@
               <div class="text-lamp lamp-replay" id="lampReplay">Replay</div>
               <div class="text-lamp lamp-start" id="lampStart">Start</div>
               <div class="text-lamp lamp-wait" id="lampWait">Wait</div>
-              <div class="text-lamp lamp-bet3" id="lampBet3">3BET</div>
             </div>
           </div>
 
-          <!-- GOGOランプ ＆ 7セグ -->
+          <!-- GOGOランプ ＆ SVG7セグ -->
           <div class="main-bottom-row">
             <div class="gogo-box" id="gogoBox">
               <svg class="gogo-svg" viewBox="0 0 100 60">
@@ -551,7 +634,6 @@
               <div class="led-unit">
                 <div class="led-label">CREDIT</div>
                 <div class="led-7seg-container" id="creditDisp">
-                  <!-- SVG 7-Segment (2 digits) -->
                   <svg class="digit7seg" viewBox="0 0 24 40" transform="skewX(-6)">
                     <polygon class="seg seg-a" points="6,2 18,2 15,6 9,6" />
                     <polygon class="seg seg-b" points="19,3 19,18 15,15 15,7" />
@@ -594,10 +676,18 @@
           </div>
         </div>
 
-        <!-- コントロールデッキ -->
+        <!-- コントロールデッキ（リアル立体レバー ＋ ストップボタン） -->
         <div class="control-deck">
-          <button id="betBtn" class="bet-btn">3<br>BET</button>
-          <button id="startBtn" class="lever-btn"></button>
+          <!-- リアルな軸付きSTARTレバー (叩いた感付き) -->
+          <div id="startBtn" class="real-lever-assembly" title="START">
+            <div class="lever-housing"></div>
+            <div class="lever-socket"></div>
+            <div class="lever-stick">
+              <div class="lever-shaft"></div>
+              <div class="lever-knob"></div>
+            </div>
+          </div>
+
           <div class="stop-btn-group">
             <button id="stopBtn0" class="stop-btn" disabled>1</button>
             <button id="stopBtn1" class="stop-btn" disabled>2</button>
@@ -605,14 +695,14 @@
           </div>
         </div>
 
-        <!-- 下部カスタムパネル (版権フリー化) -->
+        <!-- 赤統一 下部『I'm GRAVITY』パネル -->
         <div class="bottom-custom-panel">
-          <div class="custom-panel-text">GRAVITY SLOT</div>
+          <div class="custom-panel-text">I'm GRAVITY</div>
         </div>
 
-        <!-- 最下部コントロール -->
+        <!-- 最下部コントロール (AUTOボタン幅固定 140px) -->
         <div class="bottom-controls">
-          <button id="autoToggleBtn" class="ctrl-btn">👤 MODE: MANUAL</button>
+          <button id="autoToggleBtn" class="ctrl-btn auto-btn">👤 MODE: MANUAL</button>
           <button id="dataBtn" class="ctrl-btn data-btn">📊 データ</button>
           <button id="settingModalBtn" class="ctrl-btn">⚙️ 設定</button>
         </div>
@@ -679,7 +769,7 @@
           <input type="checkbox" id="soundEnableCheck" checked>
         </div>
       </div>
-      <button id="saveSettingBtn" style="background:#00e5ff; border:none; padding:8px; border-radius:4px; font-weight:bold; cursor:pointer;">設定を適用</button>
+      <button id="saveSettingBtn" style="background:#d31820; color:#fff; border:none; padding:8px; border-radius:4px; font-weight:bold; cursor:pointer;">設定を適用</button>
     </div>
   </div>
 
@@ -742,5 +832,4 @@
   </script>
 </body>
 </html>
-
 
