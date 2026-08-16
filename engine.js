@@ -1,6 +1,6 @@
 /**
- * アイムジャグラーEX スロットゲームエンジン (engine.js)
- * 図柄Auto-Crop・演出テンポ保持・本格7セグ連動・実機文字ランプ制御
+ * スロットゲームエンジン (engine.js)
+ * 正方形リール(1:1)化・図柄Auto-Crop・演出テンポ保持・実機文字ランプ制御
  */
 
 (function() {
@@ -11,11 +11,13 @@
     ['GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', '7', 'BAR', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO']
   ];
 
-  const SYMBOL_HEIGHT = 70;
+  // 【最重要修正】リール1コマを完全な正方形(1:1)に設定し、縦縮みと隙間を排除
+  const SYMBOL_HEIGHT = 100;
   const CANVAS_WIDTH = 100;
-  const REEL_SPEED_BASE = 33; // 1回転0.75秒（実機速度）
+  // コマサイズが大きくなったため、実機の1周約0.75秒に合うよう回転速度を調整
+  const REEL_SPEED_BASE = 47; 
 
-  // SアイムジャグラーEX 実機確率テーブル (設定1〜6)
+  // 実機確率テーブル (設定1〜6)
   const PROBABILITY_TABLE = {
     1: { big: 1/273.1, reg: 1/439.8 },
     2: { big: 1/269.7, reg: 1/399.6 },
@@ -27,7 +29,7 @@
 
   // ゲーム内部状態
   let currentSetting = 6;
-  let autoStopOnBonus = true;  // ボーナス成立時にAUTO解除
+  let autoStopOnBonus = true;  // ボーナス成立時にAUTOを解除
   let weightCut = false;       // ウェイトカット設定
   let masterVolume = 1.0;      // 全体音量 (0.0 〜 1.0)
 
@@ -36,15 +38,15 @@
   let isSpinning = false;
   let isAutoMode = false;
   let autoTimer = null;
-  let lastSpinTime = 0;         // 前回レバーON時刻
+  let lastSpinTime = 0;
   let isWaiting = false;
 
   // ボーナス状態
   let bonusFlag = null;         // 'BIG' | 'REG' | null
-  let isBonusMode = false;      // ボーナスゲーム消化中
-  let bonusType = null;         // 'BIG' | 'REG'
-  let bonusAcquired = 0;        // 純増獲得枚数
-  let bonusTarget = 0;          // BIG: 252枚 / REG: 96枚
+  let isBonusMode = false;
+  let bonusType = null;
+  let bonusAcquired = 0;
+  let bonusTarget = 0;
 
   let isPeka = false;
   let pekaTiming = null;        // 'LEVER' | 'STOP1' | 'STOP3_DOWN' | 'STOP3_UP'
@@ -232,7 +234,7 @@
   };
 
   // ===================================================
-  // 2. 本格7セグメントLED動的制御 (消灯セグ透け対応)
+  // 2. 本格7セグメントLED動的制御 (SVGベース構造用)
   // ===================================================
   const SEGMENT_MAP = {
     '0': ['a','b','c','d','e','f'],
@@ -258,33 +260,25 @@
       valStr = valStr.padStart(digits, ' ');
     }
 
+    // HTML側で用意されたSVGグループ (digit7seg) を取得
     let digitElems = container.querySelectorAll('.digit7seg');
-    if (digitElems.length !== digits) {
-      container.innerHTML = '';
-      for (let i = 0; i < digits; i++) {
-        const dDiv = document.createElement('div');
-        dDiv.className = 'digit7seg';
-        ['a','b','c','d','e','f','g'].forEach(seg => {
-          const sSpan = document.createElement('span');
-          sSpan.className = `seg seg-${seg}`;
-          dDiv.appendChild(sSpan);
-        });
-        container.appendChild(dDiv);
-      }
-      digitElems = container.querySelectorAll('.digit7seg');
-    }
+    if (digitElems.length !== digits) return; // HTMLの構造と不一致の場合はスキップ
 
     for (let i = 0; i < digits; i++) {
       const char = valStr[i] || ' ';
       const litSegs = SEGMENT_MAP[char] || [];
-      const segSpans = digitElems[i].querySelectorAll('.seg');
+      const segElems = digitElems[i].querySelectorAll('.seg');
 
-      segSpans.forEach(span => {
-        const segName = span.className.replace('seg seg-', '');
-        if (litSegs.includes(segName)) {
-          span.classList.add('lit');
-        } else {
-          span.classList.remove('lit');
+      segElems.forEach(elem => {
+        // class名に 'seg-a' のように指定されていることを前提に抽出
+        const match = elem.className.baseVal ? elem.className.baseVal.match(/seg-([a-g])/) : elem.className.match(/seg-([a-g])/);
+        if (match && match[1]) {
+          const segName = match[1];
+          if (litSegs.includes(segName)) {
+            elem.classList.add('lit');
+          } else {
+            elem.classList.remove('lit');
+          }
         }
       });
     }
@@ -338,7 +332,6 @@
         const g = pixels[idx+1];
         const b = pixels[idx+2];
 
-        // 非白ピクセルの検知 (閾値: 各チャンネル245未満)
         if (r < 245 || g < 245 || b < 245) {
           if (x < minX) minX = x;
           if (x > maxX) maxX = x;
@@ -382,7 +375,7 @@
     });
   }
 
-  // Auto-Crop領域からの実機プロポーション精密描画
+  // Auto-Crop領域からの正方形キャンバスへのプロポーション精密描画
   function drawSymbol(ctx, type, y, isReelSpinning = false) {
     const cached = symbolCanvasCache[type];
     ctx.save();
@@ -395,11 +388,13 @@
     } else {
       ctx.fillStyle = "#ffffff";
     }
-    ctx.fillRect(0, -0.5, CANVAS_WIDTH, SYMBOL_HEIGHT + 1.0);
+    // 正方形リールに合わせて隙間を完全に塞ぐ
+    ctx.fillRect(0, -1, CANVAS_WIDTH, SYMBOL_HEIGHT + 2.0);
 
     if (cached) {
-      let maxW = (type === '7' || type === 'BAR') ? CANVAS_WIDTH * 0.90 : CANVAS_WIDTH * 0.50;
-      let maxH = (type === '7' || type === 'BAR') ? SYMBOL_HEIGHT * 0.90 : SYMBOL_HEIGHT * 0.55;
+      // 100x100の正方形フレームに対する最大描画サイズ比率
+      let maxW = (type === '7' || type === 'BAR') ? CANVAS_WIDTH * 0.90 : CANVAS_WIDTH * 0.70;
+      let maxH = (type === '7' || type === 'BAR') ? SYMBOL_HEIGHT * 0.90 : SYMBOL_HEIGHT * 0.70;
 
       const scale = Math.min(maxW / cached.crop.w, maxH / cached.crop.h);
       const drawW = cached.crop.w * scale;
@@ -427,7 +422,7 @@
     ctx.restore();
   }
 
-  // 実機パネル＆7セグLED表示更新
+  // 実機パネル表示更新
   function updateDisplays(payout = 0) {
     if (credits < 3 && !isBonusMode) credits = 50;
 
@@ -440,23 +435,14 @@
     const lampWait = document.getElementById('lampWait');
     const lampBet3 = document.getElementById('lampBet3');
 
+    // 実機文字ランプのクラス制御
     if (lampReplay) lampReplay.classList.toggle('active', isReplay);
     if (lampStart) lampStart.classList.toggle('active', !isSpinning && (betAmount === 3 || isReplay || isBonusMode));
     if (lampWait) lampWait.classList.toggle('active', isWaiting);
     if (lampBet3) lampBet3.classList.toggle('active', betAmount === 3 && !isSpinning);
-
-    const bStatusEl = document.getElementById('bonusStatusDisp');
-    if (bStatusEl) {
-      if (isBonusMode) {
-        bStatusEl.textContent = `${bonusType} BONUS GAME (獲得: ${bonusAcquired}/${bonusTarget}枚)`;
-        bStatusEl.style.display = 'block';
-      } else {
-        bStatusEl.style.display = 'none';
-      }
-    }
   }
 
-  // ライン表示器（①②③）制御 (BET時点灯 / 回転時消灯)
+  // ラインランプ（③②①）制御 (BET時点灯 / 回転時消灯)
   function setLineBadgesLit(isLit) {
     const badges = document.querySelectorAll('.line-badge');
     badges.forEach(badge => {
@@ -478,7 +464,6 @@
     clearTimeout(autoTimer);
     const autoToggleBtn = document.getElementById('autoToggleBtn');
     if (autoToggleBtn) {
-      autoToggleBtn.textContent = '👤 MODE: MANUAL';
       autoToggleBtn.classList.remove('active');
     }
   }
@@ -497,6 +482,7 @@
         const canvas = document.getElementById(`reelCanvas${idx}`);
         if (!canvas) return null;
         canvas.width = CANVAS_WIDTH;
+        // 正方形サイズに基づきキャンバスの高さを計算
         canvas.height = SYMBOL_HEIGHT * strip.length * 3;
         const ctx = canvas.getContext('2d');
         const tripleStrip = [...strip, ...strip, ...strip];
@@ -542,13 +528,13 @@
       tripleStrip.forEach((sym, i) => { drawSymbol(reel.ctx, sym, i * SYMBOL_HEIGHT, isSpinning); });
     },
 
-    // レバーON
     startSpin: function() {
       if (isSpinning) return;
 
       const now = Date.now();
       const elapsed = now - lastSpinTime;
-      const targetWait = weightCut ? 200 : 4100; // ウェイトカット時でも約200msの演出「間」を保持
+      // ウェイトカット時でも約200msの演出「間」を保持してせわしなさを解消
+      const targetWait = weightCut ? 200 : 4100; 
 
       if (lastSpinTime > 0 && elapsed < targetWait) {
         isWaiting = true;
@@ -573,6 +559,7 @@
         document.getElementById('stopBtn2')
       ];
 
+      // レバーON回転開始と同時にライン表示を消灯
       setLineBadgesLit(false);
 
       if (isBonusMode) {
@@ -591,7 +578,7 @@
       updateDisplays(0);
       SoundEngine.play('lever');
 
-      // 統一確率判定 (AUTO/MANUAL共用)
+      // 実機確率テーブルに準じた統一抽選
       if (!isBonusMode && !bonusFlag) {
         const prob = PROBABILITY_TABLE[currentSetting];
         const rand = Math.random();
@@ -605,6 +592,7 @@
           else if (pekaRand < 0.25) pekaTiming = 'STOP3_DOWN';
           else pekaTiming = 'STOP3_UP';
 
+          // ボーナス成立時：AUTO解除
           if (autoStopOnBonus) {
             stopAutoMode();
           }
@@ -738,7 +726,6 @@
       if (autoToggleBtn) {
         autoToggleBtn.onclick = () => {
           isAutoMode = !isAutoMode;
-          autoToggleBtn.textContent = isAutoMode ? '🤖 AUTO: ON' : '👤 MODE: MANUAL';
           autoToggleBtn.classList.toggle('active', isAutoMode);
 
           if (isAutoMode && !isSpinning) {
@@ -871,4 +858,5 @@
     }
   };
 })();
+
 

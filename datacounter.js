@@ -1,5 +1,5 @@
 /**
- * アイムジャグラーEX データカウンターモジュール (datacounter.js)
+ * データカウンターモジュール (datacounter.js)
  * ホール仕様データ集計・確率計算・当選履歴・出玉スランプグラフ描画
  */
 
@@ -241,4 +241,5 @@
 
   window.DATA_COUNTER = DataCounter;
 })();
+
 
