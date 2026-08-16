@@ -141,7 +141,7 @@
       text-shadow: 0 0 6px #fff;
     }
 
-    /* メインパネル枠 (深紅・金フチ・リール＋GOGO＋7セグを全て内包) */
+    /* メインパネル枠 (深紅・金フチ) */
     .main-panel {
       position: relative;
       width: 100%;
@@ -188,7 +188,7 @@
     .line-badge.lit.badge-2 { background: #2196f3; color: #fff; border-color: #88ccff; box-shadow: 0 0 8px #2196f3; }
     .line-badge.lit.badge-1 { background: #4caf50; color: #fff; border-color: #88ff88; box-shadow: 0 0 8px #4caf50; }
 
-    /* 【引き締まった実機プロポーション】リール窓 (300px × 225px) */
+    /* 【引き締まった実機プロポーション】リール窓 (304px × 225px) */
     .reels-screen {
       width: 304px;
       height: 225px;
@@ -335,27 +335,8 @@
       filter: drop-shadow(0 0 2px var(--led-red));
     }
 
-    /* ボーナス告知バナー */
-    .bonus-status-banner {
-      display: none;
-      width: 100%;
-      background: linear-gradient(90deg, #ff007f 0%, #ffcc00 50%, #ff007f 100%);
-      color: #000;
-      font-weight: 900;
-      font-size: 12px;
-      text-align: center;
-      padding: 4px 0;
-      border-radius: 4px;
-      position: absolute;
-      top: 50%; left: 0;
-      transform: translateY(-50%);
-      z-index: 10;
-      box-shadow: 0 0 15px #ff007f;
-      animation: bannerPulse 0.5s infinite alternate;
-    }
-
     /* ---------------------------------------------------
-       4. リアルな立体STARTレバー ＆ 叩いた感（Hit Action）
+       4. 正面視点 凹型ソケット沈み込みスタートレバー
     --------------------------------------------------- */
     .control-deck {
       width: 100%;
@@ -370,73 +351,60 @@
       box-shadow: inset 0 2px 4px rgba(255,255,255,0.8), 0 5px 10px rgba(0,0,0,0.7);
     }
 
-    /* リアルレバーのアセンブリ構造 (台座＋金属シャフト＋赤いボール) */
+    /* 真正面視点に合わせた「円形凹型ソケット＋沈み込みボール」構造 */
     .real-lever-assembly {
       position: relative;
-      width: 54px;
-      height: 54px;
+      width: 52px;
+      height: 52px;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      perspective: 300px;
     }
 
-    /* 金属傾斜台座 */
+    /* 外枠メッキソケット */
     .lever-housing {
       position: absolute;
       width: 48px;
       height: 48px;
       border-radius: 50%;
-      background: radial-gradient(circle at 30% 30%, #ffffff 0%, #888888 60%, #222222 100%);
-      border: 3px solid #1a1a1a;
-      box-shadow: inset 0 3px 6px rgba(0,0,0,0.8), 0 4px 8px rgba(0,0,0,0.6);
+      background: radial-gradient(circle at 35% 35%, #ffffff 0%, #888888 60%, #111111 100%);
+      border: 2px solid #222;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.6);
     }
 
+    /* 円形くぼみ（ソケット内側の影） */
     .lever-socket {
       position: absolute;
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      background: radial-gradient(circle, #111 0%, #333 100%);
-      box-shadow: inset 0 2px 4px #000;
-    }
-
-    /* シャフト＆ボール（タップ時に斜め下へガツンと沈み込むHit Action） */
-    .lever-stick {
-      position: relative;
       width: 32px;
-      height: 44px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      transform-origin: center top;
-      transition: transform 0.08s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      z-index: 2;
+      height: 32px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 50% 50%, #050505 0%, #222222 80%, #555555 100%);
+      box-shadow: inset 0 3px 6px rgba(0,0,0,0.9);
+      transition: all 0.08s ease;
     }
 
-    /* 金属シャフト（棒） */
-    .lever-shaft {
-      width: 8px;
-      height: 20px;
-      background: linear-gradient(90deg, #999 0%, #fff 50%, #555 100%);
-      border-radius: 2px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.5);
-    }
-
-    /* 実機スタイルの赤い球体ノブ */
-    .lever-knob {
+    /* 正面丸ボール（タップ時に真下・奥へと沈み込むアクション） */
+    .lever-knob-front {
+      position: relative;
       width: 26px;
       height: 26px;
       border-radius: 50%;
-      background: radial-gradient(circle at 35% 35%, #ff6666 0%, #cc0000 60%, #550000 100%);
+      background: radial-gradient(circle at 35% 35%, #ff6666 0%, #cc0000 65%, #550000 100%);
       border: 1px solid #ffaaaa;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.7), inset 0 -2px 4px rgba(0,0,0,0.5);
+      box-shadow: 0 3px 6px rgba(0,0,0,0.8), inset 0 -2px 4px rgba(0,0,0,0.6);
+      transition: transform 0.08s ease, box-shadow 0.08s ease;
+      z-index: 2;
     }
 
-    /* レバー叩いた感（Hit Action）のアニメーション */
-    .real-lever-assembly.hit .lever-stick {
-      transform: rotateX(40deg) translateY(12px) scaleY(0.82);
+    /* レバー叩いた感（沈み込みアクション） */
+    .real-lever-assembly.hit .lever-knob-front {
+      transform: translateY(4px) scale(0.88);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.9), inset 0 2px 4px rgba(0,0,0,0.8);
+    }
+
+    .real-lever-assembly.hit .lever-socket {
+      background: radial-gradient(circle at 50% 50%, #000 0%, #151515 100%);
     }
 
     /* ストップボタン */
@@ -464,11 +432,11 @@
     .stop-btn:not(:disabled):active { transform: translateY(3px) scale(0.95); }
 
     /* ---------------------------------------------------
-       5. 赤統一 下部『I'm GRAVITY』パネル ＆ 固定幅ボタン
+       5. 赤統一 下部『I'm GRAVITY』パネル ＆ データ常時表示バー
     --------------------------------------------------- */
     .bottom-custom-panel {
       width: 100%;
-      height: 45px;
+      height: 42px;
       background: linear-gradient(180deg, var(--cabinet-red) 0%, var(--cabinet-darkred) 100%);
       border: 2px solid var(--gold);
       border-radius: 6px;
@@ -487,11 +455,54 @@
       text-shadow: 0 0 8px #ffcc00, 1px 1px 2px #000;
     }
 
-    /* 最下部ボタン (AUTOボタンは固定幅 140px で枠が動かない) */
+    /* 最下部：常時表示液晶風データディスプレイバー */
+    .live-data-bar {
+      width: 100%;
+      background: #0d111a;
+      border: 1.5px solid #28364a;
+      border-radius: 6px;
+      padding: 5px 8px;
+      margin-top: 6px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+      box-shadow: inset 0 0 8px #000;
+    }
+
+    .live-data-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #141824;
+      border: 1px solid #1f2a3a;
+      border-radius: 4px;
+      padding: 2px 0;
+    }
+
+    .live-data-label {
+      font-size: 8.5px;
+      color: var(--gold);
+      font-weight: bold;
+      margin-bottom: 1px;
+    }
+
+    .live-data-val {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 13px;
+      font-weight: 900;
+      color: #fff;
+    }
+
+    .live-data-val.big { color: #ff3366; }
+    .live-data-val.reg { color: #00e5ff; }
+    .live-data-val.prob { color: #ffcc00; }
+
+    /* 最下部ボタン群 (AUTOボタン固定幅 140px) */
     .bottom-controls {
       display: flex;
-      gap: 10px;
-      margin-top: 8px;
+      gap: 8px;
+      margin-top: 6px;
       justify-content: center;
       align-items: center;
     }
@@ -508,7 +519,6 @@
       text-align: center;
     }
 
-    /* AUTO/MANUALボタン枠幅絶対固定 */
     .ctrl-btn.auto-btn {
       width: 140px;
       display: inline-block;
@@ -552,7 +562,7 @@
     .stat-label { font-size: 9px; color: #7a8ba6; }
     .stat-value { font-size: 14px; font-weight: bold; color: #fff; }
     .stat-value.big { color: #ff3366; }
-    .stat-value.reg { color: #33ccff; }
+    .stat-value.reg { color: #00e5ff; }
     .stat-value.total { color: #ffcc00; }
     #slumpCanvas { width: 100%; height: 150px; background: #111622; }
     .history-section { max-height: 140px; overflow-y: auto; font-size: 11px; text-align: center; }
@@ -591,9 +601,6 @@
 
         <!-- メインパネル枠 (すべてを赤枠内に格納) -->
         <div class="main-panel">
-          
-          <div class="bonus-status-banner" id="bonusStatusDisp">BIG BONUS GAME</div>
-
           <div class="reels-row">
             <!-- ライン表示 -->
             <div class="line-numbers">
@@ -676,16 +683,12 @@
           </div>
         </div>
 
-        <!-- コントロールデッキ（リアル立体レバー ＋ ストップボタン） -->
+        <!-- コントロールデッキ（正面視点 凹型沈み込みレバー ＋ ストップボタン） -->
         <div class="control-deck">
-          <!-- リアルな軸付きSTARTレバー (叩いた感付き) -->
           <div id="startBtn" class="real-lever-assembly" title="START">
             <div class="lever-housing"></div>
             <div class="lever-socket"></div>
-            <div class="lever-stick">
-              <div class="lever-shaft"></div>
-              <div class="lever-knob"></div>
-            </div>
+            <div class="lever-knob-front"></div>
           </div>
 
           <div class="stop-btn-group">
@@ -700,10 +703,30 @@
           <div class="custom-panel-text">I'm GRAVITY</div>
         </div>
 
+        <!-- 【新規搭載】最下部：常時表示液晶風データディスプレイバー -->
+        <div class="live-data-bar">
+          <div class="live-data-item">
+            <div class="live-data-label">差枚数</div>
+            <div class="live-data-val" id="barDiffMedal">0</div>
+          </div>
+          <div class="live-data-item">
+            <div class="live-data-label">BIG</div>
+            <div class="live-data-val big" id="barBigCount">0</div>
+          </div>
+          <div class="live-data-item">
+            <div class="live-data-label">REG</div>
+            <div class="live-data-val reg" id="barRegCount">0</div>
+          </div>
+          <div class="live-data-item">
+            <div class="live-data-label">合成確率</div>
+            <div class="live-data-val prob" id="barTotalProb">1/--.-</div>
+          </div>
+        </div>
+
         <!-- 最下部コントロール (AUTOボタン幅固定 140px) -->
         <div class="bottom-controls">
           <button id="autoToggleBtn" class="ctrl-btn auto-btn">👤 MODE: MANUAL</button>
-          <button id="dataBtn" class="ctrl-btn data-btn">📊 データ</button>
+          <button id="dataBtn" class="ctrl-btn data-btn">📊 詳細データ</button>
           <button id="settingModalBtn" class="ctrl-btn">⚙️ 設定</button>
         </div>
 
@@ -711,7 +734,7 @@
     </div>
   </div>
 
-  <!-- ホール風データカウンター モーダル -->
+  <!-- ホール風詳細データカウンター モーダル -->
   <div class="modal-overlay" id="dataModal">
     <div class="modal-content">
       <div class="modal-header">

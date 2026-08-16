@@ -1,6 +1,6 @@
 /**
  * データカウンターモジュール (datacounter.js)
- * ホール仕様データ集計・確率計算・当選履歴・出玉スランプグラフ描画
+ * ホール仕様データ集計・確率計算・当選履歴・可変レンジ出玉スランプグラフ描画
  */
 
 (function() {
@@ -55,7 +55,7 @@
       const now = new Date();
       const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-      // 直近の履歴を先頭に追加
+      // 直近の履歴を先頭に追加 (最大50件保持でメモリ最適化)
       this.history.unshift({
         id: this.history.length + 1,
         type: type, // 'BIG' | 'REG'
@@ -64,21 +64,21 @@
         time: timeStr
       });
 
-      // 最大50件保持
       if (this.history.length > 50) {
         this.history.pop();
       }
 
       // ボーナス間ゲーム数をリセット
       this.currentGames = 0;
-      this.recordSlumpPoint();
+      this.recordSlumpPoint(true);
     },
 
-    // スランプグラフ用データポイントの記録
-    recordSlumpPoint: function() {
+    // スランプグラフ用データポイントの記録 (長時間プレイ時のメモリ増大防止サンプリング)
+    recordSlumpPoint: function(forceRecord = false) {
       const lastPoint = this.slumpData[this.slumpData.length - 1];
-      // 5ゲーム経過毎、または差枚に変動があった場合に記録
-      if (!lastPoint || this.totalGames - lastPoint.game >= 5 || Math.abs(this.diffMedal - lastPoint.diff) >= 10) {
+      
+      // 強制記録(ボーナス時) または 5G経過毎 または 差枚が10枚以上動いた場合にのみポイント保存
+      if (forceRecord || !lastPoint || (this.totalGames - lastPoint.game >= 5) || Math.abs(this.diffMedal - lastPoint.diff) >= 10) {
         this.slumpData.push({
           game: this.totalGames,
           diff: this.diffMedal
@@ -86,7 +86,7 @@
       }
     },
 
-    // 統計・計算結果データの取得
+    // 統計・計算結果データの取得 (ボタンエリア常時表示＆モーダル用)
     getStats: function() {
       const formatProb = (count, total) => {
         if (count === 0 || total === 0) return '1/--.-';
@@ -108,7 +108,7 @@
       };
     },
 
-    // Canvasを使用した出玉スランプグラフ描画
+    // Canvasを使用した可変レンジ出玉スランプグラフ描画
     renderSlumpGraph: function(canvasElement) {
       if (!canvasElement) return;
       const ctx = canvasElement.getContext('2d');
@@ -119,11 +119,11 @@
       ctx.fillStyle = '#111622';
       ctx.fillRect(0, 0, width, height);
 
-      const padding = { top: 25, right: 20, bottom: 25, left: 45 };
+      const padding = { top: 25, right: 20, bottom: 25, left: 48 };
       const graphWidth = width - padding.left - padding.right;
       const graphHeight = height - padding.top - padding.bottom;
 
-      // 差枚最大・最小値のレンジ決定
+      // 出玉の振れ幅に応じたY軸レンジの動的スケーリング (±1000〜±5000等へ可変)
       let maxDiff = 1000;
       let minDiff = -1000;
 
@@ -131,6 +131,11 @@
         if (p.diff > maxDiff) maxDiff = Math.ceil(p.diff / 500) * 500;
         if (p.diff < minDiff) minDiff = Math.floor(p.diff / 500) * 500;
       });
+
+      // スケーリングの絶対値を上下対称に揃えて見やすく調整
+      const absMax = Math.max(Math.abs(maxDiff), Math.abs(minDiff), 1000);
+      maxDiff = absMax;
+      minDiff = -absMax;
 
       const maxGame = Math.max(3000, this.totalGames + 200);
 

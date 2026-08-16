@@ -1,6 +1,6 @@
 /**
  * スロットゲームエンジン (engine.js)
- * I'm GRAVITY 仕様・固定トリミング極限密着・3x3完全整列・自動3BET対応
+ * 小役サイズ適正化・縦隙間ゼロ密着描画・GOGOランプ揃い時消灯・クレジット上限50制御
  */
 
 (function() {
@@ -11,7 +11,7 @@
     ['GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', '7', 'BAR', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO']
   ];
 
-  // リールコマサイズ (横幅100px × 高さ75px) - 引き締まった実機プロポーション
+  // リールコマサイズ (横幅100px × 高さ75px) - 実機引き締め比率
   const SYMBOL_HEIGHT = 75;
   const CANVAS_WIDTH = 100;
   const REEL_SPEED_BASE = 36; // 1回転約0.75秒の標準スピード
@@ -32,7 +32,8 @@
   let weightCut = false;       // ウェイトカット設定
   let masterVolume = 1.0;      // 全体音量 (0.0 〜 1.0)
 
-  let credits = 50;
+  let credits = 50;            // 表示クレジット（上限50固定）
+  let internalCredits = 50;    // 内部保持クレジット
   let betAmount = 0;
   let isSpinning = false;
   let isAutoMode = false;
@@ -284,17 +285,17 @@
   }
 
   // ===================================================
-  // 3. 【最重要】固定一律トリミング (Fixed-Crop) デコーダー
-  // 3x3ズレの元凶であった動的Auto-Cropを全廃し、全図柄共通で余白カット
+  // 3. 【最重要】精密トリミング＆高比率密着描画デコーダー
+  // 128x128画像の実領域（84px）のみをダイレクトに切り出し、コマ上下の空白を消滅
   // ===================================================
-  function decodeRLEToCanvasFixedCrop(symData) {
+  function decodeRLEToCanvasPrecisionCrop(symData) {
     const rawCvs = document.createElement('canvas');
     rawCvs.width = 128; rawCvs.height = 128;
     const rawCtx = rawCvs.getContext('2d');
     rawCtx.fillStyle = '#ffffff'; rawCtx.fillRect(0, 0, 128, 128);
 
     if (!symData || !symData.rle) {
-      return { canvas: rawCvs, crop: { x: 0, y: 16, w: 128, h: 96 } };
+      return { canvas: rawCvs, crop: { x: 0, y: 22, w: 128, h: 84 } };
     }
 
     const imgData = rawCtx.createImageData(symData.w, symData.h);
@@ -321,11 +322,10 @@
     }
     rawCtx.putImageData(imgData, symData.x, symData.y);
 
-    // 全図柄共通の固定トリミング範囲（上下不要部分を正確に20pxずつカット）
-    // これにより図柄中心線が全コマで完璧に一致し、3x3のラインがビシッと揃います。
+    // 画像内の実コンテンツ領域（上下白スペースを除いた真の84px領域）を正確に切り出し
     return {
       canvas: rawCvs,
-      crop: { x: 0, y: 16, w: 128, h: 96 }
+      crop: { x: 0, y: 22, w: 128, h: 84 }
     };
   }
 
@@ -335,7 +335,7 @@
 
     ALL_IDS.forEach(id => {
       if (dataStore[id]) {
-        symbolCanvasCache[id] = decodeRLEToCanvasFixedCrop(dataStore[id]);
+        symbolCanvasCache[id] = decodeRLEToCanvasPrecisionCrop(dataStore[id]);
       } else {
         const cvs = document.createElement('canvas');
         cvs.width = 128; cvs.height = 128;
@@ -344,47 +344,53 @@
         ctx.fillStyle = '#000000'; ctx.font = 'bold 24px sans-serif';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(id, 64, 64);
-        symbolCanvasCache[id] = { canvas: cvs, crop: { x: 0, y: 16, w: 128, h: 96 } };
+        symbolCanvasCache[id] = { canvas: cvs, crop: { x: 0, y: 22, w: 128, h: 84 } };
       }
     });
   }
 
-  // 1コマ描画（7/BAR=特大88%, 小役=中型48% ナレッジ遵守）
+  // 1コマ描画（7/BAR=88%, 小役=72% の適正大型化で縦の空白を完全排除）
   function drawSymbol(ctx, type, y, isReelSpinning = false) {
     const cached = symbolCanvasCache[type];
     ctx.save();
     ctx.translate(0, y);
 
-    // 1コマ枠内の背景色塗り（隙間極限排除）
+    // 1コマ枠内の背景色（白）
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, -0.5, CANVAS_WIDTH, SYMBOL_HEIGHT + 1.0);
 
     if (cached) {
-      // 7/BAR は特大、小役は適切な引き締まったサイズに打ち分け
-      let maxW = (type === '7' || type === 'BAR') ? CANVAS_WIDTH * 0.88 : CANVAS_WIDTH * 0.48;
-      let maxH = (type === '7' || type === 'BAR') ? SYMBOL_HEIGHT * 0.88 : SYMBOL_HEIGHT * 0.52;
+      // 小役のサイズを45%から72%へと適正大型化し、上下の白い隙間を消滅
+      let maxW = (type === '7' || type === 'BAR') ? CANVAS_WIDTH * 0.88 : CANVAS_WIDTH * 0.72;
+      let maxH = (type === '7' || type === 'BAR') ? SYMBOL_HEIGHT * 0.90 : SYMBOL_HEIGHT * 0.74;
 
       const scale = Math.min(maxW / cached.crop.w, maxH / cached.crop.h);
       const drawW = cached.crop.w * scale;
       const drawH = cached.crop.h * scale;
+
+      // 完全左右中央配置（右寄り不具合の解絶）
       const drawX = (CANVAS_WIDTH - drawW) / 2;
       const drawY = (SYMBOL_HEIGHT - drawH) / 2;
 
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
 
-      // 回転中の白飛び・過剰エフェクトは全廃。クッキリ目押し可能な色濃さを保証
+      // 回転中も色濃くクッキリ描画（目押し可能化）
       ctx.drawImage(cached.canvas, cached.crop.x, cached.crop.y, cached.crop.w, cached.crop.h, drawX, drawY, drawW, drawH);
     }
     ctx.restore();
   }
 
-  // ディスプレイ＆ランプ状態更新
+  // ディスプレイ＆7セグ＆データバー状態更新
   function updateDisplays(payout = 0) {
-    if (credits < 3 && !isBonusMode) credits = 50;
+    if (internalCredits < 3 && !isBonusMode) {
+      internalCredits = 50;
+    }
+    // 表示クレジットは実機同様に上限50に固定
+    credits = Math.min(50, internalCredits);
 
     update7SegDisplay('creditDisp', credits, 2);
-    update7SegDisplay('countDisp', payout > 0 ? payout : 0, 2);
+    update7SegDisplay('countDisp', isBonusMode ? bonusAcquired : 0, 2);
     update7SegDisplay('payoutDisp', payout, 2);
 
     const lampReplay = document.getElementById('lampReplay');
@@ -395,18 +401,25 @@
     if (lampStart) lampStart.classList.toggle('active', !isSpinning && (betAmount === 3 || isReplay || isBonusMode));
     if (lampWait) lampWait.classList.toggle('active', isWaiting);
 
-    const bStatusEl = document.getElementById('bonusStatusDisp');
-    if (bStatusEl) {
-      if (isBonusMode) {
-        bStatusEl.textContent = `${bonusType} BONUS GAME (獲得: ${bonusAcquired}/${bonusTarget}枚)`;
-        bStatusEl.style.display = 'block';
-      } else {
-        bStatusEl.style.display = 'none';
+    // 最下部ボタンエリア常時表示データバーのリアルタイム更新
+    if (window.DATA_COUNTER) {
+      const stats = window.DATA_COUNTER.getStats();
+      const diffEl = document.getElementById('barDiffMedal');
+      const bigEl = document.getElementById('barBigCount');
+      const regEl = document.getElementById('barRegCount');
+      const probEl = document.getElementById('barTotalProb');
+
+      if (diffEl) {
+        diffEl.textContent = (stats.diffMedal > 0 ? '+' : '') + stats.diffMedal;
+        diffEl.style.color = stats.diffMedal >= 0 ? '#00e5ff' : '#ff9900';
       }
+      if (bigEl) bigEl.textContent = stats.bigCount;
+      if (regEl) regEl.textContent = stats.regCount;
+      if (probEl) probEl.textContent = stats.totalProb;
     }
   }
 
-  // ラインランプ（③②①）点灯/消灯制御
+  // ラインランプ（③②①）制御
   function setLineBadgesLit(isLit) {
     const badges = document.querySelectorAll('.line-badge');
     badges.forEach(badge => {
@@ -415,12 +428,25 @@
     });
   }
 
+  // ペカリ発動 ＆ 即時AUTO自動解除
   function triggerPeka() {
     if (isPeka) return;
     isPeka = true;
     const gogoBox = document.getElementById('gogoBox');
     if (gogoBox) gogoBox.classList.add('peka');
     SoundEngine.play('gako');
+
+    // 【重要】ペカリ点灯した瞬間にAUTOを自動解除して手動（MANUAL）モードに復帰
+    if (isAutoMode) {
+      stopAutoMode();
+    }
+  }
+
+  // GOGO!ランプ消灯処理（ボーナス図柄揃い時）
+  function turnOffGogoLamp() {
+    isPeka = false;
+    const gogoBox = document.getElementById('gogoBox');
+    if (gogoBox) gogoBox.classList.remove('peka');
   }
 
   function stopAutoMode() {
@@ -492,7 +518,6 @@
       tripleStrip.forEach((sym, i) => { drawSymbol(reel.ctx, sym, i * SYMBOL_HEIGHT, isSpinning); });
     },
 
-    // レバーON（自動3BET処理内蔵）
     startSpin: function() {
       if (isSpinning) return;
 
@@ -523,15 +548,14 @@
         document.getElementById('stopBtn2')
       ];
 
-      // 回転開始と同時にライン表示①②③を消灯
       setLineBadgesLit(false);
 
       if (isBonusMode) {
-        betAmount = 1; credits -= 1;
+        betAmount = 1; internalCredits -= 1;
         if (window.DATA_COUNTER) window.DATA_COUNTER.onGameStart(1);
       } else if (!isReplay) {
-        if (credits < 3) credits = 50; 
-        credits -= 3; betAmount = 3;
+        if (internalCredits < 3) internalCredits = 50; 
+        internalCredits -= 3; betAmount = 3;
         if (window.DATA_COUNTER) window.DATA_COUNTER.onGameStart(3);
       } else {
         betAmount = 3; isReplay = false;
@@ -542,7 +566,7 @@
       updateDisplays(0);
       SoundEngine.play('lever');
 
-      // 統一確率抽選
+      // 確率判定 (AUTO/MANUAL共用)
       if (!isBonusMode && !bonusFlag) {
         const prob = PROBABILITY_TABLE[currentSetting];
         const rand = Math.random();
@@ -551,14 +575,10 @@
 
         if (bonusFlag) {
           const pekaRand = Math.random();
-          if (pekaRand < 0.125) pekaTiming = 'LEVER';
-          else if (pekaRand < 0.1875) pekaTiming = 'STOP1';
-          else if (pekaRand < 0.25) pekaTiming = 'STOP3_DOWN';
+          if (pekaRand < 0.25) pekaTiming = 'LEVER';
+          else if (pekaRand < 0.35) pekaTiming = 'STOP1';
+          else if (pekaRand < 0.50) pekaTiming = 'STOP3_DOWN';
           else pekaTiming = 'STOP3_UP';
-
-          if (autoStopOnBonus) {
-            stopAutoMode();
-          }
         }
       }
 
@@ -658,7 +678,7 @@
         elem.addEventListener('click', downTrigger);
       };
 
-      // 【リアルスタートレバー】打撃タップイベント
+      // 正面視点凹型レバーの沈み込みタップイベント
       if (startBtn) {
         const handleLeverHit = (e) => {
           if (e.cancelable) e.preventDefault();
@@ -681,7 +701,7 @@
         });
       });
 
-      // AUTO/MANUAL切替ボタン (テキスト固定＆確実な切り替え)
+      // AUTO/MANUAL切替ボタン
       if (autoToggleBtn) {
         autoToggleBtn.onclick = () => {
           isAutoMode = !isAutoMode;
@@ -710,7 +730,7 @@
       }, 220);
     },
 
-    // 標準スロット流下（上から下へ流れる正回転）
+    // 標準スロット回転 (上から下へ滑らかに流下)
     spinReel: function(reel) {
       const maxPos = reel.strip.length * SYMBOL_HEIGHT;
       const animate = () => {
@@ -738,7 +758,6 @@
 
     onAllStopped: function() {
       isSpinning = false; betAmount = 0;
-      const gogoBox = document.getElementById('gogoBox');
       const getSym = (rIdx, offset) => {
         const strip = reels[rIdx].strip;
         return strip[(reels[rIdx].currentIndex + offset + strip.length) % strip.length];
@@ -754,17 +773,17 @@
 
       let payout = 0;
 
+      // ボーナスゲーム中消化
       if (isBonusMode) {
         payout = 14;
         bonusAcquired += 13;
-        credits += payout;
+        internalCredits += payout;
         if (window.DATA_COUNTER) window.DATA_COUNTER.onPayout(payout);
         SoundEngine.play('bonus_pay');
 
         if (bonusAcquired >= bonusTarget) {
           isBonusMode = false;
           bonusFlag = null;
-          if (gogoBox) { isPeka = false; gogoBox.classList.remove('peka'); }
         }
         updateDisplays(payout);
 
@@ -774,6 +793,7 @@
         return;
       }
 
+      // 通常ゲーム停止判定
       let isBigWin = false, isRegWin = false, isReplayWin = false;
 
       lines.forEach(line => {
@@ -791,11 +811,13 @@
       if (isBigWin) {
         isBonusMode = true; bonusType = 'BIG'; bonusAcquired = 0; bonusTarget = 252;
         if (window.DATA_COUNTER) window.DATA_COUNTER.onBonusWin('BIG');
+        turnOffGogoLamp(); // 【実機準拠】777が揃った瞬間にGOGO!ランプは消灯
         SoundEngine.play('big_fanfare');
         if (autoStopOnBonus) stopAutoMode();
       } else if (isRegWin) {
         isBonusMode = true; bonusType = 'REG'; bonusAcquired = 0; bonusTarget = 96;
         if (window.DATA_COUNTER) window.DATA_COUNTER.onBonusWin('REG');
+        turnOffGogoLamp(); // 【実機準拠】77BARが揃った瞬間にGOGO!ランプは消灯
         SoundEngine.play('reg_fanfare');
         if (autoStopOnBonus) stopAutoMode();
       } else if (isReplayWin) {
@@ -803,7 +825,7 @@
         setLineBadgesLit(true);
         SoundEngine.play('replay');
       } else if (payout > 0) {
-        credits += payout;
+        internalCredits += payout;
         if (window.DATA_COUNTER) window.DATA_COUNTER.onPayout(payout);
         if (payout === 8) SoundEngine.play('grape');
         else SoundEngine.play('bonus_pay');
