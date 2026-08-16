@@ -1,6 +1,6 @@
 /**
  * データカウンターモジュール (datacounter.js)
- * ホール仕様データ集計・確率計算・当選履歴・可変レンジ出玉スランプグラフ描画
+ * ホール仕様データ集計・確率計算・当選履歴・初期レンジ±500可変スランプグラフ描画
  */
 
 (function() {
@@ -108,7 +108,7 @@
       };
     },
 
-    // Canvasを使用した可変レンジ出玉スランプグラフ描画
+    // Canvasを使用した可変レンジ出玉スランプグラフ描画 (初期レンジ±500)
     renderSlumpGraph: function(canvasElement) {
       if (!canvasElement) return;
       const ctx = canvasElement.getContext('2d');
@@ -123,17 +123,17 @@
       const graphWidth = width - padding.left - padding.right;
       const graphHeight = height - padding.top - padding.bottom;
 
-      // 出玉の振れ幅に応じたY軸レンジの動的スケーリング (±1000〜±5000等へ可変)
-      let maxDiff = 1000;
-      let minDiff = -1000;
+      // 出玉の振れ幅に応じたY軸レンジの動的スケーリング (初期レンジ±500から動的拡張)
+      let maxDiff = 500;
+      let minDiff = -500;
 
       this.slumpData.forEach(p => {
-        if (p.diff > maxDiff) maxDiff = Math.ceil(p.diff / 500) * 500;
-        if (p.diff < minDiff) minDiff = Math.floor(p.diff / 500) * 500;
+        if (p.diff > maxDiff) maxDiff = Math.ceil(p.diff / 250) * 250;
+        if (p.diff < minDiff) minDiff = Math.floor(p.diff / 250) * 250;
       });
 
       // スケーリングの絶対値を上下対称に揃えて見やすく調整
-      const absMax = Math.max(Math.abs(maxDiff), Math.abs(minDiff), 1000);
+      const absMax = Math.max(Math.abs(maxDiff), Math.abs(minDiff), 500);
       maxDiff = absMax;
       minDiff = -absMax;
 

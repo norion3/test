@@ -1,6 +1,6 @@
 /**
  * スロットゲームエンジン (engine.js)
- * ペカリ時スロー旋回・超アシスト目押し・全画面タップ進行・縦幅100%密着描画・デフォルトWaitなし
+ * ボーナス中ブドウ100%成立・コマ高60px隙間ゼロ・多重タップ防止・実機ラインランプ制御
  */
 
 (function() {
@@ -11,11 +11,11 @@
     ['GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', '7', 'BAR', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO']
   ];
 
-  // リールコマサイズ (横幅100px × 高さ75px)
-  const SYMBOL_HEIGHT = 75;
+  // コマサイズ (横幅100px × 高さ60px) - 実機通りの横長引き締め比率
+  const SYMBOL_HEIGHT = 60;
   const CANVAS_WIDTH = 100;
-  const REEL_SPEED_NORMAL = 36; // 通常時スピード
-  const REEL_SPEED_SLOW = 12;   // ペカリ（点灯）時の超低速スロー旋回スピード
+  const REEL_SPEED_NORMAL = 28; // 通常/ボーナス中スピード (目押し可能)
+  const REEL_SPEED_SLOW = 10;   // ペカリ時の超低速スロー旋回
 
   // SアイムジャグラーEX 実機確率テーブル (設定1〜6)
   const PROBABILITY_TABLE = {
@@ -40,14 +40,15 @@
   let isAutoMode = false;
   let autoTimer = null;
   let lastSpinTime = 0;
+  let lastTapTime = 0;         // タップ多重発火防止タイムスタンプ
   let isWaiting = false;
 
   // ボーナス状態
   let bonusFlag = null;         // 'BIG' | 'REG' | null
   let isBonusMode = false;      // ボーナス消化モード
   let bonusType = null;         // 'BIG' | 'REG'
-  let bonusAcquired = 0;        // 純増獲得枚数
-  let bonusTarget = 0;          // BIG: 252枚 / REG: 96枚
+  let bonusAcquired = 0;        // 累計獲得枚数 (BIG 266枚上限 / REG 105枚上限)
+  let bonusTarget = 0;          // BIG: 266枚 / REG: 105枚
 
   let isPeka = false;
   let pekaTiming = null;        // 'LEVER' | 'STOP1' | 'STOP3_DOWN' | 'STOP3_UP'
@@ -286,8 +287,7 @@
   }
 
   // ===================================================
-  // 3. 【最重要】縦幅100%フルフィット描画デコーダー
-  // 上下の白い余白（隙間）を物理的に0pxにし、図柄同士を完全に接続
+  // 3. 【最重要】コマ高60pxフィッティング＆左右完全中央描画
   // ===================================================
   function decodeRLEToCanvasPrecisionCrop(symData) {
     const rawCvs = document.createElement('canvas');
@@ -323,7 +323,6 @@
     }
     rawCtx.putImageData(imgData, symData.x, symData.y);
 
-    // 画像内の実コンテンツ領域（84px領域）を正確に抽出
     return {
       canvas: rawCvs,
       crop: { x: 0, y: 22, w: 128, h: 84 }
@@ -350,7 +349,7 @@
     });
   }
 
-  // 1コマ描画（コマ高75pxに対して縦幅100%展開。上下白スペース0px）
+  // 1コマ描画（コマ高60pxに対して縦幅100%展開。左右完全中央揃え）
   function drawSymbol(ctx, type, y, isReelSpinning = false) {
     const cached = symbolCanvasCache[type];
     ctx.save();
@@ -361,7 +360,6 @@
     ctx.fillRect(0, -0.5, CANVAS_WIDTH, SYMBOL_HEIGHT + 1.0);
 
     if (cached) {
-      // 縦幅を1コマ高さ(75px)いっぱい(100%)にフィッティング配置
       let drawH = SYMBOL_HEIGHT; 
       let maxW = (type === '7' || type === 'BAR') ? CANVAS_WIDTH * 0.92 : CANVAS_WIDTH * 0.74;
 
@@ -372,8 +370,8 @@
         drawW = CANVAS_WIDTH * 0.94;
       }
 
-      // 完全左右中央配置
-      const drawX = (CANVAS_WIDTH - drawW) / 2;
+      // 厳密な左右完全中央配置
+      const drawX = Math.round((CANVAS_WIDTH - drawW) / 2);
       const drawY = 0; 
 
       ctx.imageSmoothingEnabled = true;
@@ -400,7 +398,7 @@
     const lampWait = document.getElementById('lampWait');
 
     if (lampReplay) lampReplay.classList.toggle('active', isReplay);
-    if (lampStart) lampStart.classList.toggle('active', !isSpinning && (betAmount === 3 || isReplay || isBonusMode));
+    if (lampStart) lampStart.classList.toggle('active', !isSpinning && (betAmount === 3 || betAmount === 1 || isReplay || isBonusMode));
     if (lampWait) lampWait.classList.toggle('active', isWaiting);
 
     // 最下部データバーリアルタイム更新
@@ -431,7 +429,7 @@
 
     if (isLit) {
       if (isBonusMode) {
-        // ボーナス中(1BET時)は中段1ライン有効 ➔ 「②」ランプのみ点灯
+        // ボーナス中(1BET時)は中段1ライン有効 ➔ 「②」ランプのみ常時点灯
         badge1.classList.remove('lit');
         badge2.classList.add('lit');
         badge3.classList.remove('lit');
@@ -475,6 +473,15 @@
     if (autoToggleBtn) {
       autoToggleBtn.textContent = '👤 MODE: MANUAL';
       autoToggleBtn.classList.remove('active');
+    }
+  }
+
+  // レバーアクションアニメーション実行
+  function triggerLeverVisual() {
+    const startBtn = document.getElementById('startBtn');
+    if (startBtn) {
+      startBtn.classList.add('hit');
+      setTimeout(() => startBtn.classList.remove('hit'), 150);
     }
   }
 
@@ -542,7 +549,7 @@
 
       const now = Date.now();
       const elapsed = now - lastSpinTime;
-      const targetWait = weightCut ? 180 : 4100;
+      const targetWait = weightCut ? 150 : 4100;
 
       if (lastSpinTime > 0 && elapsed < targetWait) {
         isWaiting = true;
@@ -560,6 +567,7 @@
     executeSpin: function() {
       lastSpinTime = Date.now();
       SoundEngine.init();
+      triggerLeverVisual();
 
       const stopBtns = [
         document.getElementById('stopBtn0'),
@@ -569,7 +577,7 @@
 
       if (isBonusMode) {
         betAmount = 1; internalCredits -= 1;
-        setLineBadgesLit(true); // ボーナス中は「②」ランプのみ点灯
+        setLineBadgesLit(true); // ボーナス中は「②」ランプのみ常時点灯
         if (window.DATA_COUNTER) window.DATA_COUNTER.onGameStart(1);
       } else if (!isReplay) {
         if (internalCredits < 3) internalCredits = 50; 
@@ -586,7 +594,7 @@
       updateDisplays(0);
       SoundEngine.play('lever');
 
-      // 確率判定
+      // 確率判定 (通常時)
       if (!isBonusMode && !bonusFlag) {
         const prob = PROBABILITY_TABLE[currentSetting];
         const rand = Math.random();
@@ -604,7 +612,7 @@
 
       if (!isBonusMode && bonusFlag && pekaTiming === 'LEVER') triggerPeka();
 
-      // 回転速度の決定（ペカリ時は超低速スロー旋回で目押しイージー化）
+      // 回転速度 (ペカリ時のみ超低速スロー旋回、通常/ボーナス中は快適目押し速度)
       const spinSpeed = (isPeka || bonusFlag) ? REEL_SPEED_SLOW : REEL_SPEED_NORMAL;
 
       reels.forEach((reel, i) => {
@@ -619,8 +627,6 @@
         }
       });
 
-      // 回転開始とともにラインランプ消灯
-      setLineBadgesLit(false);
       updateDisplays();
 
       if (isAutoMode) {
@@ -652,12 +658,22 @@
       let targetIdx = baseIdx;
 
       if (isBonusMode) {
-        targetIdx = baseIdx;
+        // 【実機準拠】ボーナス中はブドウ（15枚役）100%成立 ➔ アシスト滑りで中段（②ライン）にブドウを引き込む
+        let found = false;
+        for (let slip = 0; slip <= 4; slip++) {
+          const checkTopIdx = (baseIdx - slip + reel.strip.length) % reel.strip.length;
+          // 中段 (checkTopIdx + 1) が GRAPE になる位置を探索
+          const midSymIdx = (checkTopIdx + 1) % reel.strip.length;
+          if (reel.strip[midSymIdx] === 'GRAPE') {
+            targetIdx = checkTopIdx; found = true; break;
+          }
+        }
+        if (!found) targetIdx = baseIdx;
       } else if (bonusFlag) {
-        // 【超アシスト目押し】滑り探索範囲を枠上〜枠下まで大幅拡大（大体狙えばスッと揃う）
+        // 【超アシスト目押し】ペカリ中は滑り探索範囲を枠上〜枠下まで大幅拡大
         const targetSym = bonusFlag === 'BIG' ? '7' : (index === 2 ? 'BAR' : '7');
         let found = false;
-        for (let slip = 0; slip <= 8; slip++) { // 超アシスト（8コマ滑りまで対応）
+        for (let slip = 0; slip <= 8; slip++) {
           const checkTopIdx = (baseIdx - slip + reel.strip.length) % reel.strip.length;
           for (let offset = 0; offset <= 2; offset++) {
             const checkSymIdx = (checkTopIdx + offset) % reel.strip.length;
@@ -681,9 +697,15 @@
       }
     },
 
-    // 全画面どこでもタップ時順次進行ロジック
+    // 全画面どこでもタップ時順次進行ロジック (デバウンス多重発火防止)
     handleGlobalTap: function() {
       if (!this.isInitialized) return;
+
+      const now = Date.now();
+      if (now - lastTapTime < 120) { // 120ms以内の連続タップは多重発火防止
+        return;
+      }
+      lastTapTime = now;
 
       // 回転していない状態 ➔ スタートレバーON
       if (!isSpinning) {
@@ -729,8 +751,6 @@
       if (startBtn) {
         attachFastTouch(startBtn, (e) => {
           if (e.cancelable) e.preventDefault();
-          startBtn.classList.add('hit');
-          setTimeout(() => startBtn.classList.remove('hit'), 150);
           this.startSpin();
         });
       }
@@ -809,17 +829,17 @@
       const lines = [
         [getSym(0, 0), getSym(1, 0), getSym(2, 0)],
         [getSym(0, 1), getSym(1, 1), getSym(2, 1)],
-        [getSym(0, 2), getSym(1, 2), getSym(2, 2)],
+        [getSym(0, 2), getSym(1, 2), getSym(2, 0)],
         [getSym(0, 0), getSym(1, 1), getSym(2, 2)],
         [getSym(0, 2), getSym(1, 1), getSym(2, 0)]
       ];
 
       let payout = 0;
 
-      // ボーナス消化中
+      // 【実機準拠】ボーナス消化中：ブドウ揃いで15枚払出（純増14枚）
       if (isBonusMode) {
-        payout = 14;
-        bonusAcquired += 13;
+        payout = 15;
+        bonusAcquired += 15;
         internalCredits += payout;
         if (window.DATA_COUNTER) window.DATA_COUNTER.onPayout(payout);
         SoundEngine.play('bonus_pay');
@@ -827,6 +847,7 @@
         if (bonusAcquired >= bonusTarget) {
           isBonusMode = false;
           bonusFlag = null;
+          setLineBadgesLit(false);
         }
         updateDisplays(payout);
 
@@ -836,7 +857,7 @@
         return;
       }
 
-      // 通常停止判定
+      // 通常ゲーム停止判定
       let isBigWin = false, isRegWin = false, isReplayWin = false;
 
       lines.forEach(line => {
@@ -852,13 +873,13 @@
       });
 
       if (isBigWin) {
-        isBonusMode = true; bonusType = 'BIG'; bonusAcquired = 0; bonusTarget = 252;
+        isBonusMode = true; bonusType = 'BIG'; bonusAcquired = 0; bonusTarget = 266;
         if (window.DATA_COUNTER) window.DATA_COUNTER.onBonusWin('BIG');
         turnOffGogoLamp(); // 【実機準拠】777が揃った瞬間にGOGO!ランプは即消灯
         SoundEngine.play('big_fanfare');
         if (autoStopOnBonus) stopAutoMode();
       } else if (isRegWin) {
-        isBonusMode = true; bonusType = 'REG'; bonusAcquired = 0; bonusTarget = 96;
+        isBonusMode = true; bonusType = 'REG'; bonusAcquired = 0; bonusTarget = 105;
         if (window.DATA_COUNTER) window.DATA_COUNTER.onBonusWin('REG');
         turnOffGogoLamp(); // 【実機準拠】77BARが揃った瞬間にGOGO!ランプは即消灯
         SoundEngine.play('reg_fanfare');

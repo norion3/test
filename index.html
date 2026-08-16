@@ -166,7 +166,7 @@
     .line-numbers {
       display: flex;
       flex-direction: column;
-      gap: 28px;
+      gap: 22px;
       font-weight: 900;
       font-size: 10px;
     }
@@ -188,10 +188,10 @@
     .line-badge.lit.badge-2 { background: #2196f3; color: #fff; border-color: #88ccff; box-shadow: 0 0 8px #2196f3; }
     .line-badge.lit.badge-1 { background: #4caf50; color: #fff; border-color: #88ff88; box-shadow: 0 0 8px #4caf50; }
 
-    /* 【引き締まった実機プロポーション】リール窓 (320px × 225px) */
+    /* 【引き締まった実機長方形プロポーション】リール窓 (320px × 180px) */
     .reels-screen {
       width: 320px;
-      height: 225px;
+      height: 180px;
       background: #fff;
       border: 3px solid #111;
       border-radius: 4px;
@@ -205,7 +205,7 @@
 
     .reel-column {
       width: 104px;
-      height: 225px;
+      height: 180px;
       background: #fff;
       position: relative;
       overflow: hidden;
@@ -336,7 +336,7 @@
     }
 
     /* ---------------------------------------------------
-       4. 正面視点 凹型ソケット沈み込みスタートレバー
+       4. 正面視点 凹型ソケット沈み込みレバー ＆ 中央寄せストップボタン
     --------------------------------------------------- */
     .control-deck {
       width: 100%;
@@ -346,16 +346,17 @@
       padding: 10px 18px;
       margin-top: 6px;
       display: flex;
-      justify-content: space-between;
+      justify-content: center; /* 【中央寄せ黄金レイアウト】 */
       align-items: center;
+      gap: 20px;
       box-shadow: inset 0 2px 4px rgba(255,255,255,0.8), 0 5px 10px rgba(0,0,0,0.7);
     }
 
     /* 真正面視点に合わせた「円形凹型ソケット＋沈み込みボール」構造 */
     .real-lever-assembly {
       position: relative;
-      width: 52px;
-      height: 52px;
+      width: 50px;
+      height: 50px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -365,8 +366,8 @@
     /* 外枠メッキソケット */
     .lever-housing {
       position: absolute;
-      width: 48px;
-      height: 48px;
+      width: 46px;
+      height: 46px;
       border-radius: 50%;
       background: radial-gradient(circle at 35% 35%, #ffffff 0%, #888888 60%, #111111 100%);
       border: 2px solid #222;
@@ -376,8 +377,8 @@
     /* 円形くぼみ（ソケット内側の影） */
     .lever-socket {
       position: absolute;
-      width: 32px;
-      height: 32px;
+      width: 30px;
+      height: 30px;
       border-radius: 50%;
       background: radial-gradient(circle at 50% 50%, #050505 0%, #222222 80%, #555555 100%);
       box-shadow: inset 0 3px 6px rgba(0,0,0,0.9);
@@ -387,8 +388,8 @@
     /* 正面丸ボール（タップ時に真下・奥へと沈み込むアクション） */
     .lever-knob-front {
       position: relative;
-      width: 26px;
-      height: 26px;
+      width: 25px;
+      height: 25px;
       border-radius: 50%;
       background: radial-gradient(circle at 35% 35%, #ff6666 0%, #cc0000 65%, #550000 100%);
       border: 1px solid #ffaaaa;
@@ -397,7 +398,7 @@
       z-index: 2;
     }
 
-    /* レバー叩いた感（沈み込みアクション） */
+    /* レバー沈み込みアクション */
     .real-lever-assembly.hit .lever-knob-front {
       transform: translateY(4px) scale(0.88);
       box-shadow: 0 1px 2px rgba(0,0,0,0.9), inset 0 2px 4px rgba(0,0,0,0.8);
@@ -407,10 +408,10 @@
       background: radial-gradient(circle at 50% 50%, #000 0%, #151515 100%);
     }
 
-    /* ストップボタン */
+    /* ストップボタン (数字印字削除・プレーンな赤メッキ仕様) */
     .stop-btn-group {
       display: flex;
-      gap: 14px;
+      gap: 12px;
     }
 
     .stop-btn {
@@ -419,9 +420,6 @@
       border-radius: 50%;
       background: radial-gradient(circle, #e62229 0%, #8a0b10 100%);
       border: 2px solid #ffcccc;
-      color: #fff;
-      font-weight: 900;
-      font-size: 14px;
       box-shadow: 0 4px 6px rgba(0,0,0,0.6);
       cursor: pointer;
       transition: transform 0.05s ease-out, border-color 0.1s;
@@ -498,7 +496,7 @@
     .live-data-val.reg { color: #00e5ff; }
     .live-data-val.prob { color: #ffcc00; }
 
-    /* 最下部ボタン群 (AUTOボタン固定幅 140px) */
+    /* 最下部コントロール (AUTOボタン幅固定 140px) */
     .bottom-controls {
       display: flex;
       gap: 8px;
@@ -517,7 +515,7 @@
       font-weight: bold;
       cursor: pointer;
       text-align: center;
-      z-index: 100; /* ボタン自体のタップを全画面タップより最優先 */
+      z-index: 100;
     }
 
     .ctrl-btn.auto-btn {
@@ -611,7 +609,7 @@
               <div class="line-badge badge-1">1</div>
             </div>
 
-            <!-- 引き締まった実機プロポーション 3列リール窓 (320x225) -->
+            <!-- 引き締まった実機プロポーション 3列リール窓 (320x180) -->
             <div class="reels-screen">
               <div class="reel-column"><canvas id="reelCanvas0" class="reel-canvas"></canvas></div>
               <div class="reel-separator"></div>
@@ -685,7 +683,7 @@
           </div>
         </div>
 
-        <!-- コントロールデッキ（正面視点 凹型沈み込みレバー ＋ ストップボタン） -->
+        <!-- コントロールデッキ（正面視点 凹型沈み込みレバー ＋ 中央寄せプレーンボタン） -->
         <div class="control-deck">
           <div id="startBtn" class="real-lever-assembly" title="START">
             <div class="lever-housing"></div>
@@ -694,9 +692,9 @@
           </div>
 
           <div class="stop-btn-group">
-            <button id="stopBtn0" class="stop-btn" disabled>1</button>
-            <button id="stopBtn1" class="stop-btn" disabled>2</button>
-            <button id="stopBtn2" class="stop-btn" disabled>3</button>
+            <button id="stopBtn0" class="stop-btn" disabled></button>
+            <button id="stopBtn1" class="stop-btn" disabled></button>
+            <button id="stopBtn2" class="stop-btn" disabled></button>
           </div>
         </div>
 
@@ -801,7 +799,7 @@
   <script>
     document.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
 
-    // 【新規機能】全画面どこでもワンタップ進行イベント
+    // 全画面どこでもワンタップ進行イベント
     const appViewport = document.getElementById('appViewport');
     if (appViewport) {
       const handleTap = (e) => {
@@ -820,7 +818,6 @@
       };
 
       appViewport.addEventListener('touchstart', (e) => {
-        // マルチタッチ防止および全画面進行
         if (e.touches && e.touches.length === 1) {
           handleTap(e);
         }
