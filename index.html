@@ -57,11 +57,11 @@
     }
 
     /* ---------------------------------------------------
-       2. ドット筐体 ＆ 赤統一実機完全トレースレイアウト
+       2. ドット筐体 ＆ 赤統一・横幅390px拡大 黄金比レイアウト
     --------------------------------------------------- */
     .cabinet {
       position: relative;
-      width: 360px;
+      width: 390px;
       background: #111115;
       border: 4px solid #333338;
       border-radius: 12px;
@@ -188,9 +188,9 @@
     .line-badge.lit.badge-2 { background: #2196f3; color: #fff; border-color: #88ccff; box-shadow: 0 0 8px #2196f3; }
     .line-badge.lit.badge-1 { background: #4caf50; color: #fff; border-color: #88ff88; box-shadow: 0 0 8px #4caf50; }
 
-    /* 【引き締まった実機プロポーション】リール窓 (304px × 225px) */
+    /* 【引き締まった実機プロポーション】リール窓 (320px × 225px) */
     .reels-screen {
-      width: 304px;
+      width: 320px;
       height: 225px;
       background: #fff;
       border: 3px solid #111;
@@ -204,7 +204,7 @@
     }
 
     .reel-column {
-      width: 100px;
+      width: 104px;
       height: 225px;
       background: #fff;
       position: relative;
@@ -259,8 +259,8 @@
     }
 
     .gogo-box {
-      width: 105px; 
-      height: 52px;
+      width: 110px; 
+      height: 54px;
       background: #020204;
       border: 2px solid #222;
       border-radius: 6px;
@@ -295,7 +295,7 @@
     --------------------------------------------------- */
     .led-group {
       display: flex;
-      gap: 10px;
+      gap: 12px;
       margin-bottom: 2px;
     }
 
@@ -410,7 +410,7 @@
     /* ストップボタン */
     .stop-btn-group {
       display: flex;
-      gap: 12px;
+      gap: 14px;
     }
 
     .stop-btn {
@@ -517,6 +517,7 @@
       font-weight: bold;
       cursor: pointer;
       text-align: center;
+      z-index: 100; /* ボタン自体のタップを全画面タップより最優先 */
     }
 
     .ctrl-btn.auto-btn {
@@ -584,10 +585,11 @@
 </head>
 <body>
 
-  <div class="app-viewport">
+  <!-- 全画面どこでもワンタップ進行レスポンシブコンテナ -->
+  <div class="app-viewport" id="appViewport">
     <div class="cabinet-scaler">
       
-      <!-- 赤・金・黒統一のドット筐体 -->
+      <!-- 横幅390px拡大 ドット筐体 -->
       <div class="cabinet">
         
         <!-- GRAVITY TOPランプ -->
@@ -599,7 +601,7 @@
           <div class="juggler-brand-bar">G-SLOT</div>
         </div>
 
-        <!-- メインパネル枠 (すべてを赤枠内に格納) -->
+        <!-- メインパネル枠 -->
         <div class="main-panel">
           <div class="reels-row">
             <!-- ライン表示 -->
@@ -609,7 +611,7 @@
               <div class="line-badge badge-1">1</div>
             </div>
 
-            <!-- 引き締まった実機プロポーション 3列リール窓 (304x225) -->
+            <!-- 引き締まった実機プロポーション 3列リール窓 (320x225) -->
             <div class="reels-screen">
               <div class="reel-column"><canvas id="reelCanvas0" class="reel-canvas"></canvas></div>
               <div class="reel-separator"></div>
@@ -703,7 +705,7 @@
           <div class="custom-panel-text">I'm GRAVITY</div>
         </div>
 
-        <!-- 【新規搭載】最下部：常時表示液晶風データディスプレイバー -->
+        <!-- 最下部：常時表示液晶風データディスプレイバー -->
         <div class="live-data-bar">
           <div class="live-data-item">
             <div class="live-data-label">差枚数</div>
@@ -781,7 +783,7 @@
         </div>
         <div class="setting-row">
           <label>ウェイトカット</label>
-          <input type="checkbox" id="weightCutCheck">
+          <input type="checkbox" id="weightCutCheck" checked>
         </div>
         <div class="setting-row">
           <label>全体音量</label>
@@ -799,8 +801,37 @@
   <script>
     document.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
 
+    // 【新規機能】全画面どこでもワンタップ進行イベント
+    const appViewport = document.getElementById('appViewport');
+    if (appViewport) {
+      const handleTap = (e) => {
+        // ボタンやモーダル、入力要素が直接タップされた場合は全画面タップ進行を除外
+        if (e.target.closest('.ctrl-btn') || 
+            e.target.closest('.modal-overlay') || 
+            e.target.closest('.modal-content') ||
+            e.target.closest('select') ||
+            e.target.closest('input')) {
+          return;
+        }
+
+        if (window.JUGGLER_ENGINE) {
+          window.JUGGLER_ENGINE.handleGlobalTap();
+        }
+      };
+
+      appViewport.addEventListener('touchstart', (e) => {
+        // マルチタッチ防止および全画面進行
+        if (e.touches && e.touches.length === 1) {
+          handleTap(e);
+        }
+      }, { passive: false });
+
+      appViewport.addEventListener('click', handleTap);
+    }
+
     // データカウンターモーダル
-    document.getElementById('dataBtn').onclick = () => {
+    document.getElementById('dataBtn').onclick = (e) => {
+      e.stopPropagation();
       if(window.DATA_COUNTER) {
         const s = window.DATA_COUNTER.getStats();
         document.getElementById('modalTotalGames').textContent = s.totalGames + ' G';
@@ -814,10 +845,14 @@
       }
       document.getElementById('dataModal').classList.add('active');
     };
-    document.getElementById('dataModalCloseBtn').onclick = () => document.getElementById('dataModal').classList.remove('active');
+    document.getElementById('dataModalCloseBtn').onclick = (e) => {
+      e.stopPropagation();
+      document.getElementById('dataModal').classList.remove('active');
+    };
 
     // 設定モーダル
-    document.getElementById('settingModalBtn').onclick = () => {
+    document.getElementById('settingModalBtn').onclick = (e) => {
+      e.stopPropagation();
       if(window.JUGGLER_ENGINE) {
         const cfg = window.JUGGLER_ENGINE.getConfig();
         document.getElementById('settingSelect').value = cfg.setting;
@@ -828,8 +863,12 @@
       }
       document.getElementById('settingModal').classList.add('active');
     };
-    document.getElementById('settingModalCloseBtn').onclick = () => document.getElementById('settingModal').classList.remove('active');
-    document.getElementById('saveSettingBtn').onclick = () => {
+    document.getElementById('settingModalCloseBtn').onclick = (e) => {
+      e.stopPropagation();
+      document.getElementById('settingModal').classList.remove('active');
+    };
+    document.getElementById('saveSettingBtn').onclick = (e) => {
+      e.stopPropagation();
       if(window.JUGGLER_ENGINE) {
         window.JUGGLER_ENGINE.setConfig({
           setting: parseInt(document.getElementById('settingSelect').value, 10),
