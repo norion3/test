@@ -1,6 +1,6 @@
 /**
  * アイムジャグラーEX データカウンターモジュール (datacounter.js)
- * ホール仕様のデータ集計・確率計算・当選履歴・出玉スランプグラフ描画モジュール
+ * ホール仕様データ集計・確率計算・当選履歴・出玉スランプグラフ描画
  */
 
 (function() {
@@ -9,10 +9,10 @@
     currentGames: 0,     // 現在のボーナス間ゲーム数
     bigCount: 0,         // BIG回数
     regCount: 0,         // REG回数
-    diffMedal: 0,        // 現在の累計差枚数
+    diffMedal: 0,        // 累計差枚数
     
-    history: [],         // ボーナス当選履歴 [{ id, type, game, totalGame, time }]
-    slumpData: [{ game: 0, diff: 0 }], // スランプグラフ用履歴データ
+    history: [],         // 当選履歴リスト [{ id, type, game, totalGame, time }]
+    slumpData: [{ game: 0, diff: 0 }], // スランプグラフデータポイント
 
     init: function() {
       this.reset();
@@ -28,7 +28,7 @@
       this.slumpData = [{ game: 0, diff: 0 }];
     },
 
-    // 1ゲーム毎の差枚数・ゲーム数更新
+    // 1ゲーム開始時の更新 (BET枚数の引算)
     onGameStart: function(betCount) {
       this.totalGames++;
       this.currentGames++;
@@ -36,7 +36,7 @@
       this.recordSlumpPoint();
     },
 
-    // 払出毎の差枚数更新
+    // 払い出し発生時の更新
     onPayout: function(payout) {
       if (payout > 0) {
         this.diffMedal += payout;
@@ -44,7 +44,7 @@
       }
     },
 
-    // ボーナス当選時の記録
+    // ボーナス当選時記録
     onBonusWin: function(type) {
       if (type === 'BIG') {
         this.bigCount++;
@@ -55,16 +55,16 @@
       const now = new Date();
       const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-      // 直近の履歴を追加（先頭へ追加）
+      // 最新の履歴を先頭に追加
       this.history.unshift({
         id: this.history.length + 1,
-        type: type, // 'BIG' or 'REG'
+        type: type, // 'BIG' | 'REG'
         game: this.currentGames,
         totalGame: this.totalGames,
         time: timeStr
       });
 
-      // 履歴データの上限（最大50件）
+      // 最大50件まで保持
       if (this.history.length > 50) {
         this.history.pop();
       }
@@ -74,10 +74,10 @@
       this.recordSlumpPoint();
     },
 
-    // スランプグラフ用のデータポイント記録
+    // スランプグラフ用データポイントの記録
     recordSlumpPoint: function() {
       const lastPoint = this.slumpData[this.slumpData.length - 1];
-      // 前回の記録から一定ゲーム数以上経過または差枚に変化があった場合に記録
+      // 5ゲーム毎、または差枚が大きく動いた場合に記録
       if (!lastPoint || this.totalGames - lastPoint.game >= 5 || Math.abs(this.diffMedal - lastPoint.diff) >= 10) {
         this.slumpData.push({
           game: this.totalGames,
@@ -86,7 +86,7 @@
       }
     },
 
-    // 各種確率計算のフォーマット文字列取得
+    // 各種確率および統計データの取得
     getStats: function() {
       const formatProb = (count, total) => {
         if (count === 0 || total === 0) return '1/--.-';
@@ -108,14 +108,14 @@
       };
     },
 
-    // ホール風スランプグラフの描画 (Canvas)
+    // Canvasを使用した出玉スランプグラフのリアルタイム描画
     renderSlumpGraph: function(canvasElement) {
       if (!canvasElement) return;
       const ctx = canvasElement.getContext('2d');
       const width = canvasElement.width;
       const height = canvasElement.height;
 
-      // 背景・グリッド描画
+      // 背景クリア
       ctx.fillStyle = '#111622';
       ctx.fillRect(0, 0, width, height);
 
@@ -123,7 +123,7 @@
       const graphWidth = width - padding.left - padding.right;
       const graphHeight = height - padding.top - padding.bottom;
 
-      // 差枚の最大値・最小値の計算（レンジ決定）
+      // Y軸の表示範囲（差枚数の最大・最小値）
       let maxDiff = 1000;
       let minDiff = -1000;
 
@@ -134,14 +134,13 @@
 
       const maxGame = Math.max(3000, this.totalGames + 200);
 
-      // ゼロ基準線のY座標
+      // 差枚0基準線のY位置
       const zeroY = padding.top + graphHeight * (maxDiff / (maxDiff - minDiff));
 
-      // グリッド線の描画
+      // グリッド線描画
       ctx.strokeStyle = '#2a3447';
       ctx.lineWidth = 1;
       
-      // 横グリッド線
       const gridStepY = (maxDiff - minDiff) / 4;
       for (let i = 0; i <= 4; i++) {
         const val = maxDiff - (gridStepY * i);
@@ -152,7 +151,7 @@
         ctx.lineTo(width - padding.right, y);
         ctx.stroke();
 
-        // 差枚ラベル
+        // 差枚軸目盛
         ctx.fillStyle = '#7a8ba6';
         ctx.font = '10px monospace';
         ctx.textAlign = 'right';
@@ -168,7 +167,7 @@
       ctx.lineTo(width - padding.right, zeroY);
       ctx.stroke();
 
-      // スランプ波形ライン描画
+      // スランプ波形描画
       if (this.slumpData.length > 1) {
         ctx.strokeStyle = '#00e5ff';
         ctx.lineWidth = 2;
@@ -186,7 +185,7 @@
         });
         ctx.stroke();
 
-        // 終点（最新データ）のマーク
+        // 最新位置に黄色いプロット点
         const lastPoint = this.slumpData[this.slumpData.length - 1];
         const lastX = padding.left + (lastPoint.game / maxGame) * graphWidth;
         const lastY = padding.top + graphHeight * ((maxDiff - lastPoint.diff) / (maxDiff - minDiff));
@@ -197,14 +196,14 @@
         ctx.fill();
       }
 
-      // 軸ラベル
+      // X軸ラベル
       ctx.fillStyle = '#a0b0c8';
       ctx.font = '10px sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('ゲーム数(G)', padding.left + graphWidth / 2, height - 6);
     },
 
-    // 当選履歴テーブルのHTMLレンダリング
+    // 当選履歴テーブルHTMLの生成
     renderHistoryHTML: function() {
       if (this.history.length === 0) {
         return '<div style="text-align:center; padding:20px; color:#666;">当選履歴はありません</div>';
@@ -213,11 +212,11 @@
       let html = `<table class="history-table">
         <thead>
           <tr>
-            <th>回</th>
+            <th>No.</th>
             <th>種別</th>
-            <th>ゲーム数</th>
+            <th>当選G数</th>
             <th>累計G</th>
-            <th>時間</th>
+            <th>時刻</th>
           </tr>
         </thead>
         <tbody>`;
@@ -228,7 +227,7 @@
           <tr>
             <td>${this.history.length - idx}</td>
             <td><span class="${typeClass}">${h.type}</span></td>
-            <td class="highlight">${h.game}G</td>
+            <td style="font-weight:bold; color:#ffcc00;">${h.game}G</td>
             <td>${h.totalGame}G</td>
             <td>${h.time}</td>
           </tr>

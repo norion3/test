@@ -3,16 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>アイムジャグラーEX (実機完全準拠・データカウンター搭載版)</title>
+  <title>アイムジャグラーEX (黄金比UI・リアル7セグ・設定モーダル搭載版)</title>
   <style>
     /* ---------------------------------------------------
        1. 基本設定 ＆ レスポンシブスタイリング
     --------------------------------------------------- */
     :root {
-      --bg-color: #08080a;
+      --bg-color: #060608;
       --gold: #f5cf47;
-      --led-red: #ff1111;
-      --led-green: #00ff66;
+      --led-red: #ff0033;
+      --led-off: #260000;
     }
 
     * {
@@ -45,9 +45,9 @@
       width: 100%;
       max-width: 410px;
       background: #111;
-      border: 4px solid #555;
+      border: 4px solid #444;
       border-radius: 12px;
-      box-shadow: 0 20px 50px rgba(0,0,0,0.95), inset 0 2px 6px rgba(255,255,255,0.4);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.95), inset 0 2px 6px rgba(255,255,255,0.3);
       padding: 8px;
       display: flex;
       flex-direction: column;
@@ -137,18 +137,17 @@
       position: relative;
       display: flex;
       align-items: center;
-      justify-content: flex-end;
+      justify-content: space-between;
+      padding: 0 4px;
     }
 
+    /* 左側ライン表示器（①②③） */
     .line-numbers {
-      position: absolute;
-      left: 6px;
-      top: 35px;
       display: flex;
       flex-direction: column;
-      gap: 30px;
+      gap: 26px;
       font-weight: 900;
-      font-size: 12px;
+      font-size: 11px;
     }
 
     .line-badge {
@@ -158,35 +157,47 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #fff;
-      box-shadow: 0 0 4px rgba(0,0,0,0.9);
-      border: 1px solid #fff;
+      color: #444;
+      background: #111;
+      border: 1px solid #333;
+      transition: all 0.1s ease;
     }
-    .badge-3 { background: #e51d24; }
-    .badge-2 { background: #2196f3; }
-    .badge-1 { background: #4caf50; }
 
-    /* クッキリとしたリール窓 (隙間ゼロシームレス) */
+    .line-badge.lit.badge-3 { background: #e51d24; color: #fff; border-color: #ff8888; box-shadow: 0 0 8px #e51d24; }
+    .line-badge.lit.badge-2 { background: #2196f3; color: #fff; border-color: #88ccff; box-shadow: 0 0 8px #2196f3; }
+    .line-badge.lit.badge-1 { background: #4caf50; color: #fff; border-color: #88ff88; box-shadow: 0 0 8px #4caf50; }
+
+    /* リール窓 (太い縦セパレータ搭載) */
     .reels-screen {
-      width: 304px;
-      height: 210px;
+      width: 290px;
+      height: 200px;
       box-sizing: content-box;
       background: #fff;
-      border: 3px solid #222;
+      border: 3px solid #111;
       border-radius: 4px;
       display: flex;
+      align-items: center;
       justify-content: space-between;
       overflow: hidden;
-      box-shadow: inset 0 12px 14px rgba(0,0,0,0.4), inset 0 -12px 14px rgba(0,0,0,0.4);
+      box-shadow: inset 0 12px 14px rgba(0,0,0,0.5), inset 0 -12px 14px rgba(0,0,0,0.5);
       position: relative;
     }
 
     .reel-column {
-      width: 100px;
+      width: 90px;
       height: 100%;
       background: #fff;
       position: relative;
       overflow: hidden;
+    }
+
+    /* 太い黒色リールセパレータ */
+    .reel-separator {
+      width: 6px;
+      height: 100%;
+      background: linear-gradient(90deg, #050505 0%, #1a1a1a 50%, #050505 100%);
+      box-shadow: inset 1px 0 2px rgba(0,0,0,0.8), inset -1px 0 2px rgba(0,0,0,0.8);
+      z-index: 5;
     }
 
     .reel-canvas {
@@ -197,44 +208,60 @@
       will-change: transform;
     }
 
-    /* 右側実機表示パネル（REPLAY & AUTO BET） */
-    .reels-right-indicators {
-      position: absolute;
-      right: 6px;
-      top: 25px;
+    /* 右側パネル（実機文字透過表示） */
+    .status-panel-right {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
+      background: #0a0404;
+      border: 1px solid #3d1010;
+      padding: 4px 6px;
+      border-radius: 4px;
+      box-shadow: inset 0 0 6px #000;
     }
 
-    .indicator-lamp {
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      background: #222;
-      border: 1px solid #555;
-      box-shadow: inset 0 0 3px #000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 8px;
-      font-weight: bold;
-      color: #555;
+    .text-lamp {
+      font-family: 'Impact', 'Arial Black', sans-serif;
+      font-size: 10px;
+      color: #2b0b0b;
+      text-align: center;
+      padding: 2px 4px;
+      border-radius: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      background: #140505;
+      transition: all 0.1s ease;
     }
 
-    .indicator-lamp.replay-lamp.active {
-      background: #00ff66;
-      color: #003300;
-      box-shadow: 0 0 8px #00ff66, inset 0 0 4px #fff;
+    .text-lamp.lamp-replay.active {
+      color: #00ff66;
+      background: #002b11;
+      text-shadow: 0 0 6px #00ff66;
+      box-shadow: inset 0 0 4px #00ff66, 0 0 6px #00ff66;
     }
 
-    .indicator-lamp.autobet-lamp.active {
-      background: #ffcc00;
-      color: #332200;
-      box-shadow: 0 0 8px #ffcc00, inset 0 0 4px #fff;
+    .text-lamp.lamp-start.active {
+      color: #ff3333;
+      background: #330000;
+      text-shadow: 0 0 6px #ff3333;
+      box-shadow: inset 0 0 4px #ff3333, 0 0 6px #ff3333;
     }
 
-    /* ボーナス消化ステータスインジケーター */
+    .text-lamp.lamp-wait.active {
+      color: #ffcc00;
+      background: #332a00;
+      text-shadow: 0 0 6px #ffcc00;
+      box-shadow: inset 0 0 4px #ffcc00, 0 0 6px #ffcc00;
+    }
+
+    .text-lamp.lamp-bet3.active {
+      color: #ff9900;
+      background: #331f00;
+      text-shadow: 0 0 6px #ff9900;
+      box-shadow: inset 0 0 4px #ff9900, 0 0 6px #ff9900;
+    }
+
+    /* ボーナス消化インジケーター */
     .bonus-status-banner {
       display: none;
       width: 100%;
@@ -254,7 +281,9 @@
       to { filter: brightness(1.25); }
     }
 
-    /* 7セグLED & GOGO! CHANCE表示器 */
+    /* ---------------------------------------------------
+       3. 本格7セグメントLED ＆ GOGO! CHANCE表示部
+    --------------------------------------------------- */
     .dashboard-bar {
       width: 100%;
       display: flex;
@@ -265,8 +294,8 @@
     }
 
     .gogo-box {
-      width: 110px; 
-      height: 60px;
+      width: 105px; 
+      height: 58px;
       background: #020204;
       border: 2px solid #222;
       border-radius: 6px;
@@ -320,27 +349,53 @@
       margin-bottom: 2px;
     }
 
-    .led-screen {
-      background: #000;
-      border: 1px solid #444;
-      border-radius: 3px;
-      padding: 2px 4px;
-      font-family: 'Courier New', Courier, monospace;
-      font-size: 15px;
-      font-weight: bold;
-      color: var(--led-red);
-      text-shadow: 0 0 6px var(--led-red);
-      min-width: 32px;
-      text-align: right;
+    /* 本格7セグメントLED（消灯セグ透け構造） */
+    .led-7seg-container {
+      background: #0a0000;
+      border: 2px solid #220000;
+      border-radius: 4px;
+      padding: 4px 6px;
+      display: flex;
+      gap: 3px;
+      box-shadow: inset 0 0 8px #000;
     }
 
-    /* コントロールデッキ（操作パーツ） */
+    .digit7seg {
+      position: relative;
+      width: 14px;
+      height: 24px;
+    }
+
+    .digit7seg .seg {
+      position: absolute;
+      background-color: var(--led-off);
+      border-radius: 1px;
+      transition: background-color 0.05s, box-shadow 0.05s;
+    }
+
+    .digit7seg .seg.lit {
+      background-color: var(--led-red);
+      box-shadow: 0 0 6px var(--led-red), 0 0 10px var(--led-red);
+    }
+
+    /* セグメント配置 (a〜g) */
+    .digit7seg .seg-a { top: 0; left: 2px; width: 10px; height: 3px; }
+    .digit7seg .seg-b { top: 2px; right: 0; width: 3px; height: 9px; }
+    .digit7seg .seg-c { bottom: 2px; right: 0; width: 3px; height: 9px; }
+    .digit7seg .seg-d { bottom: 0; left: 2px; width: 10px; height: 3px; }
+    .digit7seg .seg-e { bottom: 2px; left: 0; width: 3px; height: 9px; }
+    .digit7seg .seg-f { top: 2px; left: 0; width: 3px; height: 9px; }
+    .digit7seg .seg-g { top: 11px; left: 2px; width: 10px; height: 3px; }
+
+    /* ---------------------------------------------------
+       4. 人間工学・黄金比 コントロールデッキ
+    --------------------------------------------------- */
     .control-deck {
       width: 100%;
       background: linear-gradient(180deg, #e6e6e6 0%, #b8b8b8 35%, #8a8a8a 70%, #5e5e5e 100%);
       border: 2px solid #333;
       border-radius: 6px;
-      padding: 10px;
+      padding: 10px 14px;
       margin-top: 6px;
       display: flex;
       justify-content: space-between;
@@ -349,8 +404,8 @@
     }
 
     .bet-btn {
-      width: 46px;
-      height: 46px;
+      width: 44px;
+      height: 44px;
       border-radius: 50%;
       background: radial-gradient(circle, #ff3333 0%, #880000 100%);
       border: 2px solid #fff;
@@ -376,7 +431,7 @@
       width: 44px;
       height: 44px;
       border-radius: 50%;
-      background: radial-gradient(circle, #ffffff 0%, #a0a0a0 100%);
+      background: radial-gradient(circle, #ffffff 0%, #909090 100%);
       border: 3px solid #222;
       box-shadow: 0 5px 10px rgba(0,0,0,0.7);
       cursor: pointer;
@@ -394,8 +449,8 @@
     }
 
     .stop-btn {
-      width: 42px;
-      height: 42px;
+      width: 40px;
+      height: 40px;
       border-radius: 50%;
       background: radial-gradient(circle, #e62229 0%, #8a0b10 100%);
       border: 2px solid #ffcccc;
@@ -408,15 +463,26 @@
       align-items: center;
       justify-content: center;
       touch-action: manipulation;
-      transition: transform 0.05s ease-out;
+      transition: transform 0.05s ease-out, border-color 0.1s;
+    }
+
+    .stop-btn.spinning {
+      animation: btnPulse 0.3s infinite alternate;
+      border-color: #ffff88;
+    }
+
+    @keyframes btnPulse {
+      from { box-shadow: 0 0 4px #ff3333; }
+      to { box-shadow: 0 0 12px #ff3333, inset 0 0 8px #ffffff; }
     }
 
     .stop-btn:disabled {
       background: radial-gradient(circle, #555 0%, #222 100%);
       border-color: #777;
-      opacity: 0.5;
+      opacity: 0.4;
       cursor: not-allowed;
       box-shadow: none;
+      animation: none;
     }
 
     .stop-btn:not(:disabled):active {
@@ -424,7 +490,7 @@
       box-shadow: 0 1px 2px rgba(0,0,0,0.8);
     }
 
-    /* 筐体下部コントロール */
+    /* 筐体下部コントロールボタン */
     .bottom-controls {
       display: flex;
       flex-wrap: wrap;
@@ -465,7 +531,7 @@
     }
 
     /* ---------------------------------------------------
-       3. ホール風データカウンター モーダルUI
+       5. 共通モーダルUI (データカウンター ＆ 設定モーダル)
     --------------------------------------------------- */
     .modal-overlay {
       display: none;
@@ -485,7 +551,7 @@
 
     .modal-content {
       width: 92%;
-      max-width: 480px;
+      max-width: 460px;
       max-height: 90vh;
       background: #111622;
       border: 2px solid #2a3447;
@@ -508,7 +574,7 @@
     }
 
     .modal-title {
-      font-size: 16px;
+      font-size: 15px;
       font-weight: bold;
       color: #00e5ff;
       display: flex;
@@ -530,7 +596,51 @@
       justify-content: center;
     }
 
-    /* 集計表示グリッド */
+    /* 設定フォームスタイル */
+    .setting-group {
+      background: #1a2233;
+      border: 1px solid #2d3b54;
+      border-radius: 8px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .setting-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+    }
+
+    .setting-row label {
+      color: #d0e0f8;
+      font-weight: bold;
+    }
+
+    .setting-select, .setting-input {
+      background: #0b101d;
+      border: 1px solid #3d4f6e;
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+
+    .setting-checkbox {
+      width: 18px;
+      height: 18px;
+      accent-color: #00e5ff;
+      cursor: pointer;
+    }
+
+    .volume-slider {
+      width: 120px;
+      accent-color: #00e5ff;
+    }
+
+    /* データカウンター集計表示 */
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -553,7 +663,7 @@
 
     .stat-value {
       font-family: 'Courier New', Courier, monospace;
-      font-size: 16px;
+      font-size: 15px;
       font-weight: bold;
       color: #fff;
     }
@@ -562,39 +672,20 @@
     .stat-value.reg { color: #33ccff; }
     .stat-value.total { color: #ffcc00; }
 
-    /* スランプグラフ枠 */
-    .graph-section {
-      background: #1a2233;
-      border: 1px solid #2d3b54;
-      border-radius: 6px;
-      padding: 10px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    .graph-title {
-      font-size: 12px;
-      color: #a0b0c8;
-      align-self: flex-start;
-      margin-bottom: 6px;
-    }
-
     #slumpCanvas {
       width: 100%;
       max-width: 420px;
-      height: 180px;
+      height: 170px;
       background: #111622;
       border-radius: 4px;
     }
 
-    /* 当選履歴テーブル */
     .history-section {
       background: #1a2233;
       border: 1px solid #2d3b54;
       border-radius: 6px;
       padding: 10px;
-      max-height: 180px;
+      max-height: 160px;
       overflow-y: auto;
     }
 
@@ -666,32 +757,37 @@
     <!-- 中央メインフレーム -->
     <div class="center-frame">
       <div class="reels-wrapper">
+        <!-- 左側ライン表示（①②③） -->
         <div class="line-numbers">
           <div class="line-badge badge-3">3</div>
           <div class="line-badge badge-2">2</div>
           <div class="line-badge badge-1">1</div>
         </div>
 
-        <!-- 3列リール窓 -->
+        <!-- 3列リール窓 (太いセパレータ付き) -->
         <div class="reels-screen">
           <div class="reel-column"><canvas id="reelCanvas0" class="reel-canvas"></canvas></div>
+          <div class="reel-separator"></div>
           <div class="reel-column"><canvas id="reelCanvas1" class="reel-canvas"></canvas></div>
+          <div class="reel-separator"></div>
           <div class="reel-column"><canvas id="reelCanvas2" class="reel-canvas"></canvas></div>
         </div>
 
-        <!-- 右側実機ランプ (REPLAY & AUTO BET) -->
-        <div class="reels-right-indicators">
-          <div class="indicator-lamp replay-lamp" id="replayLamp">R</div>
-          <div class="indicator-lamp autobet-lamp" id="autoBetLamp">A</div>
+        <!-- 右側文字透過パネル -->
+        <div class="status-panel-right">
+          <div class="text-lamp lamp-replay" id="lampReplay">Replay</div>
+          <div class="text-lamp lamp-start" id="lampStart">Start</div>
+          <div class="text-lamp lamp-wait" id="lampWait">Wait</div>
+          <div class="text-lamp lamp-bet3" id="lampBet3">3BET</div>
         </div>
       </div>
 
-      <!-- ボーナス消化ステータスインジケーター -->
+      <!-- ボーナス消化ステータス -->
       <div class="bonus-status-banner" id="bonusStatusDisp">
         BIG BONUS GAME (獲得: 0/252枚)
       </div>
 
-      <!-- 7セグLED & GOGO! CHANCE表示器 -->
+      <!-- 本格7セグLED & GOGO! CHANCE表示器 -->
       <div class="dashboard-bar">
         <div class="gogo-box" id="gogoBox">
           <svg class="gogo-svg" viewBox="0 0 100 60">
@@ -704,21 +800,21 @@
         <div class="led-group">
           <div class="led-unit">
             <div class="led-label">CREDIT</div>
-            <div class="led-screen" id="creditDisp">50</div>
+            <div class="led-7seg-container" id="creditDisp"></div>
           </div>
           <div class="led-unit">
             <div class="led-label">COUNT</div>
-            <div class="led-screen" id="countDisp">0</div>
+            <div class="led-7seg-container" id="countDisp"></div>
           </div>
           <div class="led-unit">
             <div class="led-label">PAYOUT</div>
-            <div class="led-screen" id="payoutDisp">0</div>
+            <div class="led-7seg-container" id="payoutDisp"></div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- コントロールデッキ（操作パーツ） -->
+    <!-- コントロールデッキ（人間工学・黄金比配置） -->
     <div class="control-deck">
       <button id="betBtn" class="bet-btn">3<br>BET</button>
       <button id="startBtn" class="lever-btn" title="START"></button>
@@ -729,12 +825,11 @@
       </div>
     </div>
 
-    <!-- 下部補助コントロール (AUTO切替・データボタン搭載) -->
+    <!-- 下部操作ボタン -->
     <div class="bottom-controls">
       <button id="autoToggleBtn" class="ctrl-btn">👤 MODE: MANUAL</button>
       <button id="dataBtn" class="ctrl-btn data-btn">📊 データ</button>
-      <button id="soundToggle" class="ctrl-btn">🔊 サウンド: ON</button>
-      <button id="settingToggle" class="ctrl-btn setting">⚙️ 設定: 6</button>
+      <button id="settingModalBtn" class="ctrl-btn setting">⚙️ 設定</button>
     </div>
   </div>
 
@@ -743,10 +838,9 @@
     <div class="modal-content">
       <div class="modal-header">
         <div class="modal-title">📊 ホールデータカウンター</div>
-        <button class="modal-close-btn" id="modalCloseBtn">✕</button>
+        <button class="modal-close-btn" id="dataModalCloseBtn">✕</button>
       </div>
 
-      <!-- 回数 ＆ 確率グリッド -->
       <div class="stats-grid">
         <div class="stat-card">
           <div class="stat-label">総回転数</div>
@@ -786,16 +880,58 @@
         </div>
       </div>
 
-      <!-- 出玉スランプグラフ (Canvas) -->
-      <div class="graph-section">
-        <div class="graph-title">📈 出玉スランプグラフ</div>
-        <canvas id="slumpCanvas" width="400" height="180"></canvas>
+      <div style="background:#1a2233; border:1px solid #2d3b54; border-radius:6px; padding:8px; text-align:center;">
+        <div style="font-size:12px; color:#a0b0c8; text-align:left; margin-bottom:6px;">📈 出玉スランプグラフ</div>
+        <canvas id="slumpCanvas" width="400" height="170"></canvas>
       </div>
 
-      <!-- 当選履歴一覧 -->
-      <div class="history-section" id="historyContainer">
-        <!-- JSで履歴テーブルが動的挿入されます -->
+      <div class="history-section" id="historyContainer"></div>
+    </div>
+  </div>
+
+  <!-- ⚙️ 環境設定 モーダルUI -->
+  <div class="modal-overlay" id="settingModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">⚙️ 環境設定</div>
+        <button class="modal-close-btn" id="settingModalCloseBtn">✕</button>
       </div>
+
+      <div class="setting-group">
+        <div class="setting-row">
+          <label for="settingSelect">パチスロ設定</label>
+          <select id="settingSelect" class="setting-select">
+            <option value="1">設定 1 (合成 1/168.5)</option>
+            <option value="2">設定 2 (合成 1/161.0)</option>
+            <option value="3">設定 3 (合成 1/148.6)</option>
+            <option value="4">設定 4 (合成 1/142.2)</option>
+            <option value="5">設定 5 (合成 1/128.5)</option>
+            <option value="6" selected>設定 6 (合成 1/127.5)</option>
+          </select>
+        </div>
+
+        <div class="setting-row">
+          <label for="autoBonusStopCheck">ボーナス当選時にAUTOを自動解除</label>
+          <input type="checkbox" id="autoBonusStopCheck" class="setting-checkbox" checked>
+        </div>
+
+        <div class="setting-row">
+          <label for="weightCutCheck">ウェイトカット (快適回転)</label>
+          <input type="checkbox" id="weightCutCheck" class="setting-checkbox">
+        </div>
+
+        <div class="setting-row">
+          <label for="volumeRange">全体音量</label>
+          <input type="range" id="volumeRange" class="volume-slider" min="0" max="100" value="100">
+        </div>
+
+        <div class="setting-row">
+          <label for="soundEnableCheck">効果音・BGM再生</label>
+          <input type="checkbox" id="soundEnableCheck" class="setting-checkbox" checked>
+        </div>
+      </div>
+
+      <button id="saveSettingBtn" style="background:#00e5ff; color:#000; border:none; border-radius:6px; padding:10px; font-weight:bold; cursor:pointer; margin-top:8px;">設定を適用して閉じる</button>
     </div>
   </div>
 
@@ -804,10 +940,10 @@
     document.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
     document.addEventListener('gesturestart', function(e) { e.preventDefault(); });
 
-    // データカウンター モーダルの開閉＆更新制御
+    // データカウンター モーダル制御
     const dataBtn = document.getElementById('dataBtn');
     const dataModal = document.getElementById('dataModal');
-    const modalCloseBtn = document.getElementById('modalCloseBtn');
+    const dataModalCloseBtn = document.getElementById('dataModalCloseBtn');
 
     function updateDataCounterUI() {
       if (!window.DATA_COUNTER) return;
@@ -823,11 +959,9 @@
       document.getElementById('modalRegProb').textContent = stats.regProb;
       document.getElementById('modalTotalProb').textContent = stats.totalProb;
 
-      // スランプグラフ描画
       const slumpCanvas = document.getElementById('slumpCanvas');
       window.DATA_COUNTER.renderSlumpGraph(slumpCanvas);
 
-      // 当選履歴レンダリング
       const historyContainer = document.getElementById('historyContainer');
       historyContainer.innerHTML = window.DATA_COUNTER.renderHistoryHTML();
     }
@@ -838,22 +972,53 @@
         dataModal.classList.add('active');
       };
     }
-
-    if (modalCloseBtn && dataModal) {
-      modalCloseBtn.onclick = () => {
-        dataModal.classList.remove('active');
-      };
+    if (dataModalCloseBtn && dataModal) {
+      dataModalCloseBtn.onclick = () => dataModal.classList.remove('active');
     }
 
-    if (dataModal) {
-      dataModal.onclick = (e) => {
-        if (e.target === dataModal) {
-          dataModal.classList.remove('active');
+    // 設定モーダル制御
+    const settingModalBtn = document.getElementById('settingModalBtn');
+    const settingModal = document.getElementById('settingModal');
+    const settingModalCloseBtn = document.getElementById('settingModalCloseBtn');
+    const saveSettingBtn = document.getElementById('saveSettingBtn');
+
+    if (settingModalBtn && settingModal) {
+      settingModalBtn.onclick = () => {
+        if (window.JUGGLER_ENGINE) {
+          const cfg = window.JUGGLER_ENGINE.getConfig();
+          document.getElementById('settingSelect').value = cfg.setting;
+          document.getElementById('autoBonusStopCheck').checked = cfg.autoStopOnBonus;
+          document.getElementById('weightCutCheck').checked = cfg.weightCut;
+          document.getElementById('volumeRange').value = Math.round(cfg.volume * 100);
+          document.getElementById('soundEnableCheck').checked = cfg.soundOn;
         }
+        settingModal.classList.add('active');
       };
     }
 
-    // スロットエンジンの自動起動
+    const applyAndCloseSetting = () => {
+      if (window.JUGGLER_ENGINE) {
+        window.JUGGLER_ENGINE.setConfig({
+          setting: parseInt(document.getElementById('settingSelect').value, 10),
+          autoStopOnBonus: document.getElementById('autoBonusStopCheck').checked,
+          weightCut: document.getElementById('weightCutCheck').checked,
+          volume: parseFloat(document.getElementById('volumeRange').value) / 100,
+          soundOn: document.getElementById('soundEnableCheck').checked
+        });
+      }
+      settingModal.classList.remove('active');
+    };
+
+    if (saveSettingBtn) saveSettingBtn.onclick = applyAndCloseSetting;
+    if (settingModalCloseBtn) settingModalCloseBtn.onclick = () => settingModal.classList.remove('active');
+
+    // オーバーレイ背景タップで閉じる
+    [dataModal, settingModal].forEach(modal => {
+      if (!modal) return;
+      modal.onclick = (e) => { if (e.target === modal) modal.classList.remove('active'); };
+    });
+
+    // スロットエンジンの起動
     function bootEngine() {
       if (window.DATA_COUNTER) window.DATA_COUNTER.init();
       if (window.JUGGLER_ENGINE && !window.JUGGLER_ENGINE.isInitialized) {
