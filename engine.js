@@ -1,6 +1,6 @@
 /**
  * スロットゲームエンジン (engine.js)
- * BGMシーケンサー・リセット機能・サウンド即時有効化・超アシスト・図柄限界突破
+ * サウンド1回目即時解禁・決定音・BGMシーケンサー・リセット機能・超アシスト・図柄限界拡大
  */
 
 (function() {
@@ -85,37 +85,56 @@
           this.bgmGain = this.ctx.createGain();
           
           this.masterGain.gain.setValueAtTime(soundOn ? masterVolume : 0, this.ctx.currentTime);
-          this.bgmGain.gain.setValueAtTime(soundOn ? masterVolume * 0.4 : 0, this.ctx.currentTime); // BGMは控えめに共存
+          this.bgmGain.gain.setValueAtTime(soundOn ? masterVolume * 0.35 : 0, this.ctx.currentTime); // BGMは効果音を邪魔しない音量
           
           this.masterGain.connect(this.ctx.destination);
           this.bgmGain.connect(this.ctx.destination);
         }
-        if (this.ctx.state === 'suspended') this.ctx.resume();
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
         this.loadExternalSounds();
       } catch (e) {}
     },
     
-    // 【最重要】ブラウザ制約突破用フック (設定適用時に強制発火)
-    unlock: function() {
+    // 【最重要完封修復】設定画面適用時のサウンド一発即時解禁フック
+    unlockAndPlayConfirm: function() {
       this.init();
-      if (this.ctx && this.ctx.state === 'suspended') {
+      if (this.ctx) {
+        // 同期的にResumeを実行し、無音バッファでコンテキストを完全起爆
         this.ctx.resume();
+        try {
+          const buffer = this.ctx.createBuffer(1, 1, 22050);
+          const source = this.ctx.createBufferSource();
+          source.buffer = buffer;
+          source.connect(this.ctx.destination);
+          source.start(0);
+        } catch(e) {}
       }
-      try {
-        // 空バッファを再生してAudioContextのロックを強制解除
-        const buffer = this.ctx.createBuffer(1, 1, 22050);
-        const source = this.ctx.createBufferSource();
-        source.buffer = buffer;
-        source.connect(this.ctx.destination);
-        source.start(0);
-      } catch(e) {}
+
+      // サウンドONの場合、即座に「決定ポーン♪」音を鳴らして有効化を耳で確認させる
+      if (soundOn) {
+        try {
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(1046.50, now); // C6 (高音ポーン♪)
+          gain.gain.setValueAtTime(0.4 * masterVolume, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.2);
+        } catch(e) {}
+      }
     },
 
     setVolume: function(vol) {
       masterVolume = vol;
       if (this.masterGain && this.ctx) {
-        this.masterGain.gain.setTargetAtTime(soundOn ? masterVolume : 0, this.ctx.currentTime, 0.05);
-        this.bgmGain.gain.setTargetAtTime(soundOn ? masterVolume * 0.4 : 0, this.ctx.currentTime, 0.05);
+        this.masterGain.gain.setValueAtTime(soundOn ? masterVolume : 0, this.ctx.currentTime);
+        this.bgmGain.gain.setValueAtTime(soundOn ? masterVolume * 0.35 : 0, this.ctx.currentTime);
       }
     },
     
@@ -190,7 +209,7 @@
       } catch(e) {}
     },
 
-    // 【新規】ボーナス中BGMメロディループ (軍艦マーチ風 ＆ 落ち着きテンポ)
+    // ボーナス中BGMメロディループ (軍艦マーチ風 ＆ 落ち着きテンポ)
     playBGM: function(type) {
       if (!soundOn) return;
       this.init();
@@ -227,8 +246,8 @@
           osc.frequency.value = freq;
           
           gain.gain.setValueAtTime(0, now);
-          gain.gain.linearRampToValueAtTime(0.2, now + 0.02); // 立ち上がり
-          gain.gain.linearRampToValueAtTime(0, now + (dur / 1000) - 0.02); // 減衰
+          gain.gain.linearRampToValueAtTime(0.18, now + 0.02);
+          gain.gain.linearRampToValueAtTime(0, now + (dur / 1000) - 0.02);
           
           osc.connect(gain);
           gain.connect(this.bgmGain);
@@ -426,7 +445,7 @@
     isAutoMode = false;
     clearTimeout(autoTimer);
     const btn = document.getElementById('autoToggleBtn');
-    if (btn) { btn.textContent = '👤 MODE: MANUAL'; btn.classList.remove('active'); }
+    if (btn) { btn.textContent = '👤 MANUAL'; btn.classList.remove('active'); }
   }
 
   function triggerLeverVisual() {
@@ -471,7 +490,7 @@
       this.isInitialized = true;
     },
 
-    // 【新規】遊技完全リセット機能
+    // 遊技完全リセット機能
     resetGame: function() {
       gameState = STATE_IDLE;
       activeReelsCount = 0;
@@ -511,7 +530,7 @@
       
       const autoToggleBtn = document.getElementById('autoToggleBtn');
       if(autoToggleBtn) {
-        autoToggleBtn.textContent = '👤 MODE: MANUAL';
+        autoToggleBtn.textContent = '👤 MANUAL';
         autoToggleBtn.classList.remove('active');
       }
       
@@ -521,7 +540,7 @@
 
     getConfig: function() { return { setting: currentSetting, autoStopOnBonus: autoStopOnBonus, weightCut: weightCut, volume: masterVolume, soundOn: soundOn }; },
     
-    // 【最重要】設定適用時のサウンド即時Unlock対応
+    // 【最重要修正】設定適用時のサウンド一発解禁フック
     setConfig: function(config) {
       if (config.setting !== undefined) currentSetting = config.setting;
       if (config.autoStopOnBonus !== undefined) autoStopOnBonus = config.autoStopOnBonus;
@@ -530,7 +549,7 @@
       if (config.soundOn !== undefined) {
         soundOn = config.soundOn;
         if (soundOn) {
-          SoundEngine.unlock(); // ブラウザのAudio制約を強制突破
+          SoundEngine.unlockAndPlayConfirm(); // 1解禁 ＆ 決定音(ポーン♪)同期発火
           if (isBonusMode && !isPlayingBGM) SoundEngine.playBGM(bonusType);
         } else {
           SoundEngine.stopBGM();
@@ -680,13 +699,12 @@
           else if (currentFlag === 'BELL') targetSyms = ['BELL'];
           else if (currentFlag === 'CLOWN') targetSyms = ['CLOWN'];
           else if (!currentFlag && bonusFlag) {
-            // ハズレかつボーナス成立中（超アシスト対象）
             if (bonusFlag === 'BIG' || bonusFlag === 'CHERRY_BIG') targetSyms = ['7'];
             else if (bonusFlag === 'REG' || bonusFlag === 'CHERRY_REG') targetSyms = index === 2 ? ['BAR'] : ['7'];
           }
         }
 
-        // 【極上の爽快感】ボーナス消化中 または ボーナス成立時のハズレ目 は21コマ滑らせて絶対揃える
+        // 超・引き込みアシスト
         let slipLimit = 4;
         if (isBonusMode || (!currentFlag && bonusFlag && (targetSyms.includes('7') || targetSyms.includes('BAR')))) {
           slipLimit = 21; 
@@ -743,7 +761,7 @@
         const toggleAuto = (e) => {
           if (e) { e.stopPropagation(); if (e.cancelable) e.preventDefault(); }
           isAutoMode = !isAutoMode;
-          autoToggleBtn.textContent = isAutoMode ? '🤖 AUTO: ON' : '👤 MODE: MANUAL';
+          autoToggleBtn.textContent = isAutoMode ? '🤖 AUTO' : '👤 MANUAL';
           autoToggleBtn.classList.toggle('active', isAutoMode);
           if (isAutoMode && gameState === STATE_IDLE) this.startSpin();
         };
@@ -817,7 +835,6 @@
       let playSoundType = 'bonus_pay';
       let grapeWin = false, cherryWin = false, bellWin = false, clownWin = false;
 
-      // 有効ライン上に実際に役が「揃っているか」を厳格判定
       activeLines.forEach(line => {
         if (line.every(s => s === '7')) isBigWin = true;
         else if (line[0] === '7' && line[1] === '7' && line[2] === 'BAR') isRegWin = true;
@@ -828,7 +845,6 @@
         else if (line.every(s => s === 'CLOWN')) clownWin = true;
       });
 
-      // 【ごまかし排除】実際に揃った場合のみPAYOUT枚数を決定 (REGは13枚)
       if (grapeWin) { 
         payout = isBonusMode ? (bonusType === 'BIG' ? 15 : 13) : 8; 
         playSoundType = 'grape'; 
@@ -848,12 +864,11 @@
       if (isBonusMode) {
         if (payout > 0) bonusAcquired += payout;
         
-        // 【終了条件完全適正化】BIG:266枚払出(純増252) / REG:98枚払出(純増96)
         if (bonusAcquired >= bonusTarget) {
           isBonusMode = false;
           bonusFlag = null; 
           currentFlag = null;
-          SoundEngine.stopBGM(); // 【BGM停止】
+          SoundEngine.stopBGM();
         }
         setLineBadgesLit(true);
         updateDisplays(payout);
@@ -867,7 +882,7 @@
         if (window.DATA_COUNTER) window.DATA_COUNTER.onBonusWin('BIG');
         turnOffGogoLamp();
         SoundEngine.play('big_fanfare');
-        setTimeout(() => { SoundEngine.playBGM('BIG'); }, 1500); // ファンファーレ後にBGM開始
+        setTimeout(() => { SoundEngine.playBGM('BIG'); }, 1500);
         if (autoStopOnBonus) stopAutoMode();
       } else if (isRegWin) {
         isBonusMode = true; bonusType = 'REG'; bonusAcquired = 0; bonusTarget = 98;
@@ -875,7 +890,7 @@
         if (window.DATA_COUNTER) window.DATA_COUNTER.onBonusWin('REG');
         turnOffGogoLamp();
         SoundEngine.play('reg_fanfare');
-        setTimeout(() => { SoundEngine.playBGM('REG'); }, 1500); // ファンファーレ後にBGM開始
+        setTimeout(() => { SoundEngine.playBGM('REG'); }, 1500);
         if (autoStopOnBonus) stopAutoMode();
       } else if (isReplayWin) {
         isReplay = true;
@@ -894,5 +909,4 @@
     }
   };
 })();
-
 
