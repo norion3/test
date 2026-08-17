@@ -1,6 +1,6 @@
 /**
  * スロットゲームエンジン (engine.js)
- * 極上アシスト(21コマ滑り)・REG払出13枚補正・図柄105%拡大・完全実機フラグ
+ * BGMシーケンサー・リセット機能・サウンド即時有効化・超アシスト・図柄限界突破
  */
 
 (function() {
@@ -11,7 +11,7 @@
     ['GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', '7', 'BAR', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO']
   ];
 
-  // コマサイズ (横幅100px × 高さ46px) - 縦隙間極限圧縮プロポーション
+  // コマサイズ (横幅100px × 高さ46px) - 縦隙間極限圧縮
   const SYMBOL_HEIGHT = 46;
   const CANVAS_WIDTH = 100;
   const REEL_SPEED_NORMAL = 22; 
@@ -39,7 +39,6 @@
   // アトミック・タッチセッション管理
   let isTouchActive = false;
   let hasActionExecutedInCurrentTouch = false;
-  let spinStartTime = 0;
 
   let currentSetting = 6;
   let autoStopOnBonus = true;
@@ -69,28 +68,57 @@
   const symbolCanvasCache = {};
 
   // ===================================================
-  // 1. 高度リアル音響エンジン (小役専用合成音搭載)
+  // 1. 高度リアル音響エンジン ＆ BGMシーケンサー
   // ===================================================
+  let isPlayingBGM = false;
+  let currentBgmType = null;
+
   const SoundEngine = {
-    ctx: null, masterGain: null, audioBuffers: {},
+    ctx: null, masterGain: null, bgmGain: null, audioBuffers: {},
+    bgmTimer: null,
+    
     init: function() {
       try {
         if (!this.ctx) {
           this.ctx = new (window.AudioContext || window.webkitAudioContext)();
           this.masterGain = this.ctx.createGain();
+          this.bgmGain = this.ctx.createGain();
+          
           this.masterGain.gain.setValueAtTime(soundOn ? masterVolume : 0, this.ctx.currentTime);
+          this.bgmGain.gain.setValueAtTime(soundOn ? masterVolume * 0.4 : 0, this.ctx.currentTime); // BGMは控えめに共存
+          
           this.masterGain.connect(this.ctx.destination);
+          this.bgmGain.connect(this.ctx.destination);
         }
         if (this.ctx.state === 'suspended') this.ctx.resume();
         this.loadExternalSounds();
       } catch (e) {}
     },
+    
+    // 【最重要】ブラウザ制約突破用フック (設定適用時に強制発火)
+    unlock: function() {
+      this.init();
+      if (this.ctx && this.ctx.state === 'suspended') {
+        this.ctx.resume();
+      }
+      try {
+        // 空バッファを再生してAudioContextのロックを強制解除
+        const buffer = this.ctx.createBuffer(1, 1, 22050);
+        const source = this.ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(this.ctx.destination);
+        source.start(0);
+      } catch(e) {}
+    },
+
     setVolume: function(vol) {
       masterVolume = vol;
       if (this.masterGain && this.ctx) {
-        this.masterGain.gain.setValueAtTime(soundOn ? masterVolume : 0, this.ctx.currentTime);
+        this.masterGain.gain.setTargetAtTime(soundOn ? masterVolume : 0, this.ctx.currentTime, 0.05);
+        this.bgmGain.gain.setTargetAtTime(soundOn ? masterVolume * 0.4 : 0, this.ctx.currentTime, 0.05);
       }
     },
+    
     loadExternalSounds: function() {
       const soundFiles = {
         bet: 'sounds/bet.mp3', lever: 'sounds/lever.mp3', stop: 'sounds/stop.mp3',
@@ -105,6 +133,7 @@
           .catch(() => {});
       });
     },
+
     play: function(type) {
       if (!soundOn) return;
       this.init();
@@ -118,6 +147,7 @@
         } catch(e) {}
       }
       
+      // 合成音フォールバック
       try {
         const now = this.ctx.currentTime;
         const osc = this.ctx.createOscillator();
@@ -141,38 +171,85 @@
           gain.gain.setValueAtTime(0.3, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
           osc.start(now); osc.stop(now + 0.5);
         } else if (type === 'grape' || type === 'bonus_pay') {
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(659.25, now);
-          osc.frequency.setValueAtTime(880.00, now + 0.05);
-          osc.frequency.setValueAtTime(1046.50, now + 0.1);
-          gain.gain.setValueAtTime(0.3, now);
-          gain.gain.linearRampToValueAtTime(0, now + 0.2);
+          osc.type = 'sine'; osc.frequency.setValueAtTime(659.25, now); osc.frequency.setValueAtTime(880.00, now + 0.05); osc.frequency.setValueAtTime(1046.50, now + 0.1);
+          gain.gain.setValueAtTime(0.3, now); gain.gain.linearRampToValueAtTime(0, now + 0.2);
           osc.start(now); osc.stop(now + 0.2);
         } else if (type === 'cherry') {
-          osc.type = 'square';
-          osc.frequency.setValueAtTime(440, now);
-          gain.gain.setValueAtTime(0.4, now);
-          gain.gain.setValueAtTime(0, now + 0.05);
-          gain.gain.setValueAtTime(0.4, now + 0.1);
-          gain.gain.setValueAtTime(0, now + 0.15);
+          osc.type = 'square'; osc.frequency.setValueAtTime(440, now);
+          gain.gain.setValueAtTime(0.4, now); gain.gain.setValueAtTime(0, now + 0.05); gain.gain.setValueAtTime(0.4, now + 0.1); gain.gain.setValueAtTime(0, now + 0.15);
           osc.start(now); osc.stop(now + 0.15);
         } else if (type === 'replay') {
-          osc.type = 'triangle';
-          osc.frequency.setValueAtTime(300, now);
-          osc.frequency.linearRampToValueAtTime(800, now + 0.3);
-          gain.gain.setValueAtTime(0.4, now);
-          gain.gain.linearRampToValueAtTime(0, now + 0.3);
+          osc.type = 'triangle'; osc.frequency.setValueAtTime(300, now); osc.frequency.linearRampToValueAtTime(800, now + 0.3);
+          gain.gain.setValueAtTime(0.4, now); gain.gain.linearRampToValueAtTime(0, now + 0.3);
           osc.start(now); osc.stop(now + 0.3);
         } else if (type === 'bell_clown') {
-          osc.type = 'triangle';
-          osc.frequency.setValueAtTime(1200, now);
-          osc.frequency.linearRampToValueAtTime(1400, now + 0.1);
-          osc.frequency.linearRampToValueAtTime(1200, now + 0.2);
-          gain.gain.setValueAtTime(0.3, now);
-          gain.gain.linearRampToValueAtTime(0, now + 0.3);
+          osc.type = 'triangle'; osc.frequency.setValueAtTime(1200, now); osc.frequency.linearRampToValueAtTime(1400, now + 0.1); osc.frequency.linearRampToValueAtTime(1200, now + 0.2);
+          gain.gain.setValueAtTime(0.3, now); gain.gain.linearRampToValueAtTime(0, now + 0.3);
           osc.start(now); osc.stop(now + 0.3);
         }
       } catch(e) {}
+    },
+
+    // 【新規】ボーナス中BGMメロディループ (軍艦マーチ風 ＆ 落ち着きテンポ)
+    playBGM: function(type) {
+      if (!soundOn) return;
+      this.init();
+      this.stopBGM();
+      isPlayingBGM = true;
+      currentBgmType = type;
+      
+      const melodyBIG = [
+        [392.00, 150], [392.00, 150], [392.00, 150], [392.00, 300],
+        [329.63, 300], [261.63, 300], [196.00, 300], [329.63, 300], [261.63, 300], [196.00, 300],
+        [329.63, 300], [261.63, 300], [261.63, 600]
+      ];
+      const melodyREG = [
+        [261.63, 300], [261.63, 300], [392.00, 300], [392.00, 300], 
+        [440.00, 300], [440.00, 300], [392.00, 600]
+      ];
+      
+      const melody = type === 'BIG' ? melodyBIG : melodyREG;
+      let noteIndex = 0;
+      
+      const playNextNote = () => {
+        if (!isPlayingBGM || !soundOn || currentBgmType !== type) return;
+        
+        const note = melody[noteIndex];
+        const freq = note[0];
+        const dur = note[1];
+        
+        try {
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          
+          osc.type = type === 'BIG' ? 'square' : 'triangle';
+          osc.frequency.value = freq;
+          
+          gain.gain.setValueAtTime(0, now);
+          gain.gain.linearRampToValueAtTime(0.2, now + 0.02); // 立ち上がり
+          gain.gain.linearRampToValueAtTime(0, now + (dur / 1000) - 0.02); // 減衰
+          
+          osc.connect(gain);
+          gain.connect(this.bgmGain);
+          
+          osc.start(now);
+          osc.stop(now + (dur / 1000));
+        } catch(e) {}
+        
+        noteIndex = (noteIndex + 1) % melody.length;
+        this.bgmTimer = setTimeout(playNextNote, dur);
+      };
+      playNextNote();
+    },
+
+    stopBGM: function() {
+      isPlayingBGM = false;
+      currentBgmType = null;
+      if (this.bgmTimer) {
+        clearTimeout(this.bgmTimer);
+        this.bgmTimer = null;
+      }
     }
   };
 
@@ -258,7 +335,7 @@
     ctx.save();
     ctx.translate(0, y);
 
-    // 【最重要デザイン修正】赤7とBARはコマ高(46px)に対して「105%」限界突破拡大。他の小役は85%に抑える。
+    // 【限界突破デザイン】赤7とBARはコマ高(46px)に対して「105%」拡大。他の小役は85%に抑える。
     let maxH = (type === '7' || type === 'BAR') ? SYMBOL_HEIGHT * 1.05 : SYMBOL_HEIGHT * 0.85;
     let maxW = (type === '7' || type === 'BAR') ? CANVAS_WIDTH * 1.05 : CANVAS_WIDTH * 0.80;
 
@@ -309,7 +386,7 @@
       const gEl = document.getElementById('barGames'); if(gEl) gEl.textContent = stats.currentGames + 'G';
       const bEl = document.getElementById('barBigCount'); if(bEl) bEl.textContent = stats.bigCount;
       const rEl = document.getElementById('barRegCount'); if(rEl) rEl.textContent = stats.regCount;
-      const pEl = document.getElementById('barTotalProb'); if(pEl) pEl.textContent = stats.totalProb; // 合成確率に戻す
+      const pEl = document.getElementById('barTotalProb'); if(pEl) pEl.textContent = stats.totalProb; // 合成確率
     }
   }
 
@@ -361,7 +438,7 @@
   }
 
   // ===================================================
-  // 5. グローバルスロットエンジン (実機フラグ・超爽快アシスト搭載)
+  // 5. グローバルスロットエンジン (実機フラグ・超爽快アシスト・リセット搭載)
   // ===================================================
   window.JUGGLER_ENGINE = {
     isInitialized: false,
@@ -394,13 +471,71 @@
       this.isInitialized = true;
     },
 
+    // 【新規】遊技完全リセット機能
+    resetGame: function() {
+      gameState = STATE_IDLE;
+      activeReelsCount = 0;
+      isTouchActive = false;
+      hasActionExecutedInCurrentTouch = false;
+      
+      internalCredits = 50;
+      betAmount = 0;
+      isAutoMode = false;
+      clearTimeout(autoTimer);
+      
+      currentFlag = null;
+      bonusFlag = null;
+      isBonusMode = false;
+      bonusType = null;
+      bonusAcquired = 0;
+      isPeka = false;
+      pekaTiming = null;
+      isReplay = false;
+      
+      SoundEngine.stopBGM();
+      turnOffGogoLamp();
+      
+      reels.forEach(reel => {
+        reel.isSpinning = false;
+        reel.isStopping = false;
+        cancelAnimationFrame(reel.animId);
+        const currentIdx = Math.floor(Math.random() * reel.strip.length);
+        reel.currentIndex = currentIdx;
+        reel.pos = currentIdx * SYMBOL_HEIGHT;
+        reel.canvas.style.transform = `translateY(-${reel.pos}px)`;
+        this.renderReelCanvas(reel, false);
+        
+        const btn = document.getElementById(`stopBtn${reel.id}`);
+        if(btn) { btn.disabled = true; btn.classList.remove('spinning'); }
+      });
+      
+      const autoToggleBtn = document.getElementById('autoToggleBtn');
+      if(autoToggleBtn) {
+        autoToggleBtn.textContent = '👤 MODE: MANUAL';
+        autoToggleBtn.classList.remove('active');
+      }
+      
+      setLineBadgesLit(true);
+      updateDisplays(0);
+    },
+
     getConfig: function() { return { setting: currentSetting, autoStopOnBonus: autoStopOnBonus, weightCut: weightCut, volume: masterVolume, soundOn: soundOn }; },
+    
+    // 【最重要】設定適用時のサウンド即時Unlock対応
     setConfig: function(config) {
       if (config.setting !== undefined) currentSetting = config.setting;
       if (config.autoStopOnBonus !== undefined) autoStopOnBonus = config.autoStopOnBonus;
       if (config.weightCut !== undefined) weightCut = config.weightCut;
       if (config.volume !== undefined) SoundEngine.setVolume(config.volume);
-      if (config.soundOn !== undefined) soundOn = config.soundOn;
+      if (config.soundOn !== undefined) {
+        soundOn = config.soundOn;
+        if (soundOn) {
+          SoundEngine.unlock(); // ブラウザのAudio制約を強制突破
+          if (isBonusMode && !isPlayingBGM) SoundEngine.playBGM(bonusType);
+        } else {
+          SoundEngine.stopBGM();
+        }
+      }
     },
 
     renderReelCanvas: function(reel, isSpinning) {
@@ -410,7 +545,7 @@
     },
 
     drawFlag: function() {
-      if (isBonusMode) return 'GRAPE'; // ボーナス中(1BET)は15枚/13枚役が100%成立
+      if (isBonusMode) return 'GRAPE'; 
       if (bonusFlag) return bonusFlag;
 
       const r = Math.random();
@@ -551,11 +686,10 @@
           }
         }
 
-        // 【最重要追加】爽快感を優先するための「超・引き込みアシスト」
-        // ボーナス消化中(isBonusMode) または ボーナス成立時のハズレ目(!currentFlag && bonusFlag) は21コマ滑らせて絶対揃える
+        // 【極上の爽快感】ボーナス消化中 または ボーナス成立時のハズレ目 は21コマ滑らせて絶対揃える
         let slipLimit = 4;
         if (isBonusMode || (!currentFlag && bonusFlag && (targetSyms.includes('7') || targetSyms.includes('BAR')))) {
-          slipLimit = 21; // リール1周どこからでも引き込む
+          slipLimit = 21; 
         }
         
         let found = false;
@@ -667,26 +801,23 @@
       };
 
       const lines = [
-        [getSym(0, 0), getSym(1, 0), getSym(2, 0)], // 上段
-        [getSym(0, 1), getSym(1, 1), getSym(2, 1)], // 中段
-        [getSym(0, 2), getSym(1, 2), getSym(2, 2)], // 下段
-        [getSym(0, 0), getSym(1, 1), getSym(2, 2)], // 右下がり
-        [getSym(0, 2), getSym(1, 1), getSym(2, 0)]  // 右上がり
+        [getSym(0, 0), getSym(1, 0), getSym(2, 0)],
+        [getSym(0, 1), getSym(1, 1), getSym(2, 1)],
+        [getSym(0, 2), getSym(1, 2), getSym(2, 2)],
+        [getSym(0, 0), getSym(1, 1), getSym(2, 2)],
+        [getSym(0, 2), getSym(1, 1), getSym(2, 0)]
       ];
 
       let activeLines = [];
-      if (isBonusMode) {
-        activeLines = [lines[1]]; // ボーナス中(1BET)は中段ラインのみ有効
-      } else {
-        activeLines = lines; // 通常時は5ライン有効
-      }
+      if (isBonusMode) activeLines = [lines[1]];
+      else activeLines = lines;
 
       let payout = 0;
       let isBigWin = false, isRegWin = false, isReplayWin = false;
       let playSoundType = 'bonus_pay';
       let grapeWin = false, cherryWin = false, bellWin = false, clownWin = false;
 
-      // 【最重要】有効ライン上に実際に役が「揃っているか」を厳格に判定する
+      // 有効ライン上に実際に役が「揃っているか」を厳格判定
       activeLines.forEach(line => {
         if (line.every(s => s === '7')) isBigWin = true;
         else if (line[0] === '7' && line[1] === '7' && line[2] === 'BAR') isRegWin = true;
@@ -697,9 +828,8 @@
         else if (line.every(s => s === 'CLOWN')) clownWin = true;
       });
 
-      // 【ごまかし排除】実際に揃った場合のみPAYOUT枚数を決定
+      // 【ごまかし排除】実際に揃った場合のみPAYOUT枚数を決定 (REGは13枚)
       if (grapeWin) { 
-        // BIG中は15枚払出、REG中は13枚払出に分離
         payout = isBonusMode ? (bonusType === 'BIG' ? 15 : 13) : 8; 
         playSoundType = 'grape'; 
       }
@@ -707,7 +837,6 @@
       if (bellWin && !isBonusMode) { payout = Math.max(payout, 14); playSoundType = 'bell_clown'; }
       if (clownWin && !isBonusMode) { payout = Math.max(payout, 10); playSoundType = 'bell_clown'; }
 
-      // 払い出し加算処理
       if (payout > 0) {
         internalCredits += payout;
         if (window.DATA_COUNTER) {
@@ -716,16 +845,15 @@
         SoundEngine.play(playSoundType);
       }
 
-      // ボーナス中の消化と終了判定（払い出しがあった場合のみカウント進行）
       if (isBonusMode) {
-        if (payout > 0) {
-          bonusAcquired += payout;
-        }
-        // BIGは266枚払出(純増252)、REGは98枚払出(純増96)で正確に終了
+        if (payout > 0) bonusAcquired += payout;
+        
+        // 【終了条件完全適正化】BIG:266枚払出(純増252) / REG:98枚払出(純増96)
         if (bonusAcquired >= bonusTarget) {
           isBonusMode = false;
           bonusFlag = null; 
           currentFlag = null;
+          SoundEngine.stopBGM(); // 【BGM停止】
         }
         setLineBadgesLit(true);
         updateDisplays(payout);
@@ -733,20 +861,21 @@
         return;
       }
 
-      // ボーナス入賞処理
       if (isBigWin) {
-        isBonusMode = true; bonusType = 'BIG'; bonusAcquired = 0; bonusTarget = 266; // 15枚×18回=270枚払出で終了(純増252枚)
+        isBonusMode = true; bonusType = 'BIG'; bonusAcquired = 0; bonusTarget = 266;
         bonusFlag = null; currentFlag = null; 
         if (window.DATA_COUNTER) window.DATA_COUNTER.onBonusWin('BIG');
         turnOffGogoLamp();
         SoundEngine.play('big_fanfare');
+        setTimeout(() => { SoundEngine.playBGM('BIG'); }, 1500); // ファンファーレ後にBGM開始
         if (autoStopOnBonus) stopAutoMode();
       } else if (isRegWin) {
-        isBonusMode = true; bonusType = 'REG'; bonusAcquired = 0; bonusTarget = 98; // 13枚×8回=104枚払出で終了(純増96枚)
+        isBonusMode = true; bonusType = 'REG'; bonusAcquired = 0; bonusTarget = 98;
         bonusFlag = null; currentFlag = null;
         if (window.DATA_COUNTER) window.DATA_COUNTER.onBonusWin('REG');
         turnOffGogoLamp();
         SoundEngine.play('reg_fanfare');
+        setTimeout(() => { SoundEngine.playBGM('REG'); }, 1500); // ファンファーレ後にBGM開始
         if (autoStopOnBonus) stopAutoMode();
       } else if (isReplayWin) {
         isReplay = true;

@@ -513,7 +513,7 @@
     .live-data-val.diff { color: #00e5ff; }
     .live-data-val.big { color: #ff3366; }
     .live-data-val.reg { color: #00e5ff; }
-    .live-data-val.prob { color: #ffcc00; }
+    .live-data-val.prob { color: #ffcc00; } /* 合成確率用 */
 
     /* 最下部コントロール (UI操作領域。画面タップ進行から完全に分離保護) */
     .bottom-controls {
@@ -538,12 +538,14 @@
       text-align: center;
     }
 
-    .ctrl-btn.auto-btn { width: 140px; display: inline-block; }
+    .ctrl-btn.auto-btn { width: 110px; display: inline-block; }
     .ctrl-btn.active { background: #ffcc00; color: #000; border-color: #ffcc00; box-shadow: 0 0 8px #ffcc00; }
     .ctrl-btn.data-btn { background: linear-gradient(135deg, #8a0b10 0%, #d31820 100%); color: #fff; border-color: var(--gold); box-shadow: 0 2px 6px rgba(0,0,0,0.5); }
+    /* 新設：リセットボタン */
+    .ctrl-btn.reset-btn { background: #440000; color: #ff8888; border-color: #ff3333; }
 
     /* ---------------------------------------------------
-       6. 共通モーダルUI (データ ＆ 設定)
+       6. 共通モーダルUI (データ・設定・リセット)
     --------------------------------------------------- */
     .modal-overlay {
       display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
@@ -574,6 +576,13 @@
     table { width: 100%; border-collapse: collapse; }
     th { color: #7a8ba6; border-bottom: 1px solid #2d3b54; }
     td { padding: 4px; border-bottom: 1px solid #222d42; }
+
+    /* リセット確認モーダル専用スタイル */
+    .reset-message { font-size: 14px; text-align: center; margin: 15px 0; line-height: 1.5; }
+    .reset-btn-group { display: flex; justify-content: center; gap: 15px; margin-top: 10px; }
+    .reset-confirm-btn { background: #d31820; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    .reset-cancel-btn { background: #444; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+
   </style>
 
   <script src="./symbol_7.js"></script>
@@ -722,6 +731,7 @@
           <button id="autoToggleBtn" class="ctrl-btn auto-btn">👤 MODE: MANUAL</button>
           <button id="dataBtn" class="ctrl-btn data-btn">📊 詳細データ</button>
           <button id="settingModalBtn" class="ctrl-btn">⚙️ 設定</button>
+          <button id="resetBtn" class="ctrl-btn reset-btn">🛑 終了</button>
         </div>
 
       </div>
@@ -795,6 +805,22 @@
     </div>
   </div>
 
+  <!-- 【新規】遊技終了確認 モーダル -->
+  <div class="modal-overlay" id="resetConfirmModal">
+    <div class="modal-content" style="max-width: 320px;">
+      <div class="modal-header">
+        <div class="modal-title" style="color:#ff3333;">⚠️ 確認</div>
+      </div>
+      <div class="reset-message">
+        遊技を終了し、データ履歴を<br>すべてリセットしますか？
+      </div>
+      <div class="reset-btn-group">
+        <button id="resetCancelBtn" class="reset-cancel-btn">再開</button>
+        <button id="resetConfirmBtn" class="reset-confirm-btn">終了</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // 履歴モーダル以外の不要なスクロールを防止
     document.addEventListener('touchmove', function(e) {
@@ -807,7 +833,7 @@
     if (appViewport) {
       let handled = false;
       const trigger = (e) => {
-        // UI領域（AUTOボタン、設定など）やモーダルをタップした場合はワンタップ進行を除外
+        // UI領域（AUTOボタン、リセットボタン、設定など）やモーダルをタップした場合はワンタップ進行を除外
         if (e.target.closest('.ctrl-btn') || 
             e.target.closest('.modal-overlay') || 
             e.target.closest('.modal-content') ||
@@ -871,6 +897,8 @@
       e.stopPropagation();
       document.getElementById('settingModal').classList.remove('active');
     };
+    
+    // 【サウンド即時有効化】を伴う設定適用
     document.getElementById('saveSettingBtn').onclick = (e) => {
       e.stopPropagation();
       if(window.JUGGLER_ENGINE) {
@@ -883,6 +911,25 @@
         });
       }
       document.getElementById('settingModal').classList.remove('active');
+    };
+
+    // 【新規】遊技終了（リセット）関連
+    document.getElementById('resetBtn').onclick = (e) => {
+      e.stopPropagation();
+      document.getElementById('resetConfirmModal').classList.add('active');
+    };
+    document.getElementById('resetCancelBtn').onclick = (e) => {
+      e.stopPropagation();
+      document.getElementById('resetConfirmModal').classList.remove('active'); // 再開
+    };
+    document.getElementById('resetConfirmBtn').onclick = (e) => {
+      e.stopPropagation();
+      // データカウンターとゲームエンジンを初期状態へ完全リセット
+      if(window.DATA_COUNTER) window.DATA_COUNTER.init();
+      if(window.JUGGLER_ENGINE && typeof window.JUGGLER_ENGINE.resetGame === 'function') {
+        window.JUGGLER_ENGINE.resetGame();
+      }
+      document.getElementById('resetConfirmModal').classList.remove('active');
     };
 
     // モーダルの背景タップで閉じる
