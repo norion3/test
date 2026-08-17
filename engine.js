@@ -1,6 +1,6 @@
 /**
  * スロットゲームエンジン (engine.js)
- * DMM完全解析確率・目揃いズレ完治・成立後小役抽選正常化・21コマ超アシスト・ゲーム進行 ＆ リセット管理
+ * DMM完全解析確率・目揃いズレ完治・AUTO解除フラグ修正・REG91枚ターゲット補正・21コマ超アシスト
  */
 
 (function() {
@@ -125,7 +125,11 @@
     const gogoBox = document.getElementById('gogoBox');
     if (gogoBox) gogoBox.classList.add('peka');
     if (window.SLOT_SOUND) window.SLOT_SOUND.play('gako');
-    if (isAutoMode) stopAutoMode();
+    
+    // 【バグ修正】設定モーダルの「ボーナス時にAUTO解除」がONの時のみAUTO解除を実行
+    if (isAutoMode && autoStopOnBonus) {
+      stopAutoMode();
+    }
   }
 
   function turnOffGogoLamp() {
@@ -414,7 +418,7 @@
           }
         }
 
-        // 【修正完治】成立ゲーム(当選G)・成立後・ボーナス消化中での21コマ超アシスト適用
+        // 成立ゲーム(当選G)・成立後・ボーナス消化中での21コマ超アシスト適用
         let slipLimit = 4;
         const isBonusFlagCurrent = (currentFlag === 'BIG' || currentFlag === 'REG' || currentFlag === 'CHERRY_BIG' || currentFlag === 'CHERRY_REG');
         if (isBonusMode || bonusFlag || isBonusFlagCurrent) {
@@ -609,7 +613,8 @@
         }
         if (autoStopOnBonus) stopAutoMode();
       } else if (isRegWin) {
-        isBonusMode = true; bonusType = 'REG'; bonusAcquired = 0; bonusTarget = 98;
+        // 【理論補正】REG中の目標獲得枚数を 91枚 に補正 (13枚×7回＝91枚)
+        isBonusMode = true; bonusType = 'REG'; bonusAcquired = 0; bonusTarget = 91;
         bonusFlag = null; currentFlag = null;
         if (window.DATA_COUNTER) window.DATA_COUNTER.onBonusWin('REG');
         turnOffGogoLamp();

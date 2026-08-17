@@ -346,7 +346,7 @@
     }
 
     /* ---------------------------------------------------
-       4. コントロールデッキ
+       4. コントロールデッキ ＆ スロットボタン刷新デザイン
     --------------------------------------------------- */
     .control-deck {
       width: 100%;
@@ -419,20 +419,41 @@
       z-index: 10;
     }
 
+    /* 基本ストップボタン領域 */
     .stop-btn {
       width: 44px;
       height: 44px;
       border-radius: 50%;
-      background: radial-gradient(circle, #e62229 0%, #8a0b10 100%);
-      border: 2px solid #ffcccc;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.6);
-      cursor: pointer;
-      transition: transform 0.05s ease-out, border-color 0.1s;
+      transition: all 0.12s ease-in-out;
     }
-    .stop-btn.spinning { animation: btnPulse 0.3s infinite alternate; border-color: #ffff88; }
-    @keyframes btnPulse { from { box-shadow: 0 0 4px #ff3333; } to { box-shadow: 0 0 12px #ff3333, inset 0 0 8px #ffffff; } }
-    .stop-btn:disabled { background: radial-gradient(circle, #555 0%, #222 100%); border-color: #777; opacity: 0.4; box-shadow: none; animation: none; }
-    .stop-btn:not(:disabled):active { transform: translateY(3px) scale(0.95); }
+
+    /* 1. 押せる時（点灯・発光状態）: 鮮やかな赤色 + 点滅アニメーション */
+    .stop-btn:not(:disabled) {
+      background: radial-gradient(circle at 35% 35%, #ff4d4d 0%, #e62229 60%, #8a0b10 100%);
+      border: 2px solid #ffaaaa;
+      box-shadow: 0 4px 10px rgba(230, 34, 41, 0.5), inset 0 2px 4px rgba(255, 255, 255, 0.8);
+      cursor: pointer;
+    }
+
+    .stop-btn.spinning {
+      animation: btnPulse 0.3s infinite alternate;
+      border-color: #ffff88;
+    }
+    @keyframes btnPulse { 
+      from { box-shadow: 0 0 6px #ff3333, inset 0 0 4px #ffffff; } 
+      to { box-shadow: 0 0 16px #ff3333, inset 0 0 10px #ffffff; } 
+    }
+
+    /* 2. 押せない時（消灯状態）: 実機アクリルパールホワイト（消えたような違和感を完全排除） */
+    .stop-btn:disabled {
+      background: radial-gradient(circle at 35% 35%, #ffffff 0%, #e8e8ed 50%, #c0c0ca 100%);
+      border: 2px solid #d0d0db;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.9);
+      opacity: 0.9;
+      transform: none; /* 物理的な押し込み状態にはしない */
+    }
+
+    .stop-btn:not(:disabled):active { transform: scale(0.96); }
 
     /* ---------------------------------------------------
        5. 常時表示液晶バー ＆ コントロール
