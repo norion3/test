@@ -1,14 +1,15 @@
 /**
  * データカウンターモジュール (datacounter.js)
- * ホール仕様データ集計・確率計算・当選履歴・初期レンジ±500可変スランプグラフ描画
+ * ホール仕様データ集計・各種確率計算・当選履歴・初期レンジ±500可変スランプグラフ描画
  */
 
 (function() {
   const DataCounter = {
-    totalGames: 0,       // 総回転数
+    totalGames: 0,       // 通常時の総回転数
     currentGames: 0,     // 現在のボーナス間ゲーム数
     bigCount: 0,         // BIG回数
     regCount: 0,         // REG回数
+    grapeCount: 0,       // 通常時のブドウ獲得回数
     diffMedal: 0,        // 累計差枚数
     
     history: [],         // 当選履歴リスト [{ id, type, game, totalGame, time }]
@@ -23,23 +24,31 @@
       this.currentGames = 0;
       this.bigCount = 0;
       this.regCount = 0;
+      this.grapeCount = 0;
       this.diffMedal = 0;
       this.history = [];
       this.slumpData = [{ game: 0, diff: 0 }];
     },
 
     // 1ゲーム開始時 (BET消費時)
-    onGameStart: function(betCount) {
-      this.totalGames++;
-      this.currentGames++;
+    // 実機データカウンター同様、ボーナス消化中のゲーム数は総回転数に含めない
+    onGameStart: function(betCount, isBonusMode = false) {
+      if (!isBonusMode && betCount > 0) {
+        this.totalGames++;
+        this.currentGames++;
+      }
       this.diffMedal -= betCount;
       this.recordSlumpPoint();
     },
 
     // 払い出し発生時
-    onPayout: function(payout) {
+    onPayout: function(payout, type = '') {
       if (payout > 0) {
         this.diffMedal += payout;
+        // 通常時のブドウのみカウント（ボーナス中のブドウは除外）
+        if (type === 'GRAPE') {
+          this.grapeCount++;
+        }
         this.recordSlumpPoint();
       }
     },
@@ -77,7 +86,7 @@
     recordSlumpPoint: function(forceRecord = false) {
       const lastPoint = this.slumpData[this.slumpData.length - 1];
       
-      // 強制記録(ボーナス時) または 5G経過毎 または 差枚が10枚以上動いた場合にのみポイント保存
+      // 強制記録(ボーナス時) または 通常時5G経過毎 または 差枚が10枚以上動いた場合にのみポイント保存
       if (forceRecord || !lastPoint || (this.totalGames - lastPoint.game >= 5) || Math.abs(this.diffMedal - lastPoint.diff) >= 10) {
         this.slumpData.push({
           game: this.totalGames,
@@ -93,6 +102,11 @@
         return `1/${(total / count).toFixed(1)}`;
       };
 
+      const formatProbPrecise = (count, total) => {
+        if (count === 0 || total === 0) return '1/--.--';
+        return `1/${(total / count).toFixed(2)}`;
+      };
+
       const totalBonus = this.bigCount + this.regCount;
 
       return {
@@ -104,6 +118,7 @@
         bigProb: formatProb(this.bigCount, this.totalGames),
         regProb: formatProb(this.regCount, this.totalGames),
         totalProb: formatProb(totalBonus, this.totalGames),
+        grapeProb: formatProbPrecise(this.grapeCount, this.totalGames), // 小数第2位までのブドウ確率
         diffMedal: this.diffMedal
       };
     },
@@ -205,7 +220,7 @@
       ctx.fillStyle = '#a0b0c8';
       ctx.font = '10px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('ゲーム数(G)', padding.left + graphWidth / 2, height - 6);
+      ctx.fillText('通常ゲーム数(G)', padding.left + graphWidth / 2, height - 6);
     },
 
     // 当選履歴テーブルHTMLの出力
@@ -246,4 +261,5 @@
 
   window.DATA_COUNTER = DataCounter;
 })();
+
 

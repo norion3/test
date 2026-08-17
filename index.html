@@ -71,12 +71,28 @@
       flex-direction: column;
       align-items: center;
       transform-origin: center center;
+      transition: all 0.3s ease;
     }
 
     /* 画面縦幅に応じて自動縮小 */
     @media (max-height: 740px) { .cabinet { transform: scale(0.92); } }
     @media (max-height: 660px) { .cabinet { transform: scale(0.82); } }
     @media (max-height: 580px) { .cabinet { transform: scale(0.72); } }
+
+    /* 目に優しいボーナスフラッシュ演出（フワッ、フワッとした明滅） */
+    @keyframes gentleFlash {
+      0% { filter: brightness(1); box-shadow: inset 0 0 20px rgba(0,0,0,0.9); }
+      50% { filter: brightness(1.25); box-shadow: inset 0 0 30px rgba(255, 200, 50, 0.4), 0 0 25px rgba(255,50,50,0.3); }
+      100% { filter: brightness(1); box-shadow: inset 0 0 20px rgba(0,0,0,0.9); }
+    }
+    .cabinet.bonus-mode .main-panel,
+    .cabinet.bonus-mode .top-panel {
+      animation: gentleFlash 1.5s ease-in-out infinite;
+    }
+    .cabinet.bonus-mode .kitac-top {
+      animation: gentleFlash 1.5s ease-in-out infinite;
+      background: linear-gradient(180deg, #ff3b3b 0%, #a00000 100%);
+    }
 
     /* GRAVITY TOPランプ (赤・金統一) */
     .kitac-top {
@@ -88,6 +104,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      transition: all 0.5s ease;
     }
 
     .kitac-lamp {
@@ -116,6 +133,7 @@
       text-align: center;
       margin-top: 4px;
       box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+      transition: all 0.5s ease;
     }
 
     .big-chance-text {
@@ -154,6 +172,7 @@
       display: flex;
       flex-direction: column;
       gap: 10px;
+      transition: all 0.5s ease;
     }
 
     .reels-row {
@@ -227,7 +246,7 @@
       will-change: transform;
     }
 
-    /* 右側実機文字ランプ */
+    /* 右側実機文字ランプ (実機完全準拠: Start(赤) -> Replay(緑) -> Wait(黄)) */
     .status-panel-right {
       display: flex;
       flex-direction: column;
@@ -246,8 +265,8 @@
       transition: all 0.1s ease;
     }
 
-    .text-lamp.active.lamp-replay { color: #00ff66; text-shadow: 0 0 6px #00ff66; box-shadow: 0 0 6px #00ff66; }
     .text-lamp.active.lamp-start { color: #ff3333; text-shadow: 0 0 6px #ff3333; box-shadow: 0 0 6px #ff3333; }
+    .text-lamp.active.lamp-replay { color: #00ff66; text-shadow: 0 0 6px #00ff66; box-shadow: 0 0 6px #00ff66; }
     .text-lamp.active.lamp-wait { color: #ffcc00; text-shadow: 0 0 6px #ffcc00; box-shadow: 0 0 6px #ffcc00; }
 
     /* 下段：GOGO & 7セグ群 */
@@ -363,7 +382,6 @@
       cursor: pointer;
     }
 
-    /* 外枠メッキソケット */
     .lever-housing {
       position: absolute;
       width: 46px;
@@ -374,7 +392,6 @@
       box-shadow: 0 4px 8px rgba(0,0,0,0.6);
     }
 
-    /* 円形くぼみ（ソケット内側の影） */
     .lever-socket {
       position: absolute;
       width: 30px;
@@ -385,7 +402,6 @@
       transition: all 0.08s ease;
     }
 
-    /* 正面丸ボール（タップ時に真下・奥へと沈み込むアクション） */
     .lever-knob-front {
       position: relative;
       width: 25px;
@@ -398,12 +414,10 @@
       z-index: 2;
     }
 
-    /* レバー沈み込みアクション */
     .real-lever-assembly.hit .lever-knob-front {
       transform: translateY(4px) scale(0.88);
       box-shadow: 0 1px 2px rgba(0,0,0,0.9), inset 0 2px 4px rgba(0,0,0,0.8);
     }
-
     .real-lever-assembly.hit .lever-socket {
       background: radial-gradient(circle at 50% 50%, #000 0%, #151515 100%);
     }
@@ -430,7 +444,7 @@
     .stop-btn:not(:disabled):active { transform: translateY(3px) scale(0.95); }
 
     /* ---------------------------------------------------
-       5. 赤統一 下部『I'm GRAVITY』パネル ＆ データ常時表示バー
+       5. 赤統一 下部『I'm GRAVITY』パネル ＆ 5項目常時データバー
     --------------------------------------------------- */
     .bottom-custom-panel {
       width: 100%;
@@ -453,17 +467,17 @@
       text-shadow: 0 0 8px #ffcc00, 1px 1px 2px #000;
     }
 
-    /* 最下部：常時表示液晶風データディスプレイバー */
+    /* 最下部：5項目 常時表示液晶風データディスプレイバー */
     .live-data-bar {
       width: 100%;
       background: #0d111a;
       border: 1.5px solid #28364a;
       border-radius: 6px;
-      padding: 5px 8px;
+      padding: 5px 6px;
       margin-top: 6px;
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 4px;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 3px;
       box-shadow: inset 0 0 8px #000;
     }
 
@@ -479,7 +493,7 @@
     }
 
     .live-data-label {
-      font-size: 8.5px;
+      font-size: 7.5px;
       color: var(--gold);
       font-weight: bold;
       margin-bottom: 1px;
@@ -487,11 +501,13 @@
 
     .live-data-val {
       font-family: 'Courier New', Courier, monospace;
-      font-size: 13px;
+      font-size: 11px;
       font-weight: 900;
       color: #fff;
     }
 
+    .live-data-val.games { color: #ffffff; }
+    .live-data-val.diff { color: #00e5ff; }
     .live-data-val.big { color: #ff3366; }
     .live-data-val.reg { color: #00e5ff; }
     .live-data-val.prob { color: #ffcc00; }
@@ -518,24 +534,9 @@
       z-index: 100;
     }
 
-    .ctrl-btn.auto-btn {
-      width: 140px;
-      display: inline-block;
-    }
-
-    .ctrl-btn.active {
-      background: #ffcc00;
-      color: #000;
-      border-color: #ffcc00;
-      box-shadow: 0 0 8px #ffcc00;
-    }
-
-    .ctrl-btn.data-btn {
-      background: linear-gradient(135deg, #8a0b10 0%, #d31820 100%);
-      color: #fff;
-      border-color: var(--gold);
-      box-shadow: 0 2px 6px rgba(0,0,0,0.5);
-    }
+    .ctrl-btn.auto-btn { width: 140px; display: inline-block; }
+    .ctrl-btn.active { background: #ffcc00; color: #000; border-color: #ffcc00; box-shadow: 0 0 8px #ffcc00; }
+    .ctrl-btn.data-btn { background: linear-gradient(135deg, #8a0b10 0%, #d31820 100%); color: #fff; border-color: var(--gold); box-shadow: 0 2px 6px rgba(0,0,0,0.5); }
 
     /* ---------------------------------------------------
        6. 共通モーダルUI (データ ＆ 設定)
@@ -559,7 +560,7 @@
     .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
     .stat-card { background: #1a2233; border-radius: 6px; padding: 6px; text-align: center; }
     .stat-label { font-size: 9px; color: #7a8ba6; }
-    .stat-value { font-size: 14px; font-weight: bold; color: #fff; }
+    .stat-value { font-size: 12px; font-weight: bold; color: #fff; }
     .stat-value.big { color: #ff3366; }
     .stat-value.reg { color: #00e5ff; }
     .stat-value.total { color: #ffcc00; }
@@ -570,7 +571,6 @@
     td { padding: 4px; border-bottom: 1px solid #222d42; }
   </style>
 
-  <!-- スクリプトファイルの読み込み -->
   <script src="./symbol_7.js"></script>
   <script src="./symbol_BAR.js"></script>
   <script src="./symbol_GRAPE.js"></script>
@@ -588,7 +588,7 @@
     <div class="cabinet-scaler">
       
       <!-- 横幅390px拡大 ドット筐体 -->
-      <div class="cabinet">
+      <div class="cabinet" id="mainCabinet">
         
         <!-- GRAVITY TOPランプ -->
         <div class="kitac-top"><div class="kitac-lamp">GRAVITY</div></div>
@@ -604,9 +604,9 @@
           <div class="reels-row">
             <!-- ライン表示 -->
             <div class="line-numbers">
-              <div class="line-badge badge-3 lit">3</div>
-              <div class="line-badge badge-2 lit">2</div>
-              <div class="line-badge badge-1 lit">1</div>
+              <div class="line-badge badge-3 lit" id="lineBadge3">3</div>
+              <div class="line-badge badge-2 lit" id="lineBadge2">2</div>
+              <div class="line-badge badge-1 lit" id="lineBadge1">1</div>
             </div>
 
             <!-- 引き締まった実機長方形プロポーション 3列リール窓 (320x162) -->
@@ -618,15 +618,15 @@
               <div class="reel-column"><canvas id="reelCanvas2" class="reel-canvas"></canvas></div>
             </div>
 
-            <!-- 文字透過パネル -->
+            <!-- 右側文字透過パネル (Start -> Replay -> Wait の実機配列) -->
             <div class="status-panel-right">
-              <div class="text-lamp lamp-replay" id="lampReplay">Replay</div>
               <div class="text-lamp lamp-start" id="lampStart">Start</div>
+              <div class="text-lamp lamp-replay" id="lampReplay">Replay</div>
               <div class="text-lamp lamp-wait" id="lampWait">Wait</div>
             </div>
           </div>
 
-          <!-- GOGOランプ ＆ SVG7セグ (COUNTのみ3桁仕様) -->
+          <!-- GOGOランプ ＆ SVG7セグ (COUNT 3桁仕様) -->
           <div class="main-bottom-row">
             <div class="gogo-box" id="gogoBox">
               <svg class="gogo-svg" viewBox="0 0 100 60">
@@ -642,22 +642,10 @@
                 <div class="led-label">CREDIT</div>
                 <div class="led-7seg-container" id="creditDisp">
                   <svg class="digit7seg" viewBox="0 0 24 40" transform="skewX(-6)">
-                    <polygon class="seg seg-a" points="6,2 18,2 15,6 9,6" />
-                    <polygon class="seg seg-b" points="19,3 19,18 15,15 15,7" />
-                    <polygon class="seg seg-c" points="19,22 19,37 15,33 15,25" />
-                    <polygon class="seg seg-d" points="6,38 18,38 15,34 9,34" />
-                    <polygon class="seg seg-e" points="5,22 5,37 9,33 9,25" />
-                    <polygon class="seg seg-f" points="5,3 5,18 9,15 9,7" />
-                    <polygon class="seg seg-g" points="7,20 10,17 14,17 17,20 14,23 10,23" />
+                    <polygon class="seg seg-a" points="6,2 18,2 15,6 9,6" /><polygon class="seg seg-b" points="19,3 19,18 15,15 15,7" /><polygon class="seg seg-c" points="19,22 19,37 15,33 15,25" /><polygon class="seg seg-d" points="6,38 18,38 15,34 9,34" /><polygon class="seg seg-e" points="5,22 5,37 9,33 9,25" /><polygon class="seg seg-f" points="5,3 5,18 9,15 9,7" /><polygon class="seg seg-g" points="7,20 10,17 14,17 17,20 14,23 10,23" />
                   </svg>
                   <svg class="digit7seg" viewBox="0 0 24 40" transform="skewX(-6)">
-                    <polygon class="seg seg-a" points="6,2 18,2 15,6 9,6" />
-                    <polygon class="seg seg-b" points="19,3 19,18 15,15 15,7" />
-                    <polygon class="seg seg-c" points="19,22 19,37 15,33 15,25" />
-                    <polygon class="seg seg-d" points="6,38 18,38 15,34 9,34" />
-                    <polygon class="seg seg-e" points="5,22 5,37 9,33 9,25" />
-                    <polygon class="seg seg-f" points="5,3 5,18 9,15 9,7" />
-                    <polygon class="seg seg-g" points="7,20 10,17 14,17 17,20 14,23 10,23" />
+                    <polygon class="seg seg-a" points="6,2 18,2 15,6 9,6" /><polygon class="seg seg-b" points="19,3 19,18 15,15 15,7" /><polygon class="seg seg-c" points="19,22 19,37 15,33 15,25" /><polygon class="seg seg-d" points="6,38 18,38 15,34 9,34" /><polygon class="seg seg-e" points="5,22 5,37 9,33 9,25" /><polygon class="seg seg-f" points="5,3 5,18 9,15 9,7" /><polygon class="seg seg-g" points="7,20 10,17 14,17 17,20 14,23 10,23" />
                   </svg>
                 </div>
               </div>
@@ -704,11 +692,15 @@
           <div class="custom-panel-text">I'm GRAVITY</div>
         </div>
 
-        <!-- 最下部：常時表示液晶風データディスプレイバー -->
+        <!-- 最下部：5項目 常時表示液晶風データディスプレイバー -->
         <div class="live-data-bar">
           <div class="live-data-item">
+            <div class="live-data-label">ゲーム数</div>
+            <div class="live-data-val games" id="barGames">0G</div>
+          </div>
+          <div class="live-data-item">
             <div class="live-data-label">差枚数</div>
-            <div class="live-data-val" id="barDiffMedal">0</div>
+            <div class="live-data-val diff" id="barDiffMedal">0</div>
           </div>
           <div class="live-data-item">
             <div class="live-data-label">BIG</div>
@@ -735,20 +727,26 @@
     </div>
   </div>
 
-  <!-- ホール風詳細データカウンター モーダル -->
+  <!-- ホール風詳細データカウンター モーダル (各種確率追加) -->
   <div class="modal-overlay" id="dataModal">
     <div class="modal-content">
       <div class="modal-header">
         <div class="modal-title">📊 ホールデータカウンター</div>
         <button class="modal-close-btn" id="dataModalCloseBtn">✕</button>
       </div>
-      <div class="stats-grid">
+      <!-- 拡張3x3グリッド構成 -->
+      <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
         <div class="stat-card"><div class="stat-label">総回転数</div><div class="stat-value" id="modalTotalGames">0 G</div></div>
         <div class="stat-card"><div class="stat-label">現在ゲーム</div><div class="stat-value" id="modalCurrentGames">0 G</div></div>
         <div class="stat-card"><div class="stat-label">差枚数</div><div class="stat-value" id="modalDiffMedal">0 枚</div></div>
+        
         <div class="stat-card"><div class="stat-label">BIG 回数</div><div class="stat-value big" id="modalBigCount">0</div></div>
         <div class="stat-card"><div class="stat-label">REG 回数</div><div class="stat-value reg" id="modalRegCount">0</div></div>
         <div class="stat-card"><div class="stat-label">合成確率</div><div class="stat-value total" id="modalTotalProb">1/--.-</div></div>
+        
+        <div class="stat-card"><div class="stat-label">BIG 確率</div><div class="stat-value big" id="modalBigProb">1/--.-</div></div>
+        <div class="stat-card"><div class="stat-label">REG 確率</div><div class="stat-value reg" id="modalRegProb">1/--.-</div></div>
+        <div class="stat-card"><div class="stat-label">ブドウ確率</div><div class="stat-value total" id="modalGrapeProb">1/--.--</div></div>
       </div>
       <div style="background:#1a2233; padding:6px; border-radius:6px; text-align:center;">
         <canvas id="slumpCanvas" width="360" height="140"></canvas>
@@ -785,12 +783,12 @@
           <input type="checkbox" id="weightCutCheck" checked>
         </div>
         <div class="setting-row">
-          <label>全体音量</label>
-          <input type="range" id="volumeRange" min="0" max="100" value="100">
+          <label>サウンド再生</label>
+          <input type="checkbox" id="soundEnableCheck"> <!-- 初期OFF -->
         </div>
         <div class="setting-row">
-          <label>サウンド再生</label>
-          <input type="checkbox" id="soundEnableCheck">
+          <label>全体音量</label>
+          <input type="range" id="volumeRange" min="0" max="100" value="100">
         </div>
       </div>
       <button id="saveSettingBtn" style="background:#d31820; color:#fff; border:none; padding:8px; border-radius:4px; font-weight:bold; cursor:pointer;">設定を適用</button>
@@ -800,11 +798,28 @@
   <script>
     document.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
 
+    // 筐体のボーナスフラッシュ検知 MutationObserver
+    const badge1 = document.getElementById('lineBadge1');
+    const badge2 = document.getElementById('lineBadge2');
+    const mainCabinet = document.getElementById('mainCabinet');
+
+    if (badge1 && badge2 && mainCabinet) {
+      const observer = new MutationObserver(() => {
+        // 実機ルール：ボーナス中(1BET)は中段ライン(badge2)のみが有効になる
+        if (badge2.classList.contains('lit') && !badge1.classList.contains('lit')) {
+          mainCabinet.classList.add('bonus-mode');
+        } else {
+          mainCabinet.classList.remove('bonus-mode');
+        }
+      });
+      observer.observe(badge1, { attributes: true, attributeFilter: ['class'] });
+      observer.observe(badge2, { attributes: true, attributeFilter: ['class'] });
+    }
+
     // 全画面どこでもワンタップ進行イベント (多重発火伝播遮断)
     const appViewport = document.getElementById('appViewport');
     if (appViewport) {
       const handleTap = (e) => {
-        // ボタンやモーダル、入力要素が直接タップされた場合は全画面タップ進行を除外
         if (e.target.closest('.ctrl-btn') || 
             e.target.closest('.modal-overlay') || 
             e.target.closest('.modal-content') ||
@@ -812,7 +827,6 @@
             e.target.closest('input')) {
           return;
         }
-
         if (window.JUGGLER_ENGINE) {
           window.JUGGLER_ENGINE.handleGlobalTap();
         }
@@ -823,7 +837,6 @@
           handleTap(e);
         }
       }, { passive: false });
-
       appViewport.addEventListener('click', handleTap);
     }
 
@@ -838,6 +851,12 @@
         document.getElementById('modalBigCount').textContent = s.bigCount;
         document.getElementById('modalRegCount').textContent = s.regCount;
         document.getElementById('modalTotalProb').textContent = s.totalProb;
+        
+        // 確率の追加表示
+        document.getElementById('modalBigProb').textContent = s.bigProb;
+        document.getElementById('modalRegProb').textContent = s.regProb;
+        document.getElementById('modalGrapeProb').textContent = s.grapeProb;
+
         window.DATA_COUNTER.renderSlumpGraph(document.getElementById('slumpCanvas'));
         document.getElementById('historyContainer').innerHTML = window.DATA_COUNTER.renderHistoryHTML();
       }
@@ -879,7 +898,6 @@
       document.getElementById('settingModal').classList.remove('active');
     };
 
-    // オーバーレイタップで閉じる
     document.querySelectorAll('.modal-overlay').forEach(m => m.onclick = (e) => { if(e.target === m) m.classList.remove('active'); });
 
     // エンジン起動
@@ -892,4 +910,5 @@
   </script>
 </body>
 </html>
+
 
