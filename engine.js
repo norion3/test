@@ -1,6 +1,6 @@
 /**
  * スロットゲームエンジン (engine.js)
- * サウンド1回目即時解禁・決定音・BGMシーケンサー・リセット機能・超アシスト・図柄限界拡大
+ * DMM完全解析確率・目揃いズレ完治・成立後小役抽選正常化・21コマ超アシスト・ゲーム進行 ＆ リセット管理
  */
 
 (function() {
@@ -11,13 +11,12 @@
     ['GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', '7', 'BAR', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO']
   ];
 
-  // コマサイズ (横幅100px × 高さ46px) - 縦隙間極限圧縮
   const SYMBOL_HEIGHT = 46;
   const CANVAS_WIDTH = 100;
   const REEL_SPEED_NORMAL = 22; 
   const REEL_SPEED_SLOW = 8;    
 
-  // SアイムジャグラーEX 実機確率テーブル (設定1〜6) + DMM解析 (チェリー重複分離)
+  // SアイムジャグラーEX 実機確率テーブル (設定1〜6) + DMM解析
   const PROBABILITY_TABLE = {
     1: { sBIG: 1/399.6, cBIG: 1/862.3, sREG: 1/630.2, cREG: 1/1456.4, grape: 1/6.02, cherry: 1/33.03 },
     2: { sBIG: 1/399.6, cBIG: 1/862.3, sREG: 1/565.0, cREG: 1/1365.3, grape: 1/6.02, cherry: 1/33.03 },
@@ -36,7 +35,6 @@
   let gameState = STATE_IDLE;
   let activeReelsCount = 0;
 
-  // アトミック・タッチセッション管理
   let isTouchActive = false;
   let hasActionExecutedInCurrentTouch = false;
 
@@ -51,7 +49,6 @@
   let betAmount = 0;
   let isAutoMode = false;
   let autoTimer = null;
-  let lastTapTime = 0;
 
   let currentFlag = null;       
   let bonusFlag = null;         
@@ -65,322 +62,18 @@
   let isReplay = false;
   let reels = [];
 
-  const symbolCanvasCache = {};
-
   // ===================================================
-  // 1. 高度リアル音響エンジン ＆ BGMシーケンサー
-  // ===================================================
-  let isPlayingBGM = false;
-  let currentBgmType = null;
-
-  const SoundEngine = {
-    ctx: null, masterGain: null, bgmGain: null, audioBuffers: {},
-    bgmTimer: null,
-    
-    init: function() {
-      try {
-        if (!this.ctx) {
-          this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-          this.masterGain = this.ctx.createGain();
-          this.bgmGain = this.ctx.createGain();
-          
-          this.masterGain.gain.setValueAtTime(soundOn ? masterVolume : 0, this.ctx.currentTime);
-          this.bgmGain.gain.setValueAtTime(soundOn ? masterVolume * 0.35 : 0, this.ctx.currentTime); // BGMは効果音を邪魔しない音量
-          
-          this.masterGain.connect(this.ctx.destination);
-          this.bgmGain.connect(this.ctx.destination);
-        }
-        if (this.ctx.state === 'suspended') {
-          this.ctx.resume();
-        }
-        this.loadExternalSounds();
-      } catch (e) {}
-    },
-    
-    // 【最重要完封修復】設定画面適用時のサウンド一発即時解禁フック
-    unlockAndPlayConfirm: function() {
-      this.init();
-      if (this.ctx) {
-        // 同期的にResumeを実行し、無音バッファでコンテキストを完全起爆
-        this.ctx.resume();
-        try {
-          const buffer = this.ctx.createBuffer(1, 1, 22050);
-          const source = this.ctx.createBufferSource();
-          source.buffer = buffer;
-          source.connect(this.ctx.destination);
-          source.start(0);
-        } catch(e) {}
-      }
-
-      // サウンドONの場合、即座に「決定ポーン♪」音を鳴らして有効化を耳で確認させる
-      if (soundOn) {
-        try {
-          const now = this.ctx.currentTime;
-          const osc = this.ctx.createOscillator();
-          const gain = this.ctx.createGain();
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(1046.50, now); // C6 (高音ポーン♪)
-          gain.gain.setValueAtTime(0.4 * masterVolume, now);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-          osc.connect(gain);
-          gain.connect(this.ctx.destination);
-          osc.start(now);
-          osc.stop(now + 0.2);
-        } catch(e) {}
-      }
-    },
-
-    setVolume: function(vol) {
-      masterVolume = vol;
-      if (this.masterGain && this.ctx) {
-        this.masterGain.gain.setValueAtTime(soundOn ? masterVolume : 0, this.ctx.currentTime);
-        this.bgmGain.gain.setValueAtTime(soundOn ? masterVolume * 0.35 : 0, this.ctx.currentTime);
-      }
-    },
-    
-    loadExternalSounds: function() {
-      const soundFiles = {
-        bet: 'sounds/bet.mp3', lever: 'sounds/lever.mp3', stop: 'sounds/stop.mp3',
-        gako: 'sounds/gako.mp3', grape: 'sounds/grape.mp3', cherry: 'sounds/cherry.mp3',
-        replay: 'sounds/replay.mp3', bell_clown: 'sounds/bell_clown.mp3',
-        big_fanfare: 'sounds/big_fanfare.mp3', reg_fanfare: 'sounds/reg_fanfare.mp3',
-        bonus_pay: 'sounds/bonus_pay.mp3'
-      };
-      Object.keys(soundFiles).forEach(key => {
-        fetch(soundFiles[key]).then(res => res.ok ? res.arrayBuffer() : Promise.reject())
-          .then(buf => this.ctx.decodeAudioData(buf)).then(decoded => { this.audioBuffers[key] = decoded; })
-          .catch(() => {});
-      });
-    },
-
-    play: function(type) {
-      if (!soundOn) return;
-      this.init();
-      if (this.audioBuffers[type]) {
-        try {
-          const source = this.ctx.createBufferSource();
-          source.buffer = this.audioBuffers[type];
-          source.connect(this.masterGain);
-          source.start(0);
-          return;
-        } catch(e) {}
-      }
-      
-      // 合成音フォールバック
-      try {
-        const now = this.ctx.currentTime;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.connect(gain); gain.connect(this.masterGain);
-        
-        if (type === 'lever') {
-          osc.type = 'triangle'; osc.frequency.setValueAtTime(340, now); osc.frequency.exponentialRampToValueAtTime(70, now + 0.08);
-          gain.gain.setValueAtTime(0.5, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
-          osc.start(now); osc.stop(now + 0.08);
-        } else if (type === 'stop') {
-          osc.type = 'sine'; osc.frequency.setValueAtTime(180, now); osc.frequency.exponentialRampToValueAtTime(40, now + 0.06);
-          gain.gain.setValueAtTime(0.6, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.06);
-          osc.start(now); osc.stop(now + 0.06);
-        } else if (type === 'gako') {
-          osc.type = 'square'; osc.frequency.setValueAtTime(800, now);
-          gain.gain.setValueAtTime(0.8, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
-          osc.start(now); osc.stop(now + 0.15);
-        } else if (type === 'big_fanfare' || type === 'reg_fanfare') {
-          osc.type = 'triangle'; osc.frequency.setValueAtTime(523.25, now);
-          gain.gain.setValueAtTime(0.3, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
-          osc.start(now); osc.stop(now + 0.5);
-        } else if (type === 'grape' || type === 'bonus_pay') {
-          osc.type = 'sine'; osc.frequency.setValueAtTime(659.25, now); osc.frequency.setValueAtTime(880.00, now + 0.05); osc.frequency.setValueAtTime(1046.50, now + 0.1);
-          gain.gain.setValueAtTime(0.3, now); gain.gain.linearRampToValueAtTime(0, now + 0.2);
-          osc.start(now); osc.stop(now + 0.2);
-        } else if (type === 'cherry') {
-          osc.type = 'square'; osc.frequency.setValueAtTime(440, now);
-          gain.gain.setValueAtTime(0.4, now); gain.gain.setValueAtTime(0, now + 0.05); gain.gain.setValueAtTime(0.4, now + 0.1); gain.gain.setValueAtTime(0, now + 0.15);
-          osc.start(now); osc.stop(now + 0.15);
-        } else if (type === 'replay') {
-          osc.type = 'triangle'; osc.frequency.setValueAtTime(300, now); osc.frequency.linearRampToValueAtTime(800, now + 0.3);
-          gain.gain.setValueAtTime(0.4, now); gain.gain.linearRampToValueAtTime(0, now + 0.3);
-          osc.start(now); osc.stop(now + 0.3);
-        } else if (type === 'bell_clown') {
-          osc.type = 'triangle'; osc.frequency.setValueAtTime(1200, now); osc.frequency.linearRampToValueAtTime(1400, now + 0.1); osc.frequency.linearRampToValueAtTime(1200, now + 0.2);
-          gain.gain.setValueAtTime(0.3, now); gain.gain.linearRampToValueAtTime(0, now + 0.3);
-          osc.start(now); osc.stop(now + 0.3);
-        }
-      } catch(e) {}
-    },
-
-    // ボーナス中BGMメロディループ (軍艦マーチ風 ＆ 落ち着きテンポ)
-    playBGM: function(type) {
-      if (!soundOn) return;
-      this.init();
-      this.stopBGM();
-      isPlayingBGM = true;
-      currentBgmType = type;
-      
-      const melodyBIG = [
-        [392.00, 150], [392.00, 150], [392.00, 150], [392.00, 300],
-        [329.63, 300], [261.63, 300], [196.00, 300], [329.63, 300], [261.63, 300], [196.00, 300],
-        [329.63, 300], [261.63, 300], [261.63, 600]
-      ];
-      const melodyREG = [
-        [261.63, 300], [261.63, 300], [392.00, 300], [392.00, 300], 
-        [440.00, 300], [440.00, 300], [392.00, 600]
-      ];
-      
-      const melody = type === 'BIG' ? melodyBIG : melodyREG;
-      let noteIndex = 0;
-      
-      const playNextNote = () => {
-        if (!isPlayingBGM || !soundOn || currentBgmType !== type) return;
-        
-        const note = melody[noteIndex];
-        const freq = note[0];
-        const dur = note[1];
-        
-        try {
-          const now = this.ctx.currentTime;
-          const osc = this.ctx.createOscillator();
-          const gain = this.ctx.createGain();
-          
-          osc.type = type === 'BIG' ? 'square' : 'triangle';
-          osc.frequency.value = freq;
-          
-          gain.gain.setValueAtTime(0, now);
-          gain.gain.linearRampToValueAtTime(0.18, now + 0.02);
-          gain.gain.linearRampToValueAtTime(0, now + (dur / 1000) - 0.02);
-          
-          osc.connect(gain);
-          gain.connect(this.bgmGain);
-          
-          osc.start(now);
-          osc.stop(now + (dur / 1000));
-        } catch(e) {}
-        
-        noteIndex = (noteIndex + 1) % melody.length;
-        this.bgmTimer = setTimeout(playNextNote, dur);
-      };
-      playNextNote();
-    },
-
-    stopBGM: function() {
-      isPlayingBGM = false;
-      currentBgmType = null;
-      if (this.bgmTimer) {
-        clearTimeout(this.bgmTimer);
-        this.bgmTimer = null;
-      }
-    }
-  };
-
-  // ===================================================
-  // 2. 7セグ表示制御
-  // ===================================================
-  const SEGMENT_MAP = {
-    '0': ['a','b','c','d','e','f'], '1': ['b','c'], '2': ['a','b','d','e','g'],
-    '3': ['a','b','c','d','g'], '4': ['b','c','f','g'], '5': ['a','c','d','f','g'],
-    '6': ['a','c','d','e','f','g'], '7': ['a','b','c'], '8': ['a','b','c','d','e','f','g'],
-    '9': ['a','b','c','d','f','g'], '-': ['g'], ' ': []
-  };
-
-  function update7SegDisplay(containerId, value, digits = 2) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-    let valStr = String(value).padStart(digits, ' ');
-    const digitSVGs = container.querySelectorAll('.digit7seg');
-    if (digitSVGs.length !== digits) return;
-    for (let i = 0; i < digits; i++) {
-      const char = valStr[i] || ' ';
-      const litSegs = SEGMENT_MAP[char] || [];
-      const segElems = digitSVGs[i].querySelectorAll('.seg');
-      segElems.forEach(elem => {
-        let segName = '';
-        if (elem.classList) elem.classList.forEach(cls => { if (cls.startsWith('seg-')) segName = cls.replace('seg-', ''); });
-        elem.classList.toggle('lit', litSegs.includes(segName));
-      });
-    }
-  }
-
-  // ===================================================
-  // 3. 限界突破 105%透過描画 (白枠完全撤去)
-  // ===================================================
-  function decodeRLEToCanvasPrecisionCrop(symData) {
-    const rawCvs = document.createElement('canvas');
-    rawCvs.width = 128; rawCvs.height = 128;
-    const rawCtx = rawCvs.getContext('2d');
-    rawCtx.clearRect(0, 0, 128, 128);
-
-    if (!symData || !symData.rle) return { canvas: rawCvs, crop: { x: 0, y: 22, w: 128, h: 84 } };
-
-    const imgData = rawCtx.createImageData(symData.w, symData.h);
-    const data = imgData.data;
-    const palette = symData.palette;
-    const chunks = symData.rle.split(',');
-
-    let pixelIndex = 0;
-    for (let i = 0; i < chunks.length; i++) {
-      const parts = chunks[i].split(':');
-      const count = parseInt(parts[1], 10);
-      const hex = palette[parseInt(parts[0], 10)] || '#ffffff';
-      
-      const hexLower = hex.toLowerCase();
-      const isWhite = (hexLower === '#ffffff' || hexLower === '#fff' || hexLower === '#ffffffff');
-      
-      const r = parseInt(hex.substring(1, 3), 16) || 255;
-      const g = parseInt(hex.substring(3, 5), 16) || 255;
-      const b = parseInt(hex.substring(5, 7), 16) || 255;
-      const a = isWhite ? 0 : 255;
-
-      for (let c = 0; c < count; c++) {
-        const idx = pixelIndex * 4;
-        data[idx] = r; data[idx+1] = g; data[idx+2] = b; data[idx+3] = a;
-        pixelIndex++;
-      }
-    }
-    rawCtx.putImageData(imgData, symData.x, symData.y);
-    return { canvas: rawCvs, crop: { x: 0, y: 22, w: 128, h: 84 } };
-  }
-
-  function initSymbolCache() {
-    const ALL_IDS = ['7', 'BAR', 'GRAPE', 'CHERRY', 'BELL', 'RHINO', 'CLOWN'];
-    const dataStore = window.SLOT_SYMBOLS_DATA || {};
-    ALL_IDS.forEach(id => {
-      symbolCanvasCache[id] = dataStore[id] ? decodeRLEToCanvasPrecisionCrop(dataStore[id]) : decodeRLEToCanvasPrecisionCrop(null);
-    });
-  }
-
-  function drawSymbol(ctx, type, y, isReelSpinning = false) {
-    const cached = symbolCanvasCache[type];
-    if (!cached) return;
-    ctx.save();
-    ctx.translate(0, y);
-
-    // 【限界突破デザイン】赤7とBARはコマ高(46px)に対して「105%」拡大。他の小役は85%に抑える。
-    let maxH = (type === '7' || type === 'BAR') ? SYMBOL_HEIGHT * 1.05 : SYMBOL_HEIGHT * 0.85;
-    let maxW = (type === '7' || type === 'BAR') ? CANVAS_WIDTH * 1.05 : CANVAS_WIDTH * 0.80;
-
-    const scale = Math.min(maxW / cached.crop.w, maxH / cached.crop.h);
-    let drawW = cached.crop.w * scale;
-    let drawH = cached.crop.h * scale;
-
-    const drawX = Math.round((CANVAS_WIDTH - drawW) / 2);
-    const drawY = Math.round((SYMBOL_HEIGHT - drawH) / 2);
-
-    ctx.imageSmoothingEnabled = !isReelSpinning;
-    ctx.drawImage(cached.canvas, cached.crop.x, cached.crop.y, cached.crop.w, cached.crop.h, drawX, drawY, drawW, drawH);
-    
-    ctx.restore();
-  }
-
-  // ===================================================
-  // 4. UI ＆ ランプ更新
+  // 1. UI ＆ ランプ更新
   // ===================================================
   function updateDisplays(payout = 0) {
     if (internalCredits < 3 && !isBonusMode) internalCredits = 50;
     credits = Math.min(50, internalCredits);
 
-    update7SegDisplay('creditDisp', credits, 2);
-    update7SegDisplay('countDisp', isBonusMode ? bonusAcquired : 0, 3);
-    update7SegDisplay('payoutDisp', payout, 2);
+    if (window.REEL_RENDERER) {
+      window.REEL_RENDERER.update7SegDisplay('creditDisp', credits, 2);
+      window.REEL_RENDERER.update7SegDisplay('countDisp', isBonusMode ? bonusAcquired : 0, 3);
+      window.REEL_RENDERER.update7SegDisplay('payoutDisp', payout, 2);
+    }
 
     const lampReplay = document.getElementById('lampReplay');
     const lampStart = document.getElementById('lampStart');
@@ -405,7 +98,7 @@
       const gEl = document.getElementById('barGames'); if(gEl) gEl.textContent = stats.currentGames + 'G';
       const bEl = document.getElementById('barBigCount'); if(bEl) bEl.textContent = stats.bigCount;
       const rEl = document.getElementById('barRegCount'); if(rEl) rEl.textContent = stats.regCount;
-      const pEl = document.getElementById('barTotalProb'); if(pEl) pEl.textContent = stats.totalProb; // 合成確率
+      const pEl = document.getElementById('barTotalProb'); if(pEl) pEl.textContent = stats.totalProb;
     }
   }
 
@@ -431,7 +124,7 @@
     isPeka = true;
     const gogoBox = document.getElementById('gogoBox');
     if (gogoBox) gogoBox.classList.add('peka');
-    SoundEngine.play('gako');
+    if (window.SLOT_SOUND) window.SLOT_SOUND.play('gako');
     if (isAutoMode) stopAutoMode();
   }
 
@@ -443,7 +136,10 @@
 
   function stopAutoMode() {
     isAutoMode = false;
-    clearTimeout(autoTimer);
+    if (autoTimer) {
+      clearTimeout(autoTimer);
+      autoTimer = null;
+    }
     const btn = document.getElementById('autoToggleBtn');
     if (btn) { btn.textContent = '👤 MANUAL'; btn.classList.remove('active'); }
   }
@@ -457,31 +153,36 @@
   }
 
   // ===================================================
-  // 5. グローバルスロットエンジン (実機フラグ・超爽快アシスト・リセット搭載)
+  // 2. グローバルスロットエンジン (JUGGLER_ENGINE)
   // ===================================================
   window.JUGGLER_ENGINE = {
     isInitialized: false,
     
     init: function() {
       if (this.isInitialized) return;
-      initSymbolCache();
+      if (window.REEL_RENDERER) window.REEL_RENDERER.initSymbolCache();
 
       reels = REEL_STRIPS.map((strip, idx) => {
         const canvas = document.getElementById(`reelCanvas${idx}`);
         if (!canvas) return null;
         canvas.width = CANVAS_WIDTH; canvas.height = SYMBOL_HEIGHT * strip.length * 3;
         const ctx = canvas.getContext('2d');
-        const tripleStrip = [...strip, ...strip, ...strip];
-        tripleStrip.forEach((sym, i) => { drawSymbol(ctx, sym, i * SYMBOL_HEIGHT, false); });
+        
+        const reelObj = {
+          id: idx, strip: strip, canvas: canvas, ctx: ctx,
+          currentIndex: 0, isSpinning: false, isStopping: false,
+          speed: 0, pos: 0, targetPos: 0, animId: null
+        };
+
         const currentIdx = Math.floor(Math.random() * strip.length);
         const initialPos = currentIdx * SYMBOL_HEIGHT;
+        reelObj.currentIndex = currentIdx;
+        reelObj.pos = initialPos;
         canvas.style.transform = `translateY(-${initialPos}px)`;
 
-        return {
-          id: idx, strip: strip, canvas: canvas, ctx: ctx,
-          currentIndex: currentIdx, isSpinning: false, isStopping: false,
-          speed: 0, pos: initialPos, targetPos: 0, animId: null
-        };
+        if (window.REEL_RENDERER) window.REEL_RENDERER.renderReelCanvas(reelObj, false);
+
+        return reelObj;
       }).filter(Boolean);
 
       setLineBadgesLit(true);
@@ -490,7 +191,6 @@
       this.isInitialized = true;
     },
 
-    // 遊技完全リセット機能
     resetGame: function() {
       gameState = STATE_IDLE;
       activeReelsCount = 0;
@@ -500,7 +200,10 @@
       internalCredits = 50;
       betAmount = 0;
       isAutoMode = false;
-      clearTimeout(autoTimer);
+      if (autoTimer) {
+        clearTimeout(autoTimer);
+        autoTimer = null;
+      }
       
       currentFlag = null;
       bonusFlag = null;
@@ -511,18 +214,21 @@
       pekaTiming = null;
       isReplay = false;
       
-      SoundEngine.stopBGM();
+      if (window.SLOT_SOUND) window.SLOT_SOUND.stopBGM();
       turnOffGogoLamp();
       
       reels.forEach(reel => {
         reel.isSpinning = false;
         reel.isStopping = false;
-        cancelAnimationFrame(reel.animId);
+        if (reel.animId) {
+          cancelAnimationFrame(reel.animId);
+          reel.animId = null;
+        }
         const currentIdx = Math.floor(Math.random() * reel.strip.length);
         reel.currentIndex = currentIdx;
         reel.pos = currentIdx * SYMBOL_HEIGHT;
         reel.canvas.style.transform = `translateY(-${reel.pos}px)`;
-        this.renderReelCanvas(reel, false);
+        if (window.REEL_RENDERER) window.REEL_RENDERER.renderReelCanvas(reel, false);
         
         const btn = document.getElementById(`stopBtn${reel.id}`);
         if(btn) { btn.disabled = true; btn.classList.remove('spinning'); }
@@ -538,43 +244,32 @@
       updateDisplays(0);
     },
 
-    getConfig: function() { return { setting: currentSetting, autoStopOnBonus: autoStopOnBonus, weightCut: weightCut, volume: masterVolume, soundOn: soundOn }; },
+    getConfig: function() { 
+      return { setting: currentSetting, autoStopOnBonus: autoStopOnBonus, weightCut: weightCut, volume: masterVolume, soundOn: soundOn }; 
+    },
     
-    // 【最重要修正】設定適用時のサウンド一発解禁フック
     setConfig: function(config) {
       if (config.setting !== undefined) currentSetting = config.setting;
       if (config.autoStopOnBonus !== undefined) autoStopOnBonus = config.autoStopOnBonus;
       if (config.weightCut !== undefined) weightCut = config.weightCut;
-      if (config.volume !== undefined) SoundEngine.setVolume(config.volume);
-      if (config.soundOn !== undefined) {
-        soundOn = config.soundOn;
-        if (soundOn) {
-          SoundEngine.unlockAndPlayConfirm(); // 1解禁 ＆ 決定音(ポーン♪)同期発火
-          if (isBonusMode && !isPlayingBGM) SoundEngine.playBGM(bonusType);
-        } else {
-          SoundEngine.stopBGM();
-        }
+
+      if (config.volume !== undefined) masterVolume = config.volume;
+      if (config.soundOn !== undefined) soundOn = config.soundOn;
+
+      if (window.SLOT_SOUND) {
+        window.SLOT_SOUND.setVolumeAndState(masterVolume, soundOn);
       }
     },
 
-    renderReelCanvas: function(reel, isSpinning) {
-      const tripleStrip = [...reel.strip, ...reel.strip, ...reel.strip];
-      reel.ctx.clearRect(0, 0, reel.canvas.width, reel.canvas.height);
-      tripleStrip.forEach((sym, i) => { drawSymbol(reel.ctx, sym, i * SYMBOL_HEIGHT, isSpinning); });
-    },
-
+    // 毎ゲームの抽選 (成立後も通常抽選を正常に行い、小役揃いを解禁)
     drawFlag: function() {
       if (isBonusMode) return 'GRAPE'; 
-      if (bonusFlag) return bonusFlag;
 
       const r = Math.random();
       const prob = PROBABILITY_TABLE[currentSetting];
       let accum = 0;
       
-      accum += prob.sBIG; if (r < accum) return 'BIG';
-      accum += prob.sREG; if (r < accum) return 'REG';
-      accum += prob.cBIG; if (r < accum) return 'CHERRY_BIG';
-      accum += prob.cREG; if (r < accum) return 'CHERRY_REG';
+      // 1. 小役抽選（成立後でも小役当選を最優先）
       accum += PROB_REPLAY; if (r < accum) return 'REPLAY';
       accum += prob.grape; if (r < accum) return 'GRAPE';
       
@@ -583,6 +278,12 @@
       
       accum += PROB_BELL; if (r < accum) return 'BELL';
       accum += PROB_CLOWN; if (r < accum) return 'CLOWN';
+
+      // 2. ボーナス重複／単独抽選
+      accum += prob.sBIG; if (r < accum) return 'BIG';
+      accum += prob.sREG; if (r < accum) return 'REG';
+      accum += prob.cBIG; if (r < accum) return 'CHERRY_BIG';
+      accum += prob.cREG; if (r < accum) return 'CHERRY_REG';
 
       return null;
     },
@@ -597,14 +298,14 @@
         gameState = STATE_SPINNING;
         activeReelsCount = 3;
         hasActionExecutedInCurrentTouch = true;
-        spinStartTime = Date.now();
 
-        SoundEngine.init();
+        if (window.SLOT_SOUND) window.SLOT_SOUND.init();
         triggerLeverVisual();
 
         setLineBadgesLit(false);
         updateDisplays(0);
 
+        // 【不変要件】ウェイトカット時であっても実機同様に一瞬だけWaitランプを点灯させる演出
         const lampWait = document.getElementById('lampWait');
         if (lampWait) {
           lampWait.classList.add('active');
@@ -622,10 +323,11 @@
           if (window.DATA_COUNTER) window.DATA_COUNTER.onGameStart(0, false);
         }
 
-        SoundEngine.play('lever');
+        if (window.SLOT_SOUND) window.SLOT_SOUND.play('lever');
         
         currentFlag = this.drawFlag();
         
+        // ボーナス当選判定 ＆ GOGO!ランプ点灯タイミング決定
         if (currentFlag === 'BIG' || currentFlag === 'REG' || currentFlag === 'CHERRY_BIG' || currentFlag === 'CHERRY_REG') {
           if (!bonusFlag) {
             bonusFlag = currentFlag;
@@ -649,7 +351,7 @@
           reel.isSpinning = true;
           reel.isStopping = false;
           reel.speed = spinSpeed; 
-          this.renderReelCanvas(reel, true); 
+          if (window.REEL_RENDERER) window.REEL_RENDERER.renderReelCanvas(reel, true); 
           this.spinReel(reel);
           const btn = document.getElementById(`stopBtn${i}`);
           if (btn) { btn.disabled = false; btn.classList.add('spinning'); }
@@ -670,13 +372,19 @@
       if (!reel || !reel.isSpinning || reel.isStopping) return;
 
       try {
+        // AUTOモード実行中に手動タップが入った場合、進行中のAUTOタイマーを即座に安全破棄
+        if (!isAutoCall && autoTimer) {
+          clearTimeout(autoTimer);
+          autoTimer = null;
+        }
+
         reel.isStopping = true;
         activeReelsCount--;
         if (!isAutoCall) hasActionExecutedInCurrentTouch = true;
 
         const btn = document.getElementById(`stopBtn${index}`);
         if (btn) { btn.disabled = true; btn.classList.remove('spinning'); }
-        SoundEngine.play('stop');
+        if (window.SLOT_SOUND) window.SLOT_SOUND.play('stop');
 
         if (!isBonusMode && index === 0 && bonusFlag && pekaTiming === 'STOP1') triggerPeka();
         if (!isBonusMode && index === 2 && bonusFlag && pekaTiming === 'STOP3_DOWN') triggerPeka();
@@ -691,6 +399,7 @@
         if (isBonusMode) {
           targetSyms = ['GRAPE'];
         } else {
+          // 狙う図柄の判定
           if (currentFlag === 'BIG') targetSyms = ['7'];
           else if (currentFlag === 'REG') targetSyms = index === 2 ? ['BAR'] : ['7'];
           else if (currentFlag === 'CHERRY_BIG' || currentFlag === 'CHERRY_REG' || currentFlag === 'CHERRY') targetSyms = ['CHERRY'];
@@ -699,14 +408,16 @@
           else if (currentFlag === 'BELL') targetSyms = ['BELL'];
           else if (currentFlag === 'CLOWN') targetSyms = ['CLOWN'];
           else if (!currentFlag && bonusFlag) {
+            // ボーナス成立後のハズレゲームではボーナス図柄を狙わせる
             if (bonusFlag === 'BIG' || bonusFlag === 'CHERRY_BIG') targetSyms = ['7'];
             else if (bonusFlag === 'REG' || bonusFlag === 'CHERRY_REG') targetSyms = index === 2 ? ['BAR'] : ['7'];
           }
         }
 
-        // 超・引き込みアシスト
+        // 【修正完治】成立ゲーム(当選G)・成立後・ボーナス消化中での21コマ超アシスト適用
         let slipLimit = 4;
-        if (isBonusMode || (!currentFlag && bonusFlag && (targetSyms.includes('7') || targetSyms.includes('BAR')))) {
+        const isBonusFlagCurrent = (currentFlag === 'BIG' || currentFlag === 'REG' || currentFlag === 'CHERRY_BIG' || currentFlag === 'CHERRY_REG');
+        if (isBonusMode || bonusFlag || isBonusFlagCurrent) {
           slipLimit = 21; 
         }
         
@@ -747,7 +458,11 @@
     },
 
     bindEvents: function() {
-      const startTouchSession = () => { isTouchActive = true; };
+      const startTouchSession = () => {
+        isTouchActive = true;
+        // 【不変要件】画面初回タップ時にSoundEngineを裏側で常時スタンバイ(プリロード)起動
+        if (window.SLOT_SOUND) window.SLOT_SOUND.preload();
+      };
       const endTouchSession = () => { isTouchActive = false; hasActionExecutedInCurrentTouch = false; };
 
       document.addEventListener('touchstart', startTouchSession, { passive: true });
@@ -772,7 +487,7 @@
 
     scheduleAutoStop: function() {
       if (!isAutoMode) return;
-      clearTimeout(autoTimer);
+      if (autoTimer) clearTimeout(autoTimer);
       autoTimer = setTimeout(() => {
         if (reels[0].isSpinning) this.stopReelIndex(0, true);
         autoTimer = setTimeout(() => {
@@ -790,11 +505,17 @@
         if (!reel.isSpinning) return;
         if (reel.isStopping) {
           let dist = (reel.pos - reel.targetPos + maxPos) % maxPos;
+          // 【目揃いズレ完全防ぎ】減速完了領域に達した時点でアニメーションIdをクリアし理論位置に確定固定
           if (dist <= reel.speed || dist < 2) {
-            reel.pos = reel.targetPos; reel.isSpinning = false; reel.isStopping = false;
-            cancelAnimationFrame(reel.animId);
+            reel.pos = reel.targetPos; 
+            reel.isSpinning = false; 
+            reel.isStopping = false;
+            if (reel.animId) {
+              cancelAnimationFrame(reel.animId);
+              reel.animId = null;
+            }
             reel.canvas.style.transform = `translateY(-${reel.pos}px)`;
-            this.renderReelCanvas(reel, false);
+            if (window.REEL_RENDERER) window.REEL_RENDERER.renderReelCanvas(reel, false);
             if (activeReelsCount === 0) this.onAllStopped();
             return;
           } else {
@@ -835,13 +556,14 @@
       let playSoundType = 'bonus_pay';
       let grapeWin = false, cherryWin = false, bellWin = false, clownWin = false;
 
+      // ベル・ピエロの全マス一致判定（every）厳格化
       activeLines.forEach(line => {
         if (line.every(s => s === '7')) isBigWin = true;
         else if (line[0] === '7' && line[1] === '7' && line[2] === 'BAR') isRegWin = true;
         else if (line.every(s => s === 'RHINO')) isReplayWin = true;
         else if (line.every(s => s === 'GRAPE')) grapeWin = true;
         else if (line[0] === 'CHERRY') cherryWin = true;
-        else if (line.every(s => s === 'BELL')) bellWin = true;
+        else if (line.every(s => s === 'BELL')) bellWin = true; 
         else if (line.every(s => s === 'CLOWN')) clownWin = true;
       });
 
@@ -858,7 +580,7 @@
         if (window.DATA_COUNTER) {
           window.DATA_COUNTER.onPayout(payout, grapeWin ? (isBonusMode ? 'BONUS_GRAPE' : 'GRAPE') : 'OTHER');
         }
-        SoundEngine.play(playSoundType);
+        if (window.SLOT_SOUND) window.SLOT_SOUND.play(playSoundType);
       }
 
       if (isBonusMode) {
@@ -868,7 +590,7 @@
           isBonusMode = false;
           bonusFlag = null; 
           currentFlag = null;
-          SoundEngine.stopBGM();
+          if (window.SLOT_SOUND) window.SLOT_SOUND.stopBGM();
         }
         setLineBadgesLit(true);
         updateDisplays(payout);
@@ -881,20 +603,24 @@
         bonusFlag = null; currentFlag = null; 
         if (window.DATA_COUNTER) window.DATA_COUNTER.onBonusWin('BIG');
         turnOffGogoLamp();
-        SoundEngine.play('big_fanfare');
-        setTimeout(() => { SoundEngine.playBGM('BIG'); }, 1500);
+        if (window.SLOT_SOUND) {
+          window.SLOT_SOUND.play('big_fanfare');
+          setTimeout(() => { window.SLOT_SOUND.playBGM('BIG'); }, 1500);
+        }
         if (autoStopOnBonus) stopAutoMode();
       } else if (isRegWin) {
         isBonusMode = true; bonusType = 'REG'; bonusAcquired = 0; bonusTarget = 98;
         bonusFlag = null; currentFlag = null;
         if (window.DATA_COUNTER) window.DATA_COUNTER.onBonusWin('REG');
         turnOffGogoLamp();
-        SoundEngine.play('reg_fanfare');
-        setTimeout(() => { SoundEngine.playBGM('REG'); }, 1500);
+        if (window.SLOT_SOUND) {
+          window.SLOT_SOUND.play('reg_fanfare');
+          setTimeout(() => { window.SLOT_SOUND.playBGM('REG'); }, 1500);
+        }
         if (autoStopOnBonus) stopAutoMode();
       } else if (isReplayWin) {
         isReplay = true;
-        SoundEngine.play('replay');
+        if (window.SLOT_SOUND) window.SLOT_SOUND.play('replay');
       }
 
       currentFlag = null;

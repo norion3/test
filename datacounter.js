@@ -1,6 +1,6 @@
 /**
  * データカウンターモジュール (datacounter.js)
- * IN/OUT集計・機械割算出・ホール仕様データ集計・各種確率計算・初期レンジ±500可変スランプグラフ描画
+ * IN/OUT集計・機械割(RTP)算出・全件履歴保持・可変スランプグラフ描画
  */
 
 (function() {
@@ -75,7 +75,7 @@
       const now = new Date();
       const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-      // 直近の履歴を先頭に追加 (最大50件保持)
+      // 履歴を無制限で保持（配列の先頭に追加）
       this.history.unshift({
         id: this.history.length + 1,
         type: type, // 'BIG' | 'REG'
@@ -83,10 +83,6 @@
         totalGame: this.totalGames,
         time: timeStr
       });
-
-      if (this.history.length > 50) {
-        this.history.pop();
-      }
 
       // ボーナス間ゲーム数をリセット
       this.currentGames = 0;
@@ -97,7 +93,7 @@
     recordSlumpPoint: function(forceRecord = false) {
       const lastPoint = this.slumpData[this.slumpData.length - 1];
       
-      // 強制記録(ボーナス時) または 通常時5G経過毎 または 差枚が10枚以上動いた場合にのみポイント保存
+      // 強制記録(ボーナス時) または 通常時5G経過毎 または 差枚が10枚以上動いた場合にポイント保存
       if (forceRecord || !lastPoint || (this.totalGames - lastPoint.game >= 5) || Math.abs(this.diffMedal - lastPoint.diff) >= 10) {
         this.slumpData.push({
           game: this.totalGames,
@@ -106,7 +102,7 @@
       }
     },
 
-    // 統計・計算結果データの取得 (常時表示バー ＆ 詳細モーダル用)
+    // 統計・計算結果データの取得
     getStats: function() {
       const formatProb = (count, total) => {
         if (count === 0 || total === 0) return '1/--.-';
@@ -136,18 +132,20 @@
         diffMedal: this.diffMedal,
         totalIn: this.totalIn,
         totalOut: this.totalOut,
-        rtp: rtp // 機械割（％）
+        rtp: rtp
       };
     },
 
-    // Canvasを使用した可変レンジ出玉スランプグラフ描画 (初期レンジ±500)
+    // スランプグラフ描画 (初期±500レンジ、回転数に応じて1画面に自動縮尺表示)
     renderSlumpGraph: function(canvasElement) {
       if (!canvasElement) return;
       const ctx = canvasElement.getContext('2d');
       const width = canvasElement.width;
       const height = canvasElement.height;
 
-      // 背景色クリア
+      if (width === 0 || height === 0) return;
+
+      // 背景クリア
       ctx.fillStyle = '#111622';
       ctx.fillRect(0, 0, width, height);
 
@@ -155,7 +153,7 @@
       const graphWidth = width - padding.left - padding.right;
       const graphHeight = height - padding.top - padding.bottom;
 
-      // 出玉の振れ幅に応じたY軸レンジの動的スケーリング
+      // Y軸レンジの動的スケーリング
       let maxDiff = 500;
       let minDiff = -500;
 

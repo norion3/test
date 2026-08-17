@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>I'm GRAVITY (GOGO! CHANCE搭載版)</title>
+  <title>I'm GRAVITY (GOGO! CHANCE Edition)</title>
   <style>
     /* ---------------------------------------------------
-       1. 基本設定 ＆ GRAVITY・全画面レスポンシブ可変対応
+       1. 基本設定 ＆ 全画面レスポンシブ可変対応
     --------------------------------------------------- */
     :root {
       --bg-color: #050508;
@@ -36,7 +36,6 @@
       touch-action: none;
     }
 
-    /* GRAVITY上部ヘッダー不可侵エリア対策 + Dynamic Viewport Height (100dvh) */
     .app-viewport {
       width: 100vw;
       height: 100dvh;
@@ -57,7 +56,7 @@
     }
 
     /* ---------------------------------------------------
-       2. ドット筐体 ＆ 赤統一・横幅390px拡大 黄金比レイアウト
+       2. ドット筐体 ＆ 黄金比レイアウト
     --------------------------------------------------- */
     .cabinet {
       position: relative;
@@ -74,12 +73,11 @@
       transition: all 0.3s ease;
     }
 
-    /* 画面縦幅に応じて自動縮小 */
     @media (max-height: 740px) { .cabinet { transform: scale(0.92); } }
     @media (max-height: 660px) { .cabinet { transform: scale(0.82); } }
     @media (max-height: 580px) { .cabinet { transform: scale(0.72); } }
 
-    /* 【煌麗化】ボーナス時の豪華イルミネーション (ゴールド輝閃 ➔ パッションレッド ➔ ゴールド輝閃) */
+    /* ボーナス時イルミネーション */
     @keyframes gorgeousFlash {
       0% { filter: brightness(1); box-shadow: inset 0 0 20px rgba(0,0,0,0.9); }
       33% { filter: brightness(1.5); box-shadow: inset 0 0 50px rgba(255, 215, 0, 0.7), 0 0 35px rgba(255, 215, 0, 0.6); }
@@ -95,7 +93,6 @@
       background: linear-gradient(180deg, #ff3b3b 0%, #a00000 100%);
     }
 
-    /* GRAVITY TOPランプ (赤・金統一) */
     .kitac-top {
       width: 100%;
       height: 24px;
@@ -124,7 +121,6 @@
       letter-spacing: 2px;
     }
 
-    /* 上部 BIG CHANCE パネル */
     .top-panel {
       width: 100%;
       background: linear-gradient(180deg, var(--cabinet-red) 0%, #a80e14 60%, var(--cabinet-darkred) 100%);
@@ -160,7 +156,6 @@
       text-shadow: 0 0 6px #fff;
     }
 
-    /* メインパネル枠 (深紅・金フチ) */
     .main-panel {
       position: relative;
       width: 100%;
@@ -182,11 +177,10 @@
       justify-content: space-between;
     }
 
-    /* 左側ライン表示器（③②①） */
     .line-numbers {
       display: flex;
       flex-direction: column;
-      gap: 15px; /* リール縮小に合わせてギャップ調整 */
+      gap: 15px;
       font-weight: 900;
       font-size: 10px;
     }
@@ -208,18 +202,16 @@
     .line-badge.lit.badge-2 { background: #2196f3; color: #fff; border-color: #88ccff; box-shadow: 0 0 8px #2196f3; }
     .line-badge.lit.badge-1 { background: #4caf50; color: #fff; border-color: #88ff88; box-shadow: 0 0 8px #4caf50; }
 
-    /* 【極限圧縮・白枠全廃】リール窓 (320px × 138px : コマ高46px) */
     .reels-screen {
       width: 320px;
       height: 138px;
-      background: #ffffff; /* 純白のシームレス背景 */
+      background: #ffffff;
       border: 3px solid #111;
       border-radius: 4px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       overflow: hidden;
-      /* インナーシャドウで上下を物理的に暗く沈める */
       box-shadow: inset 0 8px 10px rgba(0,0,0,0.5), inset 0 -8px 10px rgba(0,0,0,0.5);
       position: relative;
     }
@@ -232,7 +224,6 @@
       overflow: hidden;
     }
 
-    /* リール縦セパレータ (太い縦枠線) */
     .reel-separator {
       width: 2px;
       height: 100%;
@@ -248,7 +239,6 @@
       will-change: transform;
     }
 
-    /* 右側実機文字ランプ (実機完全順序: Start(赤) -> Replay(緑) -> Wait(黄)) */
     .status-panel-right {
       display: flex;
       flex-direction: column;
@@ -271,7 +261,6 @@
     .text-lamp.active.lamp-replay { color: #00ff66; text-shadow: 0 0 6px #00ff66; box-shadow: 0 0 6px #00ff66; }
     .text-lamp.active.lamp-wait { color: #ffcc00; text-shadow: 0 0 6px #ffcc00; box-shadow: 0 0 6px #ffcc00; }
 
-    /* 下段：GOGO & 7セグ群 */
     .main-bottom-row {
       display: flex;
       justify-content: space-between;
@@ -312,7 +301,7 @@
     @keyframes pekaFlash { from { transform: scale(1); } to { transform: scale(1.03); } }
 
     /* ---------------------------------------------------
-       3. 絶対崩れないSVGベクター 7セグメントLED
+       3. 7セグメントLED
     --------------------------------------------------- */
     .led-group {
       display: flex;
@@ -357,7 +346,7 @@
     }
 
     /* ---------------------------------------------------
-       4. 正面視点 凹型ソケット沈み込みレバー ＆ 中央寄せストップボタン
+       4. コントロールデッキ
     --------------------------------------------------- */
     .control-deck {
       width: 100%;
@@ -367,7 +356,7 @@
       padding: 10px 18px;
       margin-top: 6px;
       display: flex;
-      justify-content: center; /* 【ど中央寄せ黄金レイアウト】 */
+      justify-content: center;
       align-items: center;
       gap: 22px;
       box-shadow: inset 0 2px 4px rgba(255,255,255,0.8), 0 5px 10px rgba(0,0,0,0.7);
@@ -424,7 +413,6 @@
       background: radial-gradient(circle at 50% 50%, #000 0%, #151515 100%);
     }
 
-    /* ストップボタン (数字印字完全排除・赤いプレーン仕様) */
     .stop-btn-group {
       display: flex;
       gap: 12px;
@@ -447,7 +435,7 @@
     .stop-btn:not(:disabled):active { transform: translateY(3px) scale(0.95); }
 
     /* ---------------------------------------------------
-       5. 赤統一 下部『I'm GRAVITY』パネル ＆ 5項目常時データバー
+       5. 常時表示液晶バー ＆ コントロール
     --------------------------------------------------- */
     .bottom-custom-panel {
       width: 100%;
@@ -470,7 +458,6 @@
       text-shadow: 0 0 8px #ffcc00, 1px 1px 2px #000;
     }
 
-    /* 最下部：5項目 常時表示液晶風データディスプレイバー */
     .live-data-bar {
       width: 100%;
       background: #0d111a;
@@ -515,40 +502,39 @@
     .live-data-val.reg { color: #00e5ff; }
     .live-data-val.prob { color: #ffcc00; }
 
-    /* 最下部コントロール (UI操作領域。画面タップ進行から完全に分離保護) */
     .bottom-controls {
       display: flex;
-      gap: 6px;
+      gap: 4px;
       margin-top: 6px;
-      justify-content: center;
+      justify-content: space-between;
       align-items: center;
       position: relative;
       z-index: 100;
       width: 100%;
     }
 
-    /* 【最重要修正】改行防止 (white-space: nowrap) ＆ 1行デザイン固定 */
     .ctrl-btn {
       background: #222;
       border: 1px solid #555;
       color: #ccc;
-      padding: 8px 10px;
+      padding: 8px 4px;
       border-radius: 16px;
-      font-size: 11px;
+      font-size: 10.5px;
       font-weight: bold;
       cursor: pointer;
       text-align: center;
-      white-space: nowrap; /* 改行を物理的に絶対禁止 */
+      white-space: nowrap;
       flex: 1;
+      overflow: hidden;
     }
 
-    .ctrl-btn.auto-btn { display: inline-block; min-width: 90px; }
+    .ctrl-btn.auto-btn { min-width: 82px; }
     .ctrl-btn.active { background: #ffcc00; color: #000; border-color: #ffcc00; box-shadow: 0 0 8px #ffcc00; }
     .ctrl-btn.data-btn { background: linear-gradient(135deg, #8a0b10 0%, #d31820 100%); color: #fff; border-color: var(--gold); box-shadow: 0 2px 6px rgba(0,0,0,0.5); }
-    .ctrl-btn.reset-btn { background: #440000; color: #ff8888; border-color: #ff3333; max-width: 70px; }
+    .ctrl-btn.reset-btn { background: #440000; color: #ff8888; border-color: #ff3333; max-width: 65px; }
 
     /* ---------------------------------------------------
-       6. 共通モーダルUI (データ・設定・リセット)
+       6. モーダルUI
     --------------------------------------------------- */
     .modal-overlay {
       display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
@@ -573,11 +559,11 @@
     .stat-value.big { color: #ff3366; }
     .stat-value.reg { color: #00e5ff; }
     .stat-value.total { color: #ffcc00; }
-    #slumpCanvas { width: 100%; height: 150px; background: #111622; }
+    #slumpCanvas { width: 100%; height: 140px; background: #111622; display: block; }
     
     .history-section { max-height: 140px; overflow-y: auto; font-size: 11px; text-align: center; overscroll-behavior-y: contain; }
     table { width: 100%; border-collapse: collapse; }
-    th { color: #7a8ba6; border-bottom: 1px solid #2d3b54; }
+    th { color: #7a8ba6; border-bottom: 1px solid #2d3b54; position: sticky; top: 0; background: #111622; }
     td { padding: 4px; border-bottom: 1px solid #222d42; }
 
     .reset-message { font-size: 14px; text-align: center; margin: 15px 0; line-height: 1.5; }
@@ -587,6 +573,7 @@
 
   </style>
 
+  <!-- 1. 図柄データファイル群の読み込み -->
   <script src="./symbol_7.js"></script>
   <script src="./symbol_BAR.js"></script>
   <script src="./symbol_GRAPE.js"></script>
@@ -594,38 +581,35 @@
   <script src="./symbol_BELL.js"></script>
   <script src="./symbol_RHINO.js"></script>
   <script src="./symbol_CLOWN.js"></script>
+
+  <!-- 2. 分割モジュール群の順序定義ロード -->
   <script src="./datacounter.js"></script>
+  <script src="./sound.js"></script>
+  <script src="./reel_renderer.js"></script>
   <script src="./engine.js"></script>
 </head>
 <body>
 
-  <!-- 全画面コンテナ -->
   <div class="app-viewport" id="appViewport">
     <div class="cabinet-scaler">
       
-      <!-- ドット筐体 -->
       <div class="cabinet" id="mainCabinet">
         
-        <!-- GRAVITY TOPランプ -->
         <div class="kitac-top"><div class="kitac-lamp">GRAVITY</div></div>
 
-        <!-- 上部 BIG CHANCE パネル -->
         <div class="top-panel">
           <div class="big-chance-text">BIG CHANCE!</div>
           <div class="juggler-brand-bar">G-SLOT</div>
         </div>
 
-        <!-- メインパネル枠 -->
         <div class="main-panel">
           <div class="reels-row">
-            <!-- ライン表示 -->
             <div class="line-numbers">
               <div class="line-badge badge-3 lit" id="lineBadge3">3</div>
               <div class="line-badge badge-2 lit" id="lineBadge2">2</div>
               <div class="line-badge badge-1 lit" id="lineBadge1">1</div>
             </div>
 
-            <!-- 【極限圧縮】リール窓 (320x138) - 透過図柄を純白背景に密着表示 -->
             <div class="reels-screen" id="reelsScreenArea">
               <div class="reel-column"><canvas id="reelCanvas0" class="reel-canvas"></canvas></div>
               <div class="reel-separator"></div>
@@ -634,7 +618,6 @@
               <div class="reel-column"><canvas id="reelCanvas2" class="reel-canvas"></canvas></div>
             </div>
 
-            <!-- 右側文字透過パネル (Start -> Replay -> Wait の実機完全配列) -->
             <div class="status-panel-right">
               <div class="text-lamp lamp-start" id="lampStart">Start</div>
               <div class="text-lamp lamp-replay" id="lampReplay">Replay</div>
@@ -642,7 +625,6 @@
             </div>
           </div>
 
-          <!-- GOGOランプ ＆ SVG7セグ (COUNT 3桁仕様) -->
           <div class="main-bottom-row">
             <div class="gogo-box" id="gogoBox">
               <svg class="gogo-svg" viewBox="0 0 100 60">
@@ -653,7 +635,6 @@
             </div>
 
             <div class="led-group">
-              <!-- CREDIT (2桁) -->
               <div class="led-unit">
                 <div class="led-label">CREDIT</div>
                 <div class="led-7seg-container" id="creditDisp">
@@ -662,7 +643,6 @@
                 </div>
               </div>
 
-              <!-- COUNT (3桁) -->
               <div class="led-unit">
                 <div class="led-label">COUNT</div>
                 <div class="led-7seg-container" id="countDisp">
@@ -672,7 +652,6 @@
                 </div>
               </div>
 
-              <!-- PAYOUT (2桁) -->
               <div class="led-unit">
                 <div class="led-label">PAYOUT</div>
                 <div class="led-7seg-container" id="payoutDisp">
@@ -684,7 +663,6 @@
           </div>
         </div>
 
-        <!-- コントロールデッキ（正面視点 凹型沈み込みレバー ＋ 中央寄せ印字なし赤ボタン） -->
         <div class="control-deck">
           <div id="startBtn" class="real-lever-assembly" title="START">
             <div class="lever-housing"></div>
@@ -699,12 +677,10 @@
           </div>
         </div>
 
-        <!-- 赤統一 下部『I'm GRAVITY』パネル -->
         <div class="bottom-custom-panel">
           <div class="custom-panel-text">I'm GRAVITY</div>
         </div>
 
-        <!-- 最下部：5項目 常時表示液晶風データディスプレイバー -->
         <div class="live-data-bar">
           <div class="live-data-item">
             <div class="live-data-label">ゲーム数</div>
@@ -728,7 +704,6 @@
           </div>
         </div>
 
-        <!-- 最下部コントロール (1行短縮表記 ＆ 改行完全禁止) -->
         <div class="bottom-controls">
           <button id="autoToggleBtn" class="ctrl-btn auto-btn">👤 MANUAL</button>
           <button id="dataBtn" class="ctrl-btn data-btn">📊 詳細データ</button>
@@ -740,7 +715,7 @@
     </div>
   </div>
 
-  <!-- ホール風詳細データカウンター モーダル -->
+  <!-- データカウンター モーダル -->
   <div class="modal-overlay" id="dataModal">
     <div class="modal-content">
       <div class="modal-header">
@@ -824,17 +799,18 @@
   </div>
 
   <script>
-    // 履歴モーダル以外の不要なスクロールを防止
+    // 1. 履歴モーダル以外の不要なスクロール・タッチ挙動を制御
     document.addEventListener('touchmove', function(e) {
       if (e.target.closest('.history-section')) return; 
       if (e.cancelable) e.preventDefault();
     }, { passive: false });
 
-    // 画面どこでもワンタップ進行 ＆ UI操作領域の安全な分離
+    // 2. 画面全域タップ進行とUIコントロール保護の分離
     const appViewport = document.getElementById('appViewport');
     if (appViewport) {
       let handled = false;
       const trigger = (e) => {
+        // UIコントロールやモーダル内でのタップ操作時はタップ進行イベントを発火させない
         if (e.target.closest('.ctrl-btn') || 
             e.target.closest('.modal-overlay') || 
             e.target.closest('.modal-content') ||
@@ -855,95 +831,131 @@
       appViewport.addEventListener('click', trigger);
     }
 
-    // データカウンターモーダル表示
+    // 3. データカウンターモーダル表示（モーダル表示確立後にスランプグラフを正確描画）
     document.getElementById('dataBtn').onclick = (e) => {
       e.stopPropagation();
       if(window.DATA_COUNTER) {
         const s = window.DATA_COUNTER.getStats();
-        document.getElementById('modalTotalGames').textContent = s.totalGames + ' G';
-        document.getElementById('modalDiffMedal').textContent = (s.diffMedal>0?'+':'') + s.diffMedal + ' 枚';
-        document.getElementById('modalBigCount').textContent = s.bigCount;
-        document.getElementById('modalRegCount').textContent = s.regCount;
+        const setTxt = (id, txt) => {
+          const el = document.getElementById(id);
+          if (el) el.textContent = txt;
+        };
         
-        document.getElementById('modalRtp').textContent = s.rtp;
-        document.getElementById('modalTotalProb').textContent = s.totalProb;
-        document.getElementById('modalBigProb').textContent = s.bigProb;
-        document.getElementById('modalRegProb').textContent = s.regProb;
-        document.getElementById('modalGrapeProb').textContent = s.grapeProb;
+        setTxt('modalTotalGames', s.totalGames + ' G');
+        setTxt('modalDiffMedal', (s.diffMedal > 0 ? '+' : '') + s.diffMedal + ' 枚');
+        setTxt('modalBigCount', s.bigCount);
+        setTxt('modalRegCount', s.regCount);
+        
+        setTxt('modalRtp', s.rtp);
+        setTxt('modalTotalProb', s.totalProb);
+        setTxt('modalBigProb', s.bigProb);
+        setTxt('modalRegProb', s.regProb);
+        setTxt('modalGrapeProb', s.grapeProb);
 
-        window.DATA_COUNTER.renderSlumpGraph(document.getElementById('slumpCanvas'));
-        document.getElementById('historyContainer').innerHTML = window.DATA_COUNTER.renderHistoryHTML();
+        const histEl = document.getElementById('historyContainer');
+        if (histEl) histEl.innerHTML = window.DATA_COUNTER.renderHistoryHTML();
       }
-      document.getElementById('dataModal').classList.add('active');
+      
+      const modal = document.getElementById('dataModal');
+      if (modal) {
+        modal.classList.add('active');
+        // DOMの表示展開後に非同期でスランプグラフを描画し、寸法取得エラーを完全防止
+        requestAnimationFrame(() => {
+          if (window.DATA_COUNTER) {
+            window.DATA_COUNTER.renderSlumpGraph(document.getElementById('slumpCanvas'));
+          }
+        });
+      }
     };
+
     document.getElementById('dataModalCloseBtn').onclick = (e) => {
       e.stopPropagation();
-      document.getElementById('dataModal').classList.remove('active');
+      const modal = document.getElementById('dataModal');
+      if (modal) modal.classList.remove('active');
     };
 
-    // 設定モーダル表示
+    // 4. 設定モーダル表示と動的同期
     document.getElementById('settingModalBtn').onclick = (e) => {
       e.stopPropagation();
       if(window.JUGGLER_ENGINE) {
         const cfg = window.JUGGLER_ENGINE.getConfig();
-        document.getElementById('settingSelect').value = cfg.setting;
-        document.getElementById('autoBonusStopCheck').checked = cfg.autoStopOnBonus;
-        document.getElementById('weightCutCheck').checked = cfg.weightCut;
-        document.getElementById('volumeRange').value = Math.round(cfg.volume * 100);
-        document.getElementById('soundEnableCheck').checked = cfg.soundOn;
+        const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+        const setCheck = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; };
+
+        setVal('settingSelect', cfg.setting);
+        setCheck('autoBonusStopCheck', cfg.autoStopOnBonus);
+        setCheck('weightCutCheck', cfg.weightCut);
+        setVal('volumeRange', Math.round(cfg.volume * 100));
+        setCheck('soundEnableCheck', cfg.soundOn);
       }
-      document.getElementById('settingModal').classList.add('active');
+      const modal = document.getElementById('settingModal');
+      if (modal) modal.classList.add('active');
     };
+
     document.getElementById('settingModalCloseBtn').onclick = (e) => {
       e.stopPropagation();
-      document.getElementById('settingModal').classList.remove('active');
+      const modal = document.getElementById('settingModal');
+      if (modal) modal.classList.remove('active');
     };
     
-    // 【最重要修正】設定適用時の同期解禁＆決定音ポーン♪発火
+    // 設定適用実行
     document.getElementById('saveSettingBtn').onclick = (e) => {
       e.stopPropagation();
       if(window.JUGGLER_ENGINE) {
+        const getVal = (id) => document.getElementById(id) ? document.getElementById(id).value : null;
+        const getCheck = (id) => document.getElementById(id) ? document.getElementById(id).checked : false;
+
         window.JUGGLER_ENGINE.setConfig({
-          setting: parseInt(document.getElementById('settingSelect').value, 10),
-          autoStopOnBonus: document.getElementById('autoBonusStopCheck').checked,
-          weightCut: document.getElementById('weightCutCheck').checked,
-          volume: parseFloat(document.getElementById('volumeRange').value) / 100,
-          soundOn: document.getElementById('soundEnableCheck').checked
+          setting: parseInt(getVal('settingSelect') || '6', 10),
+          autoStopOnBonus: getCheck('autoBonusStopCheck'),
+          weightCut: getCheck('weightCutCheck'),
+          volume: parseFloat(getVal('volumeRange') || '100') / 100,
+          soundOn: getCheck('soundEnableCheck')
         });
       }
-      document.getElementById('settingModal').classList.remove('active');
+      const modal = document.getElementById('settingModal');
+      if (modal) modal.classList.remove('active');
     };
 
-    // 遊技終了（リセット）モーダル制御
+    // 5. 遊技リセット確認モーダル制御
     document.getElementById('resetBtn').onclick = (e) => {
       e.stopPropagation();
-      document.getElementById('resetConfirmModal').classList.add('active');
+      const modal = document.getElementById('resetConfirmModal');
+      if (modal) modal.classList.add('active');
     };
+
     document.getElementById('resetCancelBtn').onclick = (e) => {
       e.stopPropagation();
-      document.getElementById('resetConfirmModal').classList.remove('active');
+      const modal = document.getElementById('resetConfirmModal');
+      if (modal) modal.classList.remove('active');
     };
+
     document.getElementById('resetConfirmBtn').onclick = (e) => {
       e.stopPropagation();
       if(window.DATA_COUNTER) window.DATA_COUNTER.init();
       if(window.JUGGLER_ENGINE && typeof window.JUGGLER_ENGINE.resetGame === 'function') {
         window.JUGGLER_ENGINE.resetGame();
       }
-      document.getElementById('resetConfirmModal').classList.remove('active');
+      const modal = document.getElementById('resetConfirmModal');
+      if (modal) modal.classList.remove('active');
     };
 
-    // モーダルの背景タップで閉じる
+    // モーダル背景領域タップで安全に閉じる処理
     document.querySelectorAll('.modal-overlay').forEach(m => {
       m.onclick = (e) => { if(e.target === m) m.classList.remove('active'); };
     });
 
-    // エンジン起動
+    // 6. 安全なマルチチェック付き起動シーケンス
     function bootEngine() {
       if(window.DATA_COUNTER) window.DATA_COUNTER.init();
       if(window.JUGGLER_ENGINE) window.JUGGLER_ENGINE.init();
     }
-    if (document.readyState === 'complete' || document.readyState === 'interactive') bootEngine();
-    else window.addEventListener('DOMContentLoaded', bootEngine);
+
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+      bootEngine();
+    } else {
+      window.addEventListener('DOMContentLoaded', bootEngine);
+    }
   </script>
 </body>
 </html>
