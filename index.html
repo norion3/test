@@ -207,25 +207,26 @@
     .line-badge.lit.badge-2 { background: #2196f3; color: #fff; border-color: #88ccff; box-shadow: 0 0 8px #2196f3; }
     .line-badge.lit.badge-1 { background: #4caf50; color: #fff; border-color: #88ff88; box-shadow: 0 0 8px #4caf50; }
 
-    /* 【引き締まった実機長方形プロポーション】リール窓 (320px × 162px : コマ高54px) */
+    /* 【光学改修】重厚なリール窓枠 (強烈なインナーシャドウで上下余白を暗く沈める) */
     .reels-screen {
       width: 320px;
       height: 162px;
-      background: #fff;
+      background: #e8e8ed;
       border: 3px solid #111;
       border-radius: 4px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       overflow: hidden;
-      box-shadow: inset 0 12px 12px rgba(0,0,0,0.6), inset 0 -12px 12px rgba(0,0,0,0.6);
+      /* 重厚な落ち影により上下余白領域を物理的に暗く沈める */
+      box-shadow: inset 0 18px 16px rgba(0,0,0,0.68), inset 0 -18px 16px rgba(0,0,0,0.68);
       position: relative;
     }
 
     .reel-column {
       width: 104px;
       height: 162px;
-      background: #fff;
+      background: #f2f2f6;
       position: relative;
       overflow: hidden;
     }
@@ -246,7 +247,7 @@
       will-change: transform;
     }
 
-    /* 右側実機文字ランプ (実機完全準拠: Start(赤) -> Replay(緑) -> Wait(黄)) */
+    /* 右側実機文字ランプ (実機完全順序: Start(赤) -> Replay(緑) -> Wait(黄)) */
     .status-panel-right {
       display: flex;
       flex-direction: column;
@@ -371,7 +372,6 @@
       box-shadow: inset 0 2px 4px rgba(255,255,255,0.8), 0 5px 10px rgba(0,0,0,0.7);
     }
 
-    /* 真正面視点に合わせた「円形凹型ソケット＋沈み込みボール」構造 */
     .real-lever-assembly {
       position: relative;
       width: 50px;
@@ -609,7 +609,7 @@
               <div class="line-badge badge-1 lit" id="lineBadge1">1</div>
             </div>
 
-            <!-- 引き締まった実機長方形プロポーション 3列リール窓 (320x162) -->
+            <!-- 【光学改修】重厚なリール窓枠 (強烈なインナーシャドウで上下余白を暗く沈める) -->
             <div class="reels-screen">
               <div class="reel-column"><canvas id="reelCanvas0" class="reel-canvas"></canvas></div>
               <div class="reel-separator"></div>
@@ -805,7 +805,7 @@
 
     if (badge1 && badge2 && mainCabinet) {
       const observer = new MutationObserver(() => {
-        // 実機ルール：ボーナス中(1BET)は中段ライン(badge2)のみが有効になる
+        // ボーナス中(1BET)は中段ライン(badge2)のみが有効になる
         if (badge2.classList.contains('lit') && !badge1.classList.contains('lit')) {
           mainCabinet.classList.add('bonus-mode');
         } else {
@@ -816,7 +816,7 @@
       observer.observe(badge2, { attributes: true, attributeFilter: ['class'] });
     }
 
-    // 全画面どこでもワンタップ進行イベント (多重発火伝播遮断)
+    // 全画面どこでもワンタップ進行イベント (単一窓口一元化)
     const appViewport = document.getElementById('appViewport');
     if (appViewport) {
       const handleTap = (e) => {
@@ -828,7 +828,7 @@
           return;
         }
         if (window.JUGGLER_ENGINE) {
-          window.JUGGLER_ENGINE.handleGlobalTap();
+          window.JUGGLER_ENGINE.handleTap();
         }
       };
 
@@ -910,5 +910,4 @@
   </script>
 </body>
 </html>
-
 

@@ -45,7 +45,7 @@
     onPayout: function(payout, type = '') {
       if (payout > 0) {
         this.diffMedal += payout;
-        // 通常時のブドウのみカウント（ボーナス中のブドウは除外）
+        // 通常時のブドウのみカウント（ボーナス中のブドウ払出は除外）
         if (type === 'GRAPE') {
           this.grapeCount++;
         }
@@ -95,7 +95,7 @@
       }
     },
 
-    // 統計・計算結果データの取得 (ボタンエリア常時表示＆モーダル用)
+    // 統計・計算結果データの取得 (常時表示バー ＆ 詳細モーダル用)
     getStats: function() {
       const formatProb = (count, total) => {
         if (count === 0 || total === 0) return '1/--.-';
@@ -118,7 +118,7 @@
         bigProb: formatProb(this.bigCount, this.totalGames),
         regProb: formatProb(this.regCount, this.totalGames),
         totalProb: formatProb(totalBonus, this.totalGames),
-        grapeProb: formatProbPrecise(this.grapeCount, this.totalGames), // 小数第2位までのブドウ確率
+        grapeProb: formatProbPrecise(this.grapeCount, this.totalGames), // 小数第2位まで精密表記
         diffMedal: this.diffMedal
       };
     },
@@ -261,5 +261,4 @@
 
   window.DATA_COUNTER = DataCounter;
 })();
-
 
