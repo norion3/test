@@ -12,8 +12,8 @@
     grapeCount: 0,       // 通常時のブドウ獲得回数
     diffMedal: 0,        // 累計差枚数
     
-    totalIn: 0,          // 【新規】累計投入枚数 (IN)
-    totalOut: 0,         // 【新規】累計払出枚数 (OUT)
+    totalIn: 0,          // 累計投入枚数 (IN)
+    totalOut: 0,         // 累計払出枚数 (OUT)
     
     history: [],         // 当選履歴リスト [{ id, type, game, totalGame, time }]
     slumpData: [{ game: 0, diff: 0 }], // スランプグラフ用データポイント
@@ -40,7 +40,7 @@
       if (betCount > 0) {
         this.totalIn += betCount; // 投入枚数(IN)を確実に集計
         
-        // 実機データカウンター同様、ボーナス消化中のゲーム数は通常総回転数に含めない
+        // ボーナス消化中のゲーム数は通常総回転数に含めない
         if (!isBonusMode) {
           this.totalGames++;
           this.currentGames++;
@@ -75,7 +75,7 @@
       const now = new Date();
       const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-      // 直近の履歴を先頭に追加 (最大50件保持でメモリ最適化)
+      // 直近の履歴を先頭に追加 (最大50件保持)
       this.history.unshift({
         id: this.history.length + 1,
         type: type, // 'BIG' | 'REG'
@@ -120,7 +120,7 @@
 
       const totalBonus = this.bigCount + this.regCount;
       
-      // 【新規】機械割（PAYOUT率）の精密計算: (OUT ÷ IN) × 100
+      // 機械割（PAYOUT率）の精密計算: (OUT ÷ IN) × 100
       const rtp = this.totalIn > 0 ? ((this.totalOut / this.totalIn) * 100).toFixed(1) + '%' : '--.-%';
 
       return {
@@ -155,7 +155,7 @@
       const graphWidth = width - padding.left - padding.right;
       const graphHeight = height - padding.top - padding.bottom;
 
-      // 出玉の振れ幅に応じたY軸レンジの動的スケーリング (初期レンジ±500から動的拡張)
+      // 出玉の振れ幅に応じたY軸レンジの動的スケーリング
       let maxDiff = 500;
       let minDiff = -500;
 
