@@ -1,6 +1,6 @@
 /**
  * スロットゲームエンジン (engine.js)
- * 白枠完全撤去・コマ高46px・200msハードロック・イベント一元化・実機BETランプ演出
+ * AUTOバグ完治・小役リアル合成音・設定別ブドウ確率・筐体フラッシュ確実化・白枠撤去
  */
 
 (function() {
@@ -17,19 +17,18 @@
   const REEL_SPEED_NORMAL = 22; // 通常時スピード
   const REEL_SPEED_SLOW = 8;    // スロー旋回スピード
 
-  // SアイムジャグラーEX 実機確率テーブル (設定1〜6)
+  // SアイムジャグラーEX 実機確率テーブル (設定1〜6) + DMM解析のブドウ設定差
   const PROBABILITY_TABLE = {
-    1: { big: 1/273.1, reg: 1/439.8 },
-    2: { big: 1/269.7, reg: 1/399.6 },
-    3: { big: 1/269.7, reg: 1/330.7 },
-    4: { big: 1/259.0, reg: 1/315.1 },
-    5: { big: 1/259.0, reg: 1/255.0 },
-    6: { big: 1/255.0, reg: 1/255.0 }
+    1: { big: 1/273.1, reg: 1/439.8, grape: 1/6.02 },
+    2: { big: 1/269.7, reg: 1/399.6, grape: 1/6.02 },
+    3: { big: 1/269.7, reg: 1/330.7, grape: 1/6.02 },
+    4: { big: 1/259.0, reg: 1/315.1, grape: 1/6.02 },
+    5: { big: 1/259.0, reg: 1/255.0, grape: 1/6.02 },
+    6: { big: 1/255.0, reg: 1/255.0, grape: 1/5.78 }
   };
 
-  // 小役確率 (設定6基準の解析値)
+  // その他の小役確率 (全設定共通)
   const PROB_REPLAY = 1 / 7.3;
-  const PROB_GRAPE  = 1 / 5.9;
   const PROB_CHERRY = 1 / 33.0;
   const PROB_BELL   = 1 / 1092.2;
   const PROB_CLOWN  = 1 / 1092.2;
@@ -39,7 +38,7 @@
   const STATE_SPINNING = 1;
   let gameState = STATE_IDLE;
   let activeReelsCount = 0;
-  let spinStartTime = 0; // 【最重要】ハードロック用タイマー
+  let spinStartTime = 0; // ハードロック用タイマー
 
   // ゲーム内部状態
   let currentSetting = 6;
@@ -71,7 +70,7 @@
   const symbolCanvasCache = {};
 
   // ===================================================
-  // 1. 高度リアル音響エンジン
+  // 1. 高度リアル音響エンジン (小役専用合成音搭載)
   // ===================================================
   const SoundEngine = {
     ctx: null, masterGain: null, audioBuffers: {},
@@ -119,6 +118,8 @@
           return;
         } catch(e) {}
       }
+      
+      // 【専用合成音】MP3がない場合のリアルなフォールバック
       try {
         const now = this.ctx.currentTime;
         const osc = this.ctx.createOscillator();
@@ -141,6 +142,41 @@
           osc.type = 'triangle'; osc.frequency.setValueAtTime(523.25, now);
           gain.gain.setValueAtTime(0.3, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
           osc.start(now); osc.stop(now + 0.5);
+        } else if (type === 'grape' || type === 'bonus_pay') {
+          // ブドウ音: ピロロピロロ♪
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(659.25, now); // E5
+          osc.frequency.setValueAtTime(880.00, now + 0.05); // A5
+          osc.frequency.setValueAtTime(1046.50, now + 0.1); // C6
+          gain.gain.setValueAtTime(0.3, now);
+          gain.gain.linearRampToValueAtTime(0, now + 0.2);
+          osc.start(now); osc.stop(now + 0.2);
+        } else if (type === 'cherry') {
+          // チェリー音: パパッ♪
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(440, now);
+          gain.gain.setValueAtTime(0.4, now);
+          gain.gain.setValueAtTime(0, now + 0.05);
+          gain.gain.setValueAtTime(0.4, now + 0.1);
+          gain.gain.setValueAtTime(0, now + 0.15);
+          osc.start(now); osc.stop(now + 0.15);
+        } else if (type === 'replay') {
+          // リプレイ音: ピュイイィィン♪
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(300, now);
+          osc.frequency.linearRampToValueAtTime(800, now + 0.3);
+          gain.gain.setValueAtTime(0.4, now);
+          gain.gain.linearRampToValueAtTime(0, now + 0.3);
+          osc.start(now); osc.stop(now + 0.3);
+        } else if (type === 'bell_clown') {
+          // レア小役音: シャラララ♪
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(1200, now);
+          osc.frequency.linearRampToValueAtTime(1400, now + 0.1);
+          osc.frequency.linearRampToValueAtTime(1200, now + 0.2);
+          gain.gain.setValueAtTime(0.3, now);
+          gain.gain.linearRampToValueAtTime(0, now + 0.3);
+          osc.start(now); osc.stop(now + 0.3);
         }
       } catch(e) {}
     }
@@ -198,7 +234,8 @@
       const hex = palette[parseInt(parts[0], 10)] || '#ffffff';
       
       // 画像の「白」部分をアルファ0（完全透過）にして背景を抜く
-      const isWhite = (hex.toLowerCase() === '#ffffff' || hex.toLowerCase() === '#fff');
+      const hexLower = hex.toLowerCase();
+      const isWhite = (hexLower === '#ffffff' || hexLower === '#fff' || hexLower === '#ffffffff');
       
       const r = parseInt(hex.substring(1, 3), 16) || 255;
       const g = parseInt(hex.substring(3, 5), 16) || 255;
@@ -229,9 +266,7 @@
     ctx.save();
     ctx.translate(0, y);
 
-    // 【最重要】白背景・境界線・ドロップシャドウ等の装飾処理を1行残らず全削除。純粋な透過描画のみ。
-
-    // コマ高46pxに対して、7/BARは特大、小役は適正サイズに
+    // 【最重要】白背景・境界線・影等の装飾処理を全削除。純粋な透過描画のみ。
     let maxH = (type === '7' || type === 'BAR') ? SYMBOL_HEIGHT * 0.98 : SYMBOL_HEIGHT * 0.86;
     let maxW = (type === '7' || type === 'BAR') ? CANVAS_WIDTH * 0.92 : CANVAS_WIDTH * 0.80;
 
@@ -264,10 +299,20 @@
 
     if (lampReplay) lampReplay.classList.toggle('active', isReplay);
     
-    // 【重要】STARTランプは「遊技待機中（STATE_IDLE）かつBET可能状態」の時に確実に点灯させる
+    // STARTランプは「遊技待機中（STATE_IDLE）かつBET可能状態」の時に点灯
     const canPlay = isReplay || (isBonusMode ? internalCredits >= 1 : internalCredits >= 3);
     if (lampStart) {
       lampStart.classList.toggle('active', gameState === STATE_IDLE && canPlay);
+    }
+
+    // 【最重要修復】不安定なObserverを廃止し、エンジン側で直接フラッシュクラスを制御
+    const mainCabinet = document.getElementById('mainCabinet');
+    if (mainCabinet) {
+      if (isBonusMode) {
+        mainCabinet.classList.add('bonus-mode');
+      } else {
+        mainCabinet.classList.remove('bonus-mode');
+      }
     }
 
     if (window.DATA_COUNTER) {
@@ -291,14 +336,12 @@
     if (!b1 || !b2 || !b3) return;
 
     if (isLit) {
-      // 点灯させる場合：ボーナス中は中段(2)のみ、通常時は全ライン点灯
       if (isBonusMode) {
         b1.classList.remove('lit'); b2.classList.add('lit'); b3.classList.remove('lit');
       } else {
         b1.classList.add('lit'); b2.classList.add('lit'); b3.classList.add('lit');
       }
     } else {
-      // レバーON等で消灯させる場合
       b1.classList.remove('lit'); b2.classList.remove('lit'); b3.classList.remove('lit');
     }
   }
@@ -361,7 +404,6 @@
         };
       }).filter(Boolean);
 
-      // 初期起動時：ランプ点灯状態（待機状態）としてスタート
       setLineBadgesLit(true);
       updateDisplays();
       this.bindEvents();
@@ -395,7 +437,7 @@
       if (r < accum) return 'REG';
       accum += PROB_REPLAY;
       if (r < accum) return 'REPLAY';
-      accum += PROB_GRAPE;
+      accum += prob.grape; // 設定依存のブドウ確率
       if (r < accum) return 'GRAPE';
       accum += PROB_CHERRY;
       if (r < accum) return 'CHERRY';
@@ -412,7 +454,6 @@
       if (gameState !== STATE_IDLE) return;
 
       try {
-        // クレジット不足時は補充 (自動BETの前提条件)
         const canPlay = isReplay || (isBonusMode ? internalCredits >= 1 : internalCredits >= 3);
         if (!canPlay && internalCredits < 3) {
           internalCredits = 50; 
@@ -420,23 +461,22 @@
 
         gameState = STATE_SPINNING;
         activeReelsCount = 3;
-        spinStartTime = Date.now(); // 【最重要】ハードロック用のタイマー記録
+        spinStartTime = Date.now(); // 人間操作ロックタイマー
 
         SoundEngine.init();
         triggerLeverVisual();
 
-        // 【最重要演出】レバーONの瞬間に、BETランプとSTARTランプを「即消灯」させる
+        // レバーONでBETランプ・STARTランプ即消灯
         setLineBadgesLit(false);
         updateDisplays(0);
 
-        // Waitランプの演出 (レバーONで一瞬だけ点灯し、すぐに消える「タメ」)
+        // Waitランプ一瞬点灯
         const lampWait = document.getElementById('lampWait');
         if (lampWait) {
           lampWait.classList.add('active');
           setTimeout(() => lampWait.classList.remove('active'), 250);
         }
 
-        // BET消費と内部集計
         if (isBonusMode) {
           betAmount = 1; internalCredits -= 1;
           if (window.DATA_COUNTER) window.DATA_COUNTER.onGameStart(1, true);
@@ -479,15 +519,16 @@
         if (isAutoMode) this.scheduleAutoStop();
 
       } catch (e) {
-        gameState = STATE_IDLE; // セーフティネット
+        gameState = STATE_IDLE; 
       }
     },
 
-    stopReelIndex: function(index) {
+    // 第2引数 isAutoCall でハードロックをバイパス
+    stopReelIndex: function(index, isAutoCall = false) {
       if (gameState !== STATE_SPINNING) return;
       
-      // 【最重要ハードロック】レバーONから200ms以内はいかなるストップ操作も無視する（多重発火の完封）
-      if (Date.now() - spinStartTime < 200) return;
+      // 【最重要】AUTOからの呼び出し以外は、レバーON後200msの操作を弾く（AUTOバグ完治）
+      if (!isAutoCall && (Date.now() - spinStartTime < 200)) return;
 
       const reel = reels[index];
       if (!reel || !reel.isSpinning || reel.isStopping) return;
@@ -538,35 +579,19 @@
       } catch (e) {}
     },
 
-    // 【完全一元化】イベント窓口。多重登録のバブリングを排除
-    handleTap: function(e) {
+    // リール窓タップ用 (UIとは分離)
+    handleTap: function() {
       if (!this.isInitialized) return;
       const now = Date.now();
-      if (now - lastTapTime < 30) return; // 極小チャタリング防止
+      if (now - lastTapTime < 30) return;
       lastTapTime = now;
 
-      // 個別ボタンの判定 (狙い打ち対応)
-      if (e && e.target) {
-        const targetId = e.target.id;
-        if (targetId === 'stopBtn0' || targetId === 'stopBtn1' || targetId === 'stopBtn2' || e.target.closest('.stop-btn')) {
-          const btn = e.target.closest('.stop-btn');
-          const idx = parseInt(btn.id.replace('stopBtn', ''), 10);
-          this.stopReelIndex(idx);
-          return;
-        }
-        if (targetId === 'startBtn' || e.target.closest('#startBtn')) {
-          this.startSpin();
-          return;
-        }
-      }
-
-      // 上記以外の全体タップ進行
       if (gameState === STATE_IDLE) {
         this.startSpin();
       } else if (gameState === STATE_SPINNING) {
         for (let i = 0; i < 3; i++) {
           if (reels[i].isSpinning && !reels[i].isStopping) {
-            this.stopReelIndex(i);
+            this.stopReelIndex(i, false);
             break;
           }
         }
@@ -574,19 +599,40 @@
     },
 
     bindEvents: function() {
-      // index.htmlの不要イベントを削除し、ここで一元管理する
-      // (グローバルなイベント登録用。重複を避ける)
+      // 独立した操作エリアのみに直接タッチイベントを登録（UIハイジャック防止）
+      const attachFastTouch = (elem, handler) => {
+        if (!elem) return;
+        let handled = false;
+        const downTrigger = (e) => {
+          if (e.type === 'touchstart' || e.type === 'pointerdown') handled = true;
+          else if (e.type === 'click' && handled) { handled = false; return; }
+          
+          if(e.cancelable) e.preventDefault(); // スクロール等のデフォルト防止
+          if (handler) handler(e);
+        };
+        elem.addEventListener('touchstart', downTrigger, { passive: false });
+        elem.addEventListener('pointerdown', downTrigger);
+        elem.addEventListener('click', downTrigger);
+      };
+
+      attachFastTouch(document.getElementById('startBtn'), () => { this.startSpin(); });
+      [0,1,2].forEach(i => {
+        attachFastTouch(document.getElementById(`stopBtn${i}`), () => { this.stopReelIndex(i, false); });
+      });
+      // リール枠タップ時
+      const reelsScreen = document.querySelector('.reels-screen');
+      if (reelsScreen) attachFastTouch(reelsScreen, () => { this.handleTap(); });
     },
 
     scheduleAutoStop: function() {
       if (!isAutoMode) return;
       clearTimeout(autoTimer);
       autoTimer = setTimeout(() => {
-        if (reels[0].isSpinning) this.stopReelIndex(0);
+        if (reels[0].isSpinning) this.stopReelIndex(0, true); // trueでハードロック回避
         autoTimer = setTimeout(() => {
-          if (reels[1].isSpinning) this.stopReelIndex(1);
+          if (reels[1].isSpinning) this.stopReelIndex(1, true);
           autoTimer = setTimeout(() => {
-            if (reels[2].isSpinning) this.stopReelIndex(2);
+            if (reels[2].isSpinning) this.stopReelIndex(2, true);
           }, 200);
         }, 200);
       }, 220);
@@ -649,7 +695,6 @@
           currentFlag = null;
         }
         
-        // 【最重要演出】自動BET完了として即座にBETランプとSTARTランプを点灯させ待機する
         setLineBadgesLit(true);
         updateDisplays(payout);
 
@@ -658,16 +703,17 @@
       }
 
       let isBigWin = false, isRegWin = false, isReplayWin = false;
+      let playSoundType = 'bonus_pay';
 
       lines.forEach(line => {
         if (line.every(s => s === '7')) isBigWin = true;
         else if (line[0] === '7' && line[1] === '7' && line[2] === 'BAR') isRegWin = true;
         else if (line.every(s => s === 'RHINO')) isReplayWin = true;
         else {
-          if (line.every(s => s === 'GRAPE')) payout = Math.max(payout, 8);
-          else if (line[0] === 'CHERRY') payout = Math.max(payout, 2);
-          else if (line.every(s => s === 'BELL')) payout = Math.max(payout, 14);
-          else if (line.every(s => s === 'CLOWN')) payout = Math.max(payout, 10);
+          if (line.every(s => s === 'GRAPE')) { payout = Math.max(payout, 8); playSoundType = 'grape'; }
+          else if (line[0] === 'CHERRY') { payout = Math.max(payout, 2); playSoundType = 'cherry'; }
+          else if (line.every(s => s === 'BELL')) { payout = Math.max(payout, 14); playSoundType = 'bell_clown'; }
+          else if (line.every(s => s === 'CLOWN')) { payout = Math.max(payout, 10); playSoundType = 'bell_clown'; }
         }
       });
 
@@ -694,13 +740,10 @@
           if (payout === 8) window.DATA_COUNTER.onPayout(payout, 'GRAPE');
           else window.DATA_COUNTER.onPayout(payout, 'OTHER');
         }
-        if (payout === 8) SoundEngine.play('grape');
-        else SoundEngine.play('bonus_pay');
+        SoundEngine.play(playSoundType);
       }
 
       currentFlag = null;
-
-      // 【最重要演出】全リール停止＆払出処理が完了したら、即座に次ゲームのBET状態としてランプを点灯させる
       setLineBadgesLit(true);
       updateDisplays(payout);
 

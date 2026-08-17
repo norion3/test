@@ -79,7 +79,7 @@
     @media (max-height: 660px) { .cabinet { transform: scale(0.82); } }
     @media (max-height: 580px) { .cabinet { transform: scale(0.72); } }
 
-    /* 目に優しいボーナスフラッシュ演出（フワッ、フワッとした明滅） */
+    /* 目に優しいボーナスフラッシュ演出（エンジン側からbonus-modeクラス付与で発動） */
     @keyframes gentleFlash {
       0% { filter: brightness(1); box-shadow: inset 0 0 20px rgba(0,0,0,0.9); }
       50% { filter: brightness(1.25); box-shadow: inset 0 0 30px rgba(255, 200, 50, 0.4), 0 0 25px rgba(255,50,50,0.3); }
@@ -380,6 +380,8 @@
       align-items: center;
       justify-content: center;
       cursor: pointer;
+      /* レバー自体のタップイベントを確実に発火させるため */
+      z-index: 10;
     }
 
     .lever-housing {
@@ -426,6 +428,7 @@
     .stop-btn-group {
       display: flex;
       gap: 12px;
+      z-index: 10;
     }
 
     .stop-btn {
@@ -512,26 +515,27 @@
     .live-data-val.reg { color: #00e5ff; }
     .live-data-val.prob { color: #ffcc00; }
 
-    /* 最下部コントロール (AUTOボタン幅固定 140px) */
+    /* 最下部コントロール (UI操作領域。イベント干渉なし) */
     .bottom-controls {
       display: flex;
       gap: 8px;
       margin-top: 6px;
       justify-content: center;
       align-items: center;
+      position: relative;
+      z-index: 100;
     }
 
     .ctrl-btn {
       background: #222;
       border: 1px solid #555;
       color: #ccc;
-      padding: 6px 10px;
+      padding: 8px 10px;
       border-radius: 16px;
       font-size: 11px;
       font-weight: bold;
       cursor: pointer;
       text-align: center;
-      z-index: 100;
     }
 
     .ctrl-btn.auto-btn { width: 140px; display: inline-block; }
@@ -553,7 +557,7 @@
     }
     .modal-header { display: flex; justify-content: space-between; border-bottom: 1px solid #2a3447; padding-bottom: 6px; }
     .modal-title { font-weight: bold; color: #00e5ff; }
-    .modal-close-btn { background: #222; border: 1px solid #555; color: #fff; border-radius: 50%; width: 28px; height: 28px; }
+    .modal-close-btn { background: #222; border: 1px solid #555; color: #fff; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; }
     
     .setting-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; padding: 6px 0; border-bottom: 1px solid #1a2233;}
     
@@ -565,7 +569,9 @@
     .stat-value.reg { color: #00e5ff; }
     .stat-value.total { color: #ffcc00; }
     #slumpCanvas { width: 100%; height: 150px; background: #111622; }
-    .history-section { max-height: 140px; overflow-y: auto; font-size: 11px; text-align: center; }
+    
+    /* 履歴スクロールエリア（touchmove対応） */
+    .history-section { max-height: 140px; overflow-y: auto; font-size: 11px; text-align: center; overscroll-behavior-y: contain; }
     table { width: 100%; border-collapse: collapse; }
     th { color: #7a8ba6; border-bottom: 1px solid #2d3b54; }
     td { padding: 4px; border-bottom: 1px solid #222d42; }
@@ -609,8 +615,8 @@
               <div class="line-badge badge-1 lit" id="lineBadge1">1</div>
             </div>
 
-            <!-- 【極限圧縮】リール窓 (320x138) - 不要な白枠装飾を全廃し図柄を密着 -->
-            <div class="reels-screen">
+            <!-- 【極限圧縮】リール窓 (320x138) - 透過図柄を純白背景に密着表示 -->
+            <div class="reels-screen" id="reelsScreenArea">
               <div class="reel-column"><canvas id="reelCanvas0" class="reel-canvas"></canvas></div>
               <div class="reel-separator"></div>
               <div class="reel-column"><canvas id="reelCanvas1" class="reel-canvas"></canvas></div>
@@ -712,7 +718,7 @@
           </div>
         </div>
 
-        <!-- 最下部コントロール (AUTOボタン幅固定 140px) -->
+        <!-- 最下部コントロール (UI操作領域。イベント干渉なし) -->
         <div class="bottom-controls">
           <button id="autoToggleBtn" class="ctrl-btn auto-btn">👤 MODE: MANUAL</button>
           <button id="dataBtn" class="ctrl-btn data-btn">📊 詳細データ</button>
@@ -723,13 +729,14 @@
     </div>
   </div>
 
-  <!-- ホール風詳細データカウンター モーダル -->
+  <!-- ホール風詳細データカウンター モーダル (各種確率追加) -->
   <div class="modal-overlay" id="dataModal">
     <div class="modal-content">
       <div class="modal-header">
         <div class="modal-title">📊 ホールデータカウンター</div>
         <button class="modal-close-btn" id="dataModalCloseBtn">✕</button>
       </div>
+      <!-- 拡張3x3グリッド構成 -->
       <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
         <div class="stat-card"><div class="stat-label">総回転数</div><div class="stat-value" id="modalTotalGames">0 G</div></div>
         <div class="stat-card"><div class="stat-label">現在ゲーム</div><div class="stat-value" id="modalCurrentGames">0 G</div></div>
@@ -779,66 +786,30 @@
         </div>
         <div class="setting-row">
           <label>サウンド再生</label>
-          <input type="checkbox" id="soundEnableCheck">
+          <input type="checkbox" id="soundEnableCheck"> <!-- 初期OFF -->
         </div>
         <div class="setting-row">
           <label>全体音量</label>
           <input type="range" id="volumeRange" min="0" max="100" value="100">
         </div>
       </div>
-      <button id="saveSettingBtn" style="background:#d31820; color:#fff; border:none; padding:8px; border-radius:4px; font-weight:bold; cursor:pointer;">設定を適用</button>
+      <button id="saveSettingBtn" style="background:#d31820; color:#fff; border:none; padding:8px; border-radius:4px; font-weight:bold; cursor: pointer;">設定を適用</button>
     </div>
   </div>
 
   <script>
-    document.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
+    // 画面全体の不要なスクロールを防止（ただし、履歴セクションのスクロールは許可）
+    document.addEventListener('touchmove', function(e) {
+      if (e.target.closest('.history-section')) return; // 履歴はスクロール可能
+      if (e.cancelable) e.preventDefault();
+    }, { passive: false });
 
-    // 筐体のボーナスフラッシュ検知 MutationObserver
-    const badge1 = document.getElementById('lineBadge1');
-    const badge2 = document.getElementById('lineBadge2');
-    const mainCabinet = document.getElementById('mainCabinet');
+    // ※ 【重要】全画面のタップ監視（appViewport.addEventListener）は完全削除しました。
+    // ※ スロットの操作（レバー、リール窓、ボタン）は engine.js の bindEvents でのみ管理され、
+    // ※ 下部のUIボタン群には一切干渉しないため、AUTO切替やモーダルは100%確実に反応します。
 
-    if (badge1 && badge2 && mainCabinet) {
-      const observer = new MutationObserver(() => {
-        if (badge2.classList.contains('lit') && !badge1.classList.contains('lit')) {
-          mainCabinet.classList.add('bonus-mode');
-        } else {
-          mainCabinet.classList.remove('bonus-mode');
-        }
-      });
-      observer.observe(badge1, { attributes: true, attributeFilter: ['class'] });
-      observer.observe(badge2, { attributes: true, attributeFilter: ['class'] });
-    }
-
-    // 全画面どこでもワンタップ進行イベントの安全な一元化
-    const appViewport = document.getElementById('appViewport');
-    if (appViewport) {
-      let handled = false;
-      const trigger = (e) => {
-        // モーダルやシステムボタン操作は除外
-        if (e.target.closest('.ctrl-btn') || 
-            e.target.closest('.modal-overlay') || 
-            e.target.closest('.modal-content') ||
-            e.target.closest('select') ||
-            e.target.closest('input')) {
-          return;
-        }
-        if (e.type === 'touchstart' || e.type === 'pointerdown') handled = true;
-        else if (e.type === 'click' && handled) { handled = false; return; }
-        
-        // engine.js 側の単一ハンドラに安全に渡す
-        if (window.JUGGLER_ENGINE && typeof window.JUGGLER_ENGINE.handleTap === 'function') {
-          window.JUGGLER_ENGINE.handleTap(e);
-        }
-      };
-
-      appViewport.addEventListener('touchstart', trigger, { passive: false });
-      appViewport.addEventListener('click', trigger);
-    }
-
-    // データカウンターモーダル
-    document.getElementById('dataBtn').onclick = (e) => {
-      e.stopPropagation();
+    // データカウンターモーダル表示 (素直なonclickによる確実な動作)
+    document.getElementById('dataBtn').onclick = () => {
       if(window.DATA_COUNTER) {
         const s = window.DATA_COUNTER.getStats();
         document.getElementById('modalTotalGames').textContent = s.totalGames + ' G';
@@ -847,6 +818,7 @@
         document.getElementById('modalBigCount').textContent = s.bigCount;
         document.getElementById('modalRegCount').textContent = s.regCount;
         document.getElementById('modalTotalProb').textContent = s.totalProb;
+        
         document.getElementById('modalBigProb').textContent = s.bigProb;
         document.getElementById('modalRegProb').textContent = s.regProb;
         document.getElementById('modalGrapeProb').textContent = s.grapeProb;
@@ -856,14 +828,12 @@
       }
       document.getElementById('dataModal').classList.add('active');
     };
-    document.getElementById('dataModalCloseBtn').onclick = (e) => {
-      e.stopPropagation();
+    document.getElementById('dataModalCloseBtn').onclick = () => {
       document.getElementById('dataModal').classList.remove('active');
     };
 
-    // 設定モーダル
-    document.getElementById('settingModalBtn').onclick = (e) => {
-      e.stopPropagation();
+    // 設定モーダル表示
+    document.getElementById('settingModalBtn').onclick = () => {
       if(window.JUGGLER_ENGINE) {
         const cfg = window.JUGGLER_ENGINE.getConfig();
         document.getElementById('settingSelect').value = cfg.setting;
@@ -874,12 +844,10 @@
       }
       document.getElementById('settingModal').classList.add('active');
     };
-    document.getElementById('settingModalCloseBtn').onclick = (e) => {
-      e.stopPropagation();
+    document.getElementById('settingModalCloseBtn').onclick = () => {
       document.getElementById('settingModal').classList.remove('active');
     };
-    document.getElementById('saveSettingBtn').onclick = (e) => {
-      e.stopPropagation();
+    document.getElementById('saveSettingBtn').onclick = () => {
       if(window.JUGGLER_ENGINE) {
         window.JUGGLER_ENGINE.setConfig({
           setting: parseInt(document.getElementById('settingSelect').value, 10),
@@ -892,7 +860,10 @@
       document.getElementById('settingModal').classList.remove('active');
     };
 
-    document.querySelectorAll('.modal-overlay').forEach(m => m.onclick = (e) => { if(e.target === m) m.classList.remove('active'); });
+    // モーダルの背景タップで閉じる
+    document.querySelectorAll('.modal-overlay').forEach(m => {
+      m.onclick = (e) => { if(e.target === m) m.classList.remove('active'); };
+    });
 
     // エンジン起動
     function bootEngine() {
