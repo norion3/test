@@ -1,6 +1,6 @@
 /**
  * スロットゲームエンジン (engine.js)
- * AUTOバグ完治・小役リアル合成音・設定別ブドウ確率・筐体フラッシュ確実化・白枠撤去
+ * アトミック・タッチセッション制御・AUTO機能復旧・DMM解析確率・WebAudio小役専用音
  */
 
 (function() {
@@ -11,7 +11,7 @@
     ['GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', '7', 'BAR', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO']
   ];
 
-  // 【最重要】コマサイズ (横幅100px × 高さ46px) - 縦隙間を極限圧縮
+  // コマサイズ (横幅100px × 高さ46px)
   const SYMBOL_HEIGHT = 46;
   const CANVAS_WIDTH = 100;
   const REEL_SPEED_NORMAL = 22; // 通常時スピード
@@ -38,7 +38,10 @@
   const STATE_SPINNING = 1;
   let gameState = STATE_IDLE;
   let activeReelsCount = 0;
-  let spinStartTime = 0; // ハードロック用タイマー
+
+  // 【最重要】アトミック・タッチセッション管理 (1回のタッチ＝1アクション制御)
+  let isTouchActive = false;
+  let hasActionExecutedInCurrentTouch = false;
 
   // ゲーム内部状態
   let currentSetting = 6;
@@ -119,7 +122,7 @@
         } catch(e) {}
       }
       
-      // 【専用合成音】MP3がない場合のリアルなフォールバック
+      // 合成サウンド用フォールバック
       try {
         const now = this.ctx.currentTime;
         const osc = this.ctx.createOscillator();
@@ -143,16 +146,14 @@
           gain.gain.setValueAtTime(0.3, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
           osc.start(now); osc.stop(now + 0.5);
         } else if (type === 'grape' || type === 'bonus_pay') {
-          // ブドウ音: ピロロピロロ♪
           osc.type = 'sine';
-          osc.frequency.setValueAtTime(659.25, now); // E5
-          osc.frequency.setValueAtTime(880.00, now + 0.05); // A5
-          osc.frequency.setValueAtTime(1046.50, now + 0.1); // C6
+          osc.frequency.setValueAtTime(659.25, now);
+          osc.frequency.setValueAtTime(880.00, now + 0.05);
+          osc.frequency.setValueAtTime(1046.50, now + 0.1);
           gain.gain.setValueAtTime(0.3, now);
           gain.gain.linearRampToValueAtTime(0, now + 0.2);
           osc.start(now); osc.stop(now + 0.2);
         } else if (type === 'cherry') {
-          // チェリー音: パパッ♪
           osc.type = 'square';
           osc.frequency.setValueAtTime(440, now);
           gain.gain.setValueAtTime(0.4, now);
@@ -161,7 +162,6 @@
           gain.gain.setValueAtTime(0, now + 0.15);
           osc.start(now); osc.stop(now + 0.15);
         } else if (type === 'replay') {
-          // リプレイ音: ピュイイィィン♪
           osc.type = 'triangle';
           osc.frequency.setValueAtTime(300, now);
           osc.frequency.linearRampToValueAtTime(800, now + 0.3);
@@ -169,7 +169,6 @@
           gain.gain.linearRampToValueAtTime(0, now + 0.3);
           osc.start(now); osc.stop(now + 0.3);
         } else if (type === 'bell_clown') {
-          // レア小役音: シャラララ♪
           osc.type = 'triangle';
           osc.frequency.setValueAtTime(1200, now);
           osc.frequency.linearRampToValueAtTime(1400, now + 0.1);
@@ -211,13 +210,12 @@
   }
 
   // ===================================================
-  // 3. コマ高46pxフィッティング描画 (白枠・装飾の完全撤去)
+  // 3. コマ高46px透過フィッティング描画
   // ===================================================
   function decodeRLEToCanvasPrecisionCrop(symData) {
     const rawCvs = document.createElement('canvas');
     rawCvs.width = 128; rawCvs.height = 128;
     const rawCtx = rawCvs.getContext('2d');
-    // 背景塗りつぶしはしない (透過)
     rawCtx.clearRect(0, 0, 128, 128);
 
     if (!symData || !symData.rle) return { canvas: rawCvs, crop: { x: 0, y: 22, w: 128, h: 84 } };
@@ -233,7 +231,6 @@
       const count = parseInt(parts[1], 10);
       const hex = palette[parseInt(parts[0], 10)] || '#ffffff';
       
-      // 画像の「白」部分をアルファ0（完全透過）にして背景を抜く
       const hexLower = hex.toLowerCase();
       const isWhite = (hexLower === '#ffffff' || hexLower === '#fff' || hexLower === '#ffffffff');
       
@@ -266,7 +263,6 @@
     ctx.save();
     ctx.translate(0, y);
 
-    // 【最重要】白背景・境界線・影等の装飾処理を全削除。純粋な透過描画のみ。
     let maxH = (type === '7' || type === 'BAR') ? SYMBOL_HEIGHT * 0.98 : SYMBOL_HEIGHT * 0.86;
     let maxW = (type === '7' || type === 'BAR') ? CANVAS_WIDTH * 0.92 : CANVAS_WIDTH * 0.80;
 
@@ -277,14 +273,14 @@
     const drawX = Math.round((CANVAS_WIDTH - drawW) / 2);
     const drawY = Math.round((SYMBOL_HEIGHT - drawH) / 2);
 
-    ctx.imageSmoothingEnabled = !isReelSpinning; // 回転中はアンチエイリアスOFF
+    ctx.imageSmoothingEnabled = !isReelSpinning;
     ctx.drawImage(cached.canvas, cached.crop.x, cached.crop.y, cached.crop.w, cached.crop.h, drawX, drawY, drawW, drawH);
     
     ctx.restore();
   }
 
   // ===================================================
-  // 4. UI ＆ ランプ更新 (実機準拠ロジック)
+  // 4. UI ＆ ランプ更新
   // ===================================================
   function updateDisplays(payout = 0) {
     if (internalCredits < 3 && !isBonusMode) internalCredits = 50;
@@ -299,13 +295,11 @@
 
     if (lampReplay) lampReplay.classList.toggle('active', isReplay);
     
-    // STARTランプは「遊技待機中（STATE_IDLE）かつBET可能状態」の時に点灯
     const canPlay = isReplay || (isBonusMode ? internalCredits >= 1 : internalCredits >= 3);
     if (lampStart) {
       lampStart.classList.toggle('active', gameState === STATE_IDLE && canPlay);
     }
 
-    // 【最重要修復】不安定なObserverを廃止し、エンジン側で直接フラッシュクラスを制御
     const mainCabinet = document.getElementById('mainCabinet');
     if (mainCabinet) {
       if (isBonusMode) {
@@ -461,16 +455,16 @@
 
         gameState = STATE_SPINNING;
         activeReelsCount = 3;
-        spinStartTime = Date.now(); // 人間操作ロックタイマー
+
+        // 【最重要】同一タッチ内でのアクション済みフラグを立てる
+        hasActionExecutedInCurrentTouch = true;
 
         SoundEngine.init();
         triggerLeverVisual();
 
-        // レバーONでBETランプ・STARTランプ即消灯
         setLineBadgesLit(false);
         updateDisplays(0);
 
-        // Waitランプ一瞬点灯
         const lampWait = document.getElementById('lampWait');
         if (lampWait) {
           lampWait.classList.add('active');
@@ -523,12 +517,13 @@
       }
     },
 
-    // 第2引数 isAutoCall でハードロックをバイパス
     stopReelIndex: function(index, isAutoCall = false) {
       if (gameState !== STATE_SPINNING) return;
       
-      // 【最重要】AUTOからの呼び出し以外は、レバーON後200msの操作を弾く（AUTOバグ完治）
-      if (!isAutoCall && (Date.now() - spinStartTime < 200)) return;
+      // 【最重要完封ガード】同一タッチ内でレバーONが発火済み、かつ指が画面から離れていない場合は絶対実行しない
+      if (!isAutoCall && isTouchActive && hasActionExecutedInCurrentTouch) {
+        return;
+      }
 
       const reel = reels[index];
       if (!reel || !reel.isSpinning || reel.isStopping) return;
@@ -536,6 +531,11 @@
       try {
         reel.isStopping = true;
         activeReelsCount--;
+
+        // 【最重要】同一タッチ内でのストップアクション実行済みフラグ
+        if (!isAutoCall) {
+          hasActionExecutedInCurrentTouch = true;
+        }
 
         const btn = document.getElementById(`stopBtn${index}`);
         if (btn) { btn.disabled = true; btn.classList.remove('spinning'); }
@@ -579,12 +579,9 @@
       } catch (e) {}
     },
 
-    // リール窓タップ用 (UIとは分離)
+    // 画面どこでもタップ進行用窓口
     handleTap: function() {
       if (!this.isInitialized) return;
-      const now = Date.now();
-      if (now - lastTapTime < 30) return;
-      lastTapTime = now;
 
       if (gameState === STATE_IDLE) {
         this.startSpin();
@@ -599,36 +596,47 @@
     },
 
     bindEvents: function() {
-      // 独立した操作エリアのみに直接タッチイベントを登録（UIハイジャック防止）
-      const attachFastTouch = (elem, handler) => {
-        if (!elem) return;
-        let handled = false;
-        const downTrigger = (e) => {
-          if (e.type === 'touchstart' || e.type === 'pointerdown') handled = true;
-          else if (e.type === 'click' && handled) { handled = false; return; }
-          
-          if(e.cancelable) e.preventDefault(); // スクロール等のデフォルト防止
-          if (handler) handler(e);
-        };
-        elem.addEventListener('touchstart', downTrigger, { passive: false });
-        elem.addEventListener('pointerdown', downTrigger);
-        elem.addEventListener('click', downTrigger);
+      // タッチセッション管理イベント
+      const startTouchSession = () => {
+        isTouchActive = true;
+      };
+      const endTouchSession = () => {
+        isTouchActive = false;
+        hasActionExecutedInCurrentTouch = false; // 指が離れたのでアクション制限解除
       };
 
-      attachFastTouch(document.getElementById('startBtn'), () => { this.startSpin(); });
-      [0,1,2].forEach(i => {
-        attachFastTouch(document.getElementById(`stopBtn${i}`), () => { this.stopReelIndex(i, false); });
-      });
-      // リール枠タップ時
-      const reelsScreen = document.querySelector('.reels-screen');
-      if (reelsScreen) attachFastTouch(reelsScreen, () => { this.handleTap(); });
+      document.addEventListener('touchstart', startTouchSession, { passive: true });
+      document.addEventListener('touchend', endTouchSession, { passive: true });
+      document.addEventListener('touchcancel', endTouchSession, { passive: true });
+      document.addEventListener('mousedown', startTouchSession, { passive: true });
+      document.addEventListener('mouseup', endTouchSession, { passive: true });
+
+      // 【最重要】AUTO切り替えボタンの明示的バインド
+      const autoToggleBtn = document.getElementById('autoToggleBtn');
+      if (autoToggleBtn) {
+        const toggleAuto = (e) => {
+          if (e) {
+            e.stopPropagation();
+            if (e.cancelable) e.preventDefault();
+          }
+          isAutoMode = !isAutoMode;
+          autoToggleBtn.textContent = isAutoMode ? '🤖 AUTO: ON' : '👤 MODE: MANUAL';
+          autoToggleBtn.classList.toggle('active', isAutoMode);
+          if (isAutoMode && gameState === STATE_IDLE) {
+            this.startSpin();
+          }
+        };
+
+        autoToggleBtn.addEventListener('touchstart', toggleAuto, { passive: false });
+        autoToggleBtn.addEventListener('click', toggleAuto);
+      }
     },
 
     scheduleAutoStop: function() {
       if (!isAutoMode) return;
       clearTimeout(autoTimer);
       autoTimer = setTimeout(() => {
-        if (reels[0].isSpinning) this.stopReelIndex(0, true); // trueでハードロック回避
+        if (reels[0].isSpinning) this.stopReelIndex(0, true);
         autoTimer = setTimeout(() => {
           if (reels[1].isSpinning) this.stopReelIndex(1, true);
           autoTimer = setTimeout(() => {
@@ -755,5 +763,4 @@
     }
   };
 })();
-
 

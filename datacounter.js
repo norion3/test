@@ -262,4 +262,3 @@
   window.DATA_COUNTER = DataCounter;
 })();
 
-

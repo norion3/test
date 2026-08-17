@@ -185,7 +185,7 @@
     .line-numbers {
       display: flex;
       flex-direction: column;
-      gap: 15px; /* リール縮小に合わせてギャップ調整 */
+      gap: 15px;
       font-weight: 900;
       font-size: 10px;
     }
@@ -218,7 +218,6 @@
       align-items: center;
       justify-content: space-between;
       overflow: hidden;
-      /* インナーシャドウで上下を物理的に暗く沈める */
       box-shadow: inset 0 8px 10px rgba(0,0,0,0.5), inset 0 -8px 10px rgba(0,0,0,0.5);
       position: relative;
     }
@@ -380,7 +379,6 @@
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      /* レバー自体のタップイベントを確実に発火させるため */
       z-index: 10;
     }
 
@@ -515,7 +513,7 @@
     .live-data-val.reg { color: #00e5ff; }
     .live-data-val.prob { color: #ffcc00; }
 
-    /* 最下部コントロール (UI操作領域。イベント干渉なし) */
+    /* 最下部コントロール (UI操作領域。画面タップ進行から安全に隔離) */
     .bottom-controls {
       display: flex;
       gap: 8px;
@@ -570,7 +568,6 @@
     .stat-value.total { color: #ffcc00; }
     #slumpCanvas { width: 100%; height: 150px; background: #111622; }
     
-    /* 履歴スクロールエリア（touchmove対応） */
     .history-section { max-height: 140px; overflow-y: auto; font-size: 11px; text-align: center; overscroll-behavior-y: contain; }
     table { width: 100%; border-collapse: collapse; }
     th { color: #7a8ba6; border-bottom: 1px solid #2d3b54; }
@@ -718,7 +715,7 @@
           </div>
         </div>
 
-        <!-- 最下部コントロール (UI操作領域。イベント干渉なし) -->
+        <!-- 最下部コントロール (UI操作領域。画面タップ進行から完全に分離保護) -->
         <div class="bottom-controls">
           <button id="autoToggleBtn" class="ctrl-btn auto-btn">👤 MODE: MANUAL</button>
           <button id="dataBtn" class="ctrl-btn data-btn">📊 詳細データ</button>
@@ -729,14 +726,13 @@
     </div>
   </div>
 
-  <!-- ホール風詳細データカウンター モーダル (各種確率追加) -->
+  <!-- ホール風詳細データカウンター モーダル -->
   <div class="modal-overlay" id="dataModal">
     <div class="modal-content">
       <div class="modal-header">
         <div class="modal-title">📊 ホールデータカウンター</div>
         <button class="modal-close-btn" id="dataModalCloseBtn">✕</button>
       </div>
-      <!-- 拡張3x3グリッド構成 -->
       <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
         <div class="stat-card"><div class="stat-label">総回転数</div><div class="stat-value" id="modalTotalGames">0 G</div></div>
         <div class="stat-card"><div class="stat-label">現在ゲーム</div><div class="stat-value" id="modalCurrentGames">0 G</div></div>
@@ -786,7 +782,7 @@
         </div>
         <div class="setting-row">
           <label>サウンド再生</label>
-          <input type="checkbox" id="soundEnableCheck"> <!-- 初期OFF -->
+          <input type="checkbox" id="soundEnableCheck">
         </div>
         <div class="setting-row">
           <label>全体音量</label>
@@ -798,18 +794,42 @@
   </div>
 
   <script>
-    // 画面全体の不要なスクロールを防止（ただし、履歴セクションのスクロールは許可）
+    // 履歴モーダル以外の不要なスクロールを防止
     document.addEventListener('touchmove', function(e) {
-      if (e.target.closest('.history-section')) return; // 履歴はスクロール可能
+      if (e.target.closest('.history-section')) return; 
       if (e.cancelable) e.preventDefault();
     }, { passive: false });
 
-    // ※ 【重要】全画面のタップ監視（appViewport.addEventListener）は完全削除しました。
-    // ※ スロットの操作（レバー、リール窓、ボタン）は engine.js の bindEvents でのみ管理され、
-    // ※ 下部のUIボタン群には一切干渉しないため、AUTO切替やモーダルは100%確実に反応します。
+    // 【最重要】画面どこでもワンタップ進行の完全復活 ＆ UI操作領域の安全な分離
+    const appViewport = document.getElementById('appViewport');
+    if (appViewport) {
+      let handled = false;
+      const trigger = (e) => {
+        // UIコントロールボタン領域（AUTOボタン等）やモーダル表示領域をタップした場合はワンタップ進行を除外
+        if (e.target.closest('.ctrl-btn') || 
+            e.target.closest('.modal-overlay') || 
+            e.target.closest('.modal-content') ||
+            e.target.closest('select') ||
+            e.target.closest('input')) {
+          return;
+        }
 
-    // データカウンターモーダル表示 (素直なonclickによる確実な動作)
-    document.getElementById('dataBtn').onclick = () => {
+        if (e.type === 'touchstart' || e.type === 'pointerdown') handled = true;
+        else if (e.type === 'click' && handled) { handled = false; return; }
+        
+        // 通常の画面タップによるスロット進行（engine.js のアトミック・タッチセッションで多重連動は完封）
+        if (window.JUGGLER_ENGINE && typeof window.JUGGLER_ENGINE.handleTap === 'function') {
+          window.JUGGLER_ENGINE.handleTap();
+        }
+      };
+
+      appViewport.addEventListener('touchstart', trigger, { passive: false });
+      appViewport.addEventListener('click', trigger);
+    }
+
+    // データカウンターモーダル表示
+    document.getElementById('dataBtn').onclick = (e) => {
+      e.stopPropagation();
       if(window.DATA_COUNTER) {
         const s = window.DATA_COUNTER.getStats();
         document.getElementById('modalTotalGames').textContent = s.totalGames + ' G';
@@ -828,12 +848,14 @@
       }
       document.getElementById('dataModal').classList.add('active');
     };
-    document.getElementById('dataModalCloseBtn').onclick = () => {
+    document.getElementById('dataModalCloseBtn').onclick = (e) => {
+      e.stopPropagation();
       document.getElementById('dataModal').classList.remove('active');
     };
 
     // 設定モーダル表示
-    document.getElementById('settingModalBtn').onclick = () => {
+    document.getElementById('settingModalBtn').onclick = (e) => {
+      e.stopPropagation();
       if(window.JUGGLER_ENGINE) {
         const cfg = window.JUGGLER_ENGINE.getConfig();
         document.getElementById('settingSelect').value = cfg.setting;
@@ -844,10 +866,12 @@
       }
       document.getElementById('settingModal').classList.add('active');
     };
-    document.getElementById('settingModalCloseBtn').onclick = () => {
+    document.getElementById('settingModalCloseBtn').onclick = (e) => {
+      e.stopPropagation();
       document.getElementById('settingModal').classList.remove('active');
     };
-    document.getElementById('saveSettingBtn').onclick = () => {
+    document.getElementById('saveSettingBtn').onclick = (e) => {
+      e.stopPropagation();
       if(window.JUGGLER_ENGINE) {
         window.JUGGLER_ENGINE.setConfig({
           setting: parseInt(document.getElementById('settingSelect').value, 10),
@@ -875,5 +899,4 @@
   </script>
 </body>
 </html>
-
 
