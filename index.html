@@ -79,19 +79,19 @@
     @media (max-height: 660px) { .cabinet { transform: scale(0.82); } }
     @media (max-height: 580px) { .cabinet { transform: scale(0.72); } }
 
-    /* 目に優しいボーナスフラッシュ演出（エンジン側からbonus-modeクラス付与で発動） */
-    @keyframes gentleFlash {
+    /* 【煌麗化】ボーナス時の豪華イルミネーション (ゴールド輝閃 ➔ パッションレッド ➔ 黄金発光) */
+    @keyframes gorgeousFlash {
       0% { filter: brightness(1); box-shadow: inset 0 0 20px rgba(0,0,0,0.9); }
-      50% { filter: brightness(1.25); box-shadow: inset 0 0 30px rgba(255, 200, 50, 0.4), 0 0 25px rgba(255,50,50,0.3); }
+      50% { filter: brightness(1.35); box-shadow: inset 0 0 45px rgba(255, 215, 0, 0.5), inset 0 0 20px rgba(255, 50, 50, 0.4), 0 0 30px rgba(255, 215, 0, 0.4); }
       100% { filter: brightness(1); box-shadow: inset 0 0 20px rgba(0,0,0,0.9); }
     }
     .cabinet.bonus-mode .main-panel,
     .cabinet.bonus-mode .top-panel {
-      animation: gentleFlash 1.5s ease-in-out infinite;
+      animation: gorgeousFlash 1.0s ease-in-out infinite;
     }
     .cabinet.bonus-mode .kitac-top {
-      animation: gentleFlash 1.5s ease-in-out infinite;
-      background: linear-gradient(180deg, #ff3b3b 0%, #a00000 100%);
+      animation: gorgeousFlash 1.0s ease-in-out infinite;
+      background: linear-gradient(180deg, #ff5555 0%, #a00000 100%);
     }
 
     /* GRAVITY TOPランプ (赤・金統一) */
@@ -185,7 +185,7 @@
     .line-numbers {
       display: flex;
       flex-direction: column;
-      gap: 15px;
+      gap: 15px; /* リール縮小に合わせてギャップ調整 */
       font-weight: 900;
       font-size: 10px;
     }
@@ -218,6 +218,7 @@
       align-items: center;
       justify-content: space-between;
       overflow: hidden;
+      /* インナーシャドウで上下を物理的に暗く沈める */
       box-shadow: inset 0 8px 10px rgba(0,0,0,0.5), inset 0 -8px 10px rgba(0,0,0,0.5);
       position: relative;
     }
@@ -511,9 +512,9 @@
     .live-data-val.diff { color: #00e5ff; }
     .live-data-val.big { color: #ff3366; }
     .live-data-val.reg { color: #00e5ff; }
-    .live-data-val.prob { color: #ffcc00; }
+    .live-data-val.prob { color: #ffcc00; } /* 機械割用 */
 
-    /* 最下部コントロール (UI操作領域。画面タップ進行から安全に隔離) */
+    /* 最下部コントロール (UI操作領域。画面タップ進行から完全に分離保護) */
     .bottom-controls {
       display: flex;
       gap: 8px;
@@ -710,8 +711,8 @@
             <div class="live-data-val reg" id="barRegCount">0</div>
           </div>
           <div class="live-data-item">
-            <div class="live-data-label">合成確率</div>
-            <div class="live-data-val prob" id="barTotalProb">1/--.-</div>
+            <div class="live-data-label">機械割</div>
+            <div class="live-data-val prob" id="barTotalProb">--.-%</div>
           </div>
         </div>
 
@@ -726,20 +727,21 @@
     </div>
   </div>
 
-  <!-- ホール風詳細データカウンター モーダル -->
+  <!-- ホール風詳細データカウンター モーダル (機械割追加) -->
   <div class="modal-overlay" id="dataModal">
     <div class="modal-content">
       <div class="modal-header">
         <div class="modal-title">📊 ホールデータカウンター</div>
         <button class="modal-close-btn" id="dataModalCloseBtn">✕</button>
       </div>
+      <!-- 拡張3カラムグリッド構成 -->
       <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
         <div class="stat-card"><div class="stat-label">総回転数</div><div class="stat-value" id="modalTotalGames">0 G</div></div>
-        <div class="stat-card"><div class="stat-label">現在ゲーム</div><div class="stat-value" id="modalCurrentGames">0 G</div></div>
-        <div class="stat-card"><div class="stat-label">差枚数</div><div class="stat-value" id="modalDiffMedal">0 枚</div></div>
-        
         <div class="stat-card"><div class="stat-label">BIG 回数</div><div class="stat-value big" id="modalBigCount">0</div></div>
         <div class="stat-card"><div class="stat-label">REG 回数</div><div class="stat-value reg" id="modalRegCount">0</div></div>
+
+        <div class="stat-card"><div class="stat-label">差枚数</div><div class="stat-value" id="modalDiffMedal">0 枚</div></div>
+        <div class="stat-card"><div class="stat-label">機械割 (RTP)</div><div class="stat-value total" id="modalRtp">--.-%</div></div>
         <div class="stat-card"><div class="stat-label">合成確率</div><div class="stat-value total" id="modalTotalProb">1/--.-</div></div>
         
         <div class="stat-card"><div class="stat-label">BIG 確率</div><div class="stat-value big" id="modalBigProb">1/--.-</div></div>
@@ -817,7 +819,7 @@
         if (e.type === 'touchstart' || e.type === 'pointerdown') handled = true;
         else if (e.type === 'click' && handled) { handled = false; return; }
         
-        // 通常の画面タップによるスロット進行（engine.js のアトミック・タッチセッションで多重連動は完封）
+        // 通常の画面タップによるスロット進行（engine.js のアトミック・タッチセッションで多重連動は完封済み）
         if (window.JUGGLER_ENGINE && typeof window.JUGGLER_ENGINE.handleTap === 'function') {
           window.JUGGLER_ENGINE.handleTap();
         }
@@ -833,12 +835,12 @@
       if(window.DATA_COUNTER) {
         const s = window.DATA_COUNTER.getStats();
         document.getElementById('modalTotalGames').textContent = s.totalGames + ' G';
-        document.getElementById('modalCurrentGames').textContent = s.currentGames + ' G';
         document.getElementById('modalDiffMedal').textContent = (s.diffMedal>0?'+':'') + s.diffMedal + ' 枚';
         document.getElementById('modalBigCount').textContent = s.bigCount;
         document.getElementById('modalRegCount').textContent = s.regCount;
-        document.getElementById('modalTotalProb').textContent = s.totalProb;
         
+        document.getElementById('modalRtp').textContent = s.rtp; // 新設：機械割
+        document.getElementById('modalTotalProb').textContent = s.totalProb;
         document.getElementById('modalBigProb').textContent = s.bigProb;
         document.getElementById('modalRegProb').textContent = s.regProb;
         document.getElementById('modalGrapeProb').textContent = s.grapeProb;
@@ -899,4 +901,5 @@
   </script>
 </body>
 </html>
+
 

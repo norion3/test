@@ -1,6 +1,6 @@
 /**
  * データカウンターモジュール (datacounter.js)
- * ホール仕様データ集計・各種確率計算・当選履歴・初期レンジ±500可変スランプグラフ描画
+ * IN/OUT集計・機械割算出・ホール仕様データ集計・各種確率計算・初期レンジ±500可変スランプグラフ描画
  */
 
 (function() {
@@ -11,6 +11,9 @@
     regCount: 0,         // REG回数
     grapeCount: 0,       // 通常時のブドウ獲得回数
     diffMedal: 0,        // 累計差枚数
+    
+    totalIn: 0,          // 【新規】累計投入枚数 (IN)
+    totalOut: 0,         // 【新規】累計払出枚数 (OUT)
     
     history: [],         // 当選履歴リスト [{ id, type, game, totalGame, time }]
     slumpData: [{ game: 0, diff: 0 }], // スランプグラフ用データポイント
@@ -26,16 +29,22 @@
       this.regCount = 0;
       this.grapeCount = 0;
       this.diffMedal = 0;
+      this.totalIn = 0;
+      this.totalOut = 0;
       this.history = [];
       this.slumpData = [{ game: 0, diff: 0 }];
     },
 
     // 1ゲーム開始時 (BET消費時)
-    // 実機データカウンター同様、ボーナス消化中のゲーム数は総回転数に含めない
     onGameStart: function(betCount, isBonusMode = false) {
-      if (!isBonusMode && betCount > 0) {
-        this.totalGames++;
-        this.currentGames++;
+      if (betCount > 0) {
+        this.totalIn += betCount; // 投入枚数(IN)を確実に集計
+        
+        // 実機データカウンター同様、ボーナス消化中のゲーム数は通常総回転数に含めない
+        if (!isBonusMode) {
+          this.totalGames++;
+          this.currentGames++;
+        }
       }
       this.diffMedal -= betCount;
       this.recordSlumpPoint();
@@ -44,7 +53,9 @@
     // 払い出し発生時
     onPayout: function(payout, type = '') {
       if (payout > 0) {
+        this.totalOut += payout; // 払出枚数(OUT)を確実に集計
         this.diffMedal += payout;
+        
         // 通常時のブドウのみカウント（ボーナス中のブドウ払出は除外）
         if (type === 'GRAPE') {
           this.grapeCount++;
@@ -82,7 +93,7 @@
       this.recordSlumpPoint(true);
     },
 
-    // スランプグラフ用データポイントの記録 (長時間プレイ時のメモリ増大防止サンプリング)
+    // スランプグラフ用データポイントの記録
     recordSlumpPoint: function(forceRecord = false) {
       const lastPoint = this.slumpData[this.slumpData.length - 1];
       
@@ -108,6 +119,9 @@
       };
 
       const totalBonus = this.bigCount + this.regCount;
+      
+      // 【新規】機械割（PAYOUT率）の精密計算: (OUT ÷ IN) × 100
+      const rtp = this.totalIn > 0 ? ((this.totalOut / this.totalIn) * 100).toFixed(1) + '%' : '--.-%';
 
       return {
         totalGames: this.totalGames,
@@ -118,8 +132,11 @@
         bigProb: formatProb(this.bigCount, this.totalGames),
         regProb: formatProb(this.regCount, this.totalGames),
         totalProb: formatProb(totalBonus, this.totalGames),
-        grapeProb: formatProbPrecise(this.grapeCount, this.totalGames), // 小数第2位まで精密表記
-        diffMedal: this.diffMedal
+        grapeProb: formatProbPrecise(this.grapeCount, this.totalGames),
+        diffMedal: this.diffMedal,
+        totalIn: this.totalIn,
+        totalOut: this.totalOut,
+        rtp: rtp // 機械割（％）
       };
     },
 
@@ -147,7 +164,6 @@
         if (p.diff < minDiff) minDiff = Math.floor(p.diff / 250) * 250;
       });
 
-      // スケーリングの絶対値を上下対称に揃えて見やすく調整
       const absMax = Math.max(Math.abs(maxDiff), Math.abs(minDiff), 500);
       maxDiff = absMax;
       minDiff = -absMax;
@@ -171,7 +187,6 @@
         ctx.lineTo(width - padding.right, y);
         ctx.stroke();
 
-        // 目盛値表記
         ctx.fillStyle = '#7a8ba6';
         ctx.font = '10px monospace';
         ctx.textAlign = 'right';
@@ -261,4 +276,5 @@
 
   window.DATA_COUNTER = DataCounter;
 })();
+
 
