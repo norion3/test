@@ -185,7 +185,7 @@
     .line-numbers {
       display: flex;
       flex-direction: column;
-      gap: 20px;
+      gap: 15px; /* リール縮小に合わせてギャップ調整 */
       font-weight: 900;
       font-size: 10px;
     }
@@ -207,18 +207,18 @@
     .line-badge.lit.badge-2 { background: #2196f3; color: #fff; border-color: #88ccff; box-shadow: 0 0 8px #2196f3; }
     .line-badge.lit.badge-1 { background: #4caf50; color: #fff; border-color: #88ff88; box-shadow: 0 0 8px #4caf50; }
 
-    /* 【引き締まった実機長方形プロポーション】リール窓 (320px × 138px : コマ高46px) */
+    /* 【極限圧縮・白枠全廃】リール窓 (320px × 138px : コマ高46px) */
     .reels-screen {
       width: 320px;
       height: 138px;
-      background: #ffffff; /* 純白のシームレスなテープ背景 */
+      background: #ffffff; /* 純白のシームレス背景 */
       border: 3px solid #111;
       border-radius: 4px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       overflow: hidden;
-      /* 控えめで自然な落ち影により立体感を出す */
+      /* インナーシャドウで上下を物理的に暗く沈める */
       box-shadow: inset 0 8px 10px rgba(0,0,0,0.5), inset 0 -8px 10px rgba(0,0,0,0.5);
       position: relative;
     }
@@ -226,7 +226,7 @@
     .reel-column {
       width: 104px;
       height: 138px;
-      background: #ffffff;
+      background: transparent;
       position: relative;
       overflow: hidden;
     }
@@ -583,11 +583,11 @@
 </head>
 <body>
 
-  <!-- 全画面どこでもワンタップ進行コンテナ -->
+  <!-- 全画面コンテナ -->
   <div class="app-viewport" id="appViewport">
     <div class="cabinet-scaler">
       
-      <!-- 横幅390px拡大 ドット筐体 -->
+      <!-- ドット筐体 -->
       <div class="cabinet" id="mainCabinet">
         
         <!-- GRAVITY TOPランプ -->
@@ -618,7 +618,7 @@
               <div class="reel-column"><canvas id="reelCanvas2" class="reel-canvas"></canvas></div>
             </div>
 
-            <!-- 右側文字透過パネル (Start -> Replay -> Wait の実機配列) -->
+            <!-- 右側文字透過パネル (Start -> Replay -> Wait の実機完全配列) -->
             <div class="status-panel-right">
               <div class="text-lamp lamp-start" id="lampStart">Start</div>
               <div class="text-lamp lamp-replay" id="lampReplay">Replay</div>
@@ -641,16 +641,12 @@
               <div class="led-unit">
                 <div class="led-label">CREDIT</div>
                 <div class="led-7seg-container" id="creditDisp">
-                  <svg class="digit7seg" viewBox="0 0 24 40" transform="skewX(-6)">
-                    <polygon class="seg seg-a" points="6,2 18,2 15,6 9,6" /><polygon class="seg seg-b" points="19,3 19,18 15,15 15,7" /><polygon class="seg seg-c" points="19,22 19,37 15,33 15,25" /><polygon class="seg seg-d" points="6,38 18,38 15,34 9,34" /><polygon class="seg seg-e" points="5,22 5,37 9,33 9,25" /><polygon class="seg seg-f" points="5,3 5,18 9,15 9,7" /><polygon class="seg seg-g" points="7,20 10,17 14,17 17,20 14,23 10,23" />
-                  </svg>
-                  <svg class="digit7seg" viewBox="0 0 24 40" transform="skewX(-6)">
-                    <polygon class="seg seg-a" points="6,2 18,2 15,6 9,6" /><polygon class="seg seg-b" points="19,3 19,18 15,15 15,7" /><polygon class="seg seg-c" points="19,22 19,37 15,33 15,25" /><polygon class="seg seg-d" points="6,38 18,38 15,34 9,34" /><polygon class="seg seg-e" points="5,22 5,37 9,33 9,25" /><polygon class="seg seg-f" points="5,3 5,18 9,15 9,7" /><polygon class="seg seg-g" points="7,20 10,17 14,17 17,20 14,23 10,23" />
-                  </svg>
+                  <svg class="digit7seg" viewBox="0 0 24 40" transform="skewX(-6)"><polygon class="seg seg-a" points="6,2 18,2 15,6 9,6" /><polygon class="seg seg-b" points="19,3 19,18 15,15 15,7" /><polygon class="seg seg-c" points="19,22 19,37 15,33 15,25" /><polygon class="seg seg-d" points="6,38 18,38 15,34 9,34" /><polygon class="seg seg-e" points="5,22 5,37 9,33 9,25" /><polygon class="seg seg-f" points="5,3 5,18 9,15 9,7" /><polygon class="seg seg-g" points="7,20 10,17 14,17 17,20 14,23 10,23" /></svg>
+                  <svg class="digit7seg" viewBox="0 0 24 40" transform="skewX(-6)"><polygon class="seg seg-a" points="6,2 18,2 15,6 9,6" /><polygon class="seg seg-b" points="19,3 19,18 15,15 15,7" /><polygon class="seg seg-c" points="19,22 19,37 15,33 15,25" /><polygon class="seg seg-d" points="6,38 18,38 15,34 9,34" /><polygon class="seg seg-e" points="5,22 5,37 9,33 9,25" /><polygon class="seg seg-f" points="5,3 5,18 9,15 9,7" /><polygon class="seg seg-g" points="7,20 10,17 14,17 17,20 14,23 10,23" /></svg>
                 </div>
               </div>
 
-              <!-- COUNT (純増・BIG獲得数対応 3桁仕様) -->
+              <!-- COUNT (3桁) -->
               <div class="led-unit">
                 <div class="led-label">COUNT</div>
                 <div class="led-7seg-container" id="countDisp">
@@ -727,14 +723,13 @@
     </div>
   </div>
 
-  <!-- ホール風詳細データカウンター モーダル (各種確率追加) -->
+  <!-- ホール風詳細データカウンター モーダル -->
   <div class="modal-overlay" id="dataModal">
     <div class="modal-content">
       <div class="modal-header">
         <div class="modal-title">📊 ホールデータカウンター</div>
         <button class="modal-close-btn" id="dataModalCloseBtn">✕</button>
       </div>
-      <!-- 拡張3x3グリッド構成 -->
       <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
         <div class="stat-card"><div class="stat-label">総回転数</div><div class="stat-value" id="modalTotalGames">0 G</div></div>
         <div class="stat-card"><div class="stat-label">現在ゲーム</div><div class="stat-value" id="modalCurrentGames">0 G</div></div>
@@ -784,7 +779,7 @@
         </div>
         <div class="setting-row">
           <label>サウンド再生</label>
-          <input type="checkbox" id="soundEnableCheck"> <!-- 初期OFF -->
+          <input type="checkbox" id="soundEnableCheck">
         </div>
         <div class="setting-row">
           <label>全体音量</label>
@@ -805,7 +800,6 @@
 
     if (badge1 && badge2 && mainCabinet) {
       const observer = new MutationObserver(() => {
-        // ボーナス中(1BET)は中段ライン(badge2)のみが有効になる
         if (badge2.classList.contains('lit') && !badge1.classList.contains('lit')) {
           mainCabinet.classList.add('bonus-mode');
         } else {
@@ -816,8 +810,31 @@
       observer.observe(badge2, { attributes: true, attributeFilter: ['class'] });
     }
 
-    // イベントリスナーは engine.js 内に一元化されたため、ここには記述しません。
-    // （二重発火・フリーズを物理的に排除）
+    // 全画面どこでもワンタップ進行イベントの安全な一元化
+    const appViewport = document.getElementById('appViewport');
+    if (appViewport) {
+      let handled = false;
+      const trigger = (e) => {
+        // モーダルやシステムボタン操作は除外
+        if (e.target.closest('.ctrl-btn') || 
+            e.target.closest('.modal-overlay') || 
+            e.target.closest('.modal-content') ||
+            e.target.closest('select') ||
+            e.target.closest('input')) {
+          return;
+        }
+        if (e.type === 'touchstart' || e.type === 'pointerdown') handled = true;
+        else if (e.type === 'click' && handled) { handled = false; return; }
+        
+        // engine.js 側の単一ハンドラに安全に渡す
+        if (window.JUGGLER_ENGINE && typeof window.JUGGLER_ENGINE.handleTap === 'function') {
+          window.JUGGLER_ENGINE.handleTap(e);
+        }
+      };
+
+      appViewport.addEventListener('touchstart', trigger, { passive: false });
+      appViewport.addEventListener('click', trigger);
+    }
 
     // データカウンターモーダル
     document.getElementById('dataBtn').onclick = (e) => {
@@ -830,8 +847,6 @@
         document.getElementById('modalBigCount').textContent = s.bigCount;
         document.getElementById('modalRegCount').textContent = s.regCount;
         document.getElementById('modalTotalProb').textContent = s.totalProb;
-        
-        // 確率の追加表示
         document.getElementById('modalBigProb').textContent = s.bigProb;
         document.getElementById('modalRegProb').textContent = s.regProb;
         document.getElementById('modalGrapeProb').textContent = s.grapeProb;

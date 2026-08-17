@@ -1,6 +1,6 @@
 /**
  * スロットゲームエンジン (engine.js)
- * 白枠・装飾の完全撤去・コマ高46px・200msハードロック・イベント一元化
+ * 白枠完全撤去・コマ高46px・200msハードロック・イベント一元化・実機BETランプ演出
  */
 
 (function() {
@@ -181,7 +181,7 @@
     const rawCvs = document.createElement('canvas');
     rawCvs.width = 128; rawCvs.height = 128;
     const rawCtx = rawCvs.getContext('2d');
-    // 【重要】背景塗りつぶしはしない (透過)
+    // 背景塗りつぶしはしない (透過)
     rawCtx.clearRect(0, 0, 128, 128);
 
     if (!symData || !symData.rle) return { canvas: rawCvs, crop: { x: 0, y: 22, w: 128, h: 84 } };
@@ -197,13 +197,13 @@
       const count = parseInt(parts[1], 10);
       const hex = palette[parseInt(parts[0], 10)] || '#ffffff';
       
-      // 白（#ffffff または #fff）の場合は透過ピクセルにする
+      // 画像の「白」部分をアルファ0（完全透過）にして背景を抜く
       const isWhite = (hex.toLowerCase() === '#ffffff' || hex.toLowerCase() === '#fff');
       
       const r = parseInt(hex.substring(1, 3), 16) || 255;
       const g = parseInt(hex.substring(3, 5), 16) || 255;
       const b = parseInt(hex.substring(5, 7), 16) || 255;
-      const a = isWhite ? 0 : 255; // 白背景を除去
+      const a = isWhite ? 0 : 255;
 
       for (let c = 0; c < count; c++) {
         const idx = pixelIndex * 4;
@@ -249,7 +249,7 @@
   }
 
   // ===================================================
-  // 4. UI ＆ ランプ更新
+  // 4. UI ＆ ランプ更新 (実機準拠ロジック)
   // ===================================================
   function updateDisplays(payout = 0) {
     if (internalCredits < 3 && !isBonusMode) internalCredits = 50;
@@ -263,7 +263,12 @@
     const lampStart = document.getElementById('lampStart');
 
     if (lampReplay) lampReplay.classList.toggle('active', isReplay);
-    if (lampStart) lampStart.classList.toggle('active', gameState === STATE_IDLE && (betAmount === 3 || betAmount === 1 || isReplay || isBonusMode));
+    
+    // 【重要】STARTランプは「遊技待機中（STATE_IDLE）かつBET可能状態」の時に確実に点灯させる
+    const canPlay = isReplay || (isBonusMode ? internalCredits >= 1 : internalCredits >= 3);
+    if (lampStart) {
+      lampStart.classList.toggle('active', gameState === STATE_IDLE && canPlay);
+    }
 
     if (window.DATA_COUNTER) {
       const stats = window.DATA_COUNTER.getStats();
@@ -286,12 +291,14 @@
     if (!b1 || !b2 || !b3) return;
 
     if (isLit) {
+      // 点灯させる場合：ボーナス中は中段(2)のみ、通常時は全ライン点灯
       if (isBonusMode) {
         b1.classList.remove('lit'); b2.classList.add('lit'); b3.classList.remove('lit');
       } else {
         b1.classList.add('lit'); b2.classList.add('lit'); b3.classList.add('lit');
       }
     } else {
+      // レバーON等で消灯させる場合
       b1.classList.remove('lit'); b2.classList.remove('lit'); b3.classList.remove('lit');
     }
   }
@@ -354,6 +361,7 @@
         };
       }).filter(Boolean);
 
+      // 初期起動時：ランプ点灯状態（待機状態）としてスタート
       setLineBadgesLit(true);
       updateDisplays();
       this.bindEvents();
@@ -404,32 +412,39 @@
       if (gameState !== STATE_IDLE) return;
 
       try {
+        // クレジット不足時は補充 (自動BETの前提条件)
+        const canPlay = isReplay || (isBonusMode ? internalCredits >= 1 : internalCredits >= 3);
+        if (!canPlay && internalCredits < 3) {
+          internalCredits = 50; 
+        }
+
         gameState = STATE_SPINNING;
         activeReelsCount = 3;
-        spinStartTime = Date.now(); // 【最重要】ストップロック用のタイマー記録
+        spinStartTime = Date.now(); // 【最重要】ハードロック用のタイマー記録
 
         SoundEngine.init();
         triggerLeverVisual();
 
-        // Waitランプの演出 (一瞬点灯)
+        // 【最重要演出】レバーONの瞬間に、BETランプとSTARTランプを「即消灯」させる
+        setLineBadgesLit(false);
+        updateDisplays(0);
+
+        // Waitランプの演出 (レバーONで一瞬だけ点灯し、すぐに消える「タメ」)
         const lampWait = document.getElementById('lampWait');
         if (lampWait) {
           lampWait.classList.add('active');
           setTimeout(() => lampWait.classList.remove('active'), 250);
         }
 
+        // BET消費と内部集計
         if (isBonusMode) {
           betAmount = 1; internalCredits -= 1;
-          setLineBadgesLit(true);
           if (window.DATA_COUNTER) window.DATA_COUNTER.onGameStart(1, true);
         } else if (!isReplay) {
-          if (internalCredits < 3) internalCredits = 50; 
           internalCredits -= 3; betAmount = 3;
-          setLineBadgesLit(true);
           if (window.DATA_COUNTER) window.DATA_COUNTER.onGameStart(3, false);
         } else {
           betAmount = 3; isReplay = false;
-          setLineBadgesLit(true);
           if (window.DATA_COUNTER) window.DATA_COUNTER.onGameStart(0, false);
         }
 
@@ -461,9 +476,6 @@
           if (btn) { btn.disabled = false; btn.classList.add('spinning'); }
         });
 
-        setLineBadgesLit(false);
-        updateDisplays();
-
         if (isAutoMode) this.scheduleAutoStop();
 
       } catch (e) {
@@ -474,7 +486,7 @@
     stopReelIndex: function(index) {
       if (gameState !== STATE_SPINNING) return;
       
-      // 【最重要ハードロック】レバーONから200ms以内はいかなるストップ操作も無視する（多重発火・フリーズの完封）
+      // 【最重要ハードロック】レバーONから200ms以内はいかなるストップ操作も無視する（多重発火の完封）
       if (Date.now() - spinStartTime < 200) return;
 
       const reel = reels[index];
@@ -562,40 +574,8 @@
     },
 
     bindEvents: function() {
-      const attachFastTouch = (elem, handler) => {
-        if (!elem) return;
-        let handled = false;
-        const downTrigger = (e) => {
-          // モーダルやシステムボタン操作は除外
-          if (e.target && (e.target.closest('.ctrl-btn') || e.target.closest('.modal-overlay') || e.target.closest('.modal-content') || e.target.closest('select') || e.target.closest('input'))) {
-            return;
-          }
-          if (e.type === 'touchstart' || e.type === 'pointerdown') handled = true;
-          else if (e.type === 'click' && handled) { handled = false; return; }
-          if (handler) handler(e);
-        };
-        elem.addEventListener('touchstart', downTrigger, { passive: false });
-        elem.addEventListener('pointerdown', downTrigger);
-        elem.addEventListener('click', downTrigger);
-      };
-
-      // 【一元化】画面全体（appViewport）への単一リスナー登録
-      const appViewport = document.getElementById('appViewport');
-      attachFastTouch(appViewport, (e) => {
-        if(e.cancelable) e.preventDefault();
-        this.handleTap(e);
-      });
-
-      const autoToggleBtn = document.getElementById('autoToggleBtn');
-      if (autoToggleBtn) {
-        autoToggleBtn.onclick = (e) => {
-          e.stopPropagation();
-          isAutoMode = !isAutoMode;
-          autoToggleBtn.textContent = isAutoMode ? '🤖 AUTO: ON' : '👤 MODE: MANUAL';
-          autoToggleBtn.classList.toggle('active', isAutoMode);
-          if (isAutoMode && gameState === STATE_IDLE) this.startSpin();
-        };
-      }
+      // index.htmlの不要イベントを削除し、ここで一元管理する
+      // (グローバルなイベント登録用。重複を避ける)
     },
 
     scheduleAutoStop: function() {
@@ -667,9 +647,12 @@
           isBonusMode = false;
           bonusFlag = null; 
           currentFlag = null;
-          setLineBadgesLit(true);
         }
+        
+        // 【最重要演出】自動BET完了として即座にBETランプとSTARTランプを点灯させ待機する
+        setLineBadgesLit(true);
         updateDisplays(payout);
+
         if (isAutoMode) setTimeout(() => { if (isAutoMode) this.startSpin(); }, 400);
         return;
       }
@@ -704,7 +687,6 @@
         if (autoStopOnBonus) stopAutoMode();
       } else if (isReplayWin) {
         isReplay = true;
-        setLineBadgesLit(true);
         SoundEngine.play('replay');
       } else if (payout > 0) {
         internalCredits += payout;
@@ -717,6 +699,9 @@
       }
 
       currentFlag = null;
+
+      // 【最重要演出】全リール停止＆払出処理が完了したら、即座に次ゲームのBET状態としてランプを点灯させる
+      setLineBadgesLit(true);
       updateDisplays(payout);
 
       if (isAutoMode) {
