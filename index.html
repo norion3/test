@@ -207,26 +207,26 @@
     .line-badge.lit.badge-2 { background: #2196f3; color: #fff; border-color: #88ccff; box-shadow: 0 0 8px #2196f3; }
     .line-badge.lit.badge-1 { background: #4caf50; color: #fff; border-color: #88ff88; box-shadow: 0 0 8px #4caf50; }
 
-    /* 【光学改修】重厚なリール窓枠 (強烈なインナーシャドウで上下余白を暗く沈める) */
+    /* 【引き締まった実機長方形プロポーション】リール窓 (320px × 138px : コマ高46px) */
     .reels-screen {
       width: 320px;
-      height: 162px;
-      background: #e8e8ed;
+      height: 138px;
+      background: #ffffff; /* 純白のシームレスなテープ背景 */
       border: 3px solid #111;
       border-radius: 4px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       overflow: hidden;
-      /* 重厚な落ち影により上下余白領域を物理的に暗く沈める */
-      box-shadow: inset 0 18px 16px rgba(0,0,0,0.68), inset 0 -18px 16px rgba(0,0,0,0.68);
+      /* 控えめで自然な落ち影により立体感を出す */
+      box-shadow: inset 0 8px 10px rgba(0,0,0,0.5), inset 0 -8px 10px rgba(0,0,0,0.5);
       position: relative;
     }
 
     .reel-column {
       width: 104px;
-      height: 162px;
-      background: #f2f2f6;
+      height: 138px;
+      background: #ffffff;
       position: relative;
       overflow: hidden;
     }
@@ -251,7 +251,7 @@
     .status-panel-right {
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 10px;
     }
 
     .text-lamp {
@@ -609,7 +609,7 @@
               <div class="line-badge badge-1 lit" id="lineBadge1">1</div>
             </div>
 
-            <!-- 【光学改修】重厚なリール窓枠 (強烈なインナーシャドウで上下余白を暗く沈める) -->
+            <!-- 【極限圧縮】リール窓 (320x138) - 不要な白枠装飾を全廃し図柄を密着 -->
             <div class="reels-screen">
               <div class="reel-column"><canvas id="reelCanvas0" class="reel-canvas"></canvas></div>
               <div class="reel-separator"></div>
@@ -816,29 +816,8 @@
       observer.observe(badge2, { attributes: true, attributeFilter: ['class'] });
     }
 
-    // 全画面どこでもワンタップ進行イベント (単一窓口一元化)
-    const appViewport = document.getElementById('appViewport');
-    if (appViewport) {
-      const handleTap = (e) => {
-        if (e.target.closest('.ctrl-btn') || 
-            e.target.closest('.modal-overlay') || 
-            e.target.closest('.modal-content') ||
-            e.target.closest('select') ||
-            e.target.closest('input')) {
-          return;
-        }
-        if (window.JUGGLER_ENGINE) {
-          window.JUGGLER_ENGINE.handleTap();
-        }
-      };
-
-      appViewport.addEventListener('touchstart', (e) => {
-        if (e.touches && e.touches.length === 1) {
-          handleTap(e);
-        }
-      }, { passive: false });
-      appViewport.addEventListener('click', handleTap);
-    }
+    // イベントリスナーは engine.js 内に一元化されたため、ここには記述しません。
+    // （二重発火・フリーズを物理的に排除）
 
     // データカウンターモーダル
     document.getElementById('dataBtn').onclick = (e) => {
@@ -910,4 +889,5 @@
   </script>
 </body>
 </html>
+
 

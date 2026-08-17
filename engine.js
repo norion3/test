@@ -1,6 +1,6 @@
 /**
  * スロットゲームエンジン (engine.js)
- * 人間工学光学描画・同期型状態遷移・生入り復活・全小役完全確率・高速スライド押し対応
+ * 白枠・装飾の完全撤去・コマ高46px・200msハードロック・イベント一元化
  */
 
 (function() {
@@ -11,11 +11,11 @@
     ['GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', '7', 'BAR', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO']
   ];
 
-  // コマサイズ (横幅100px × 高さ54px)
-  const SYMBOL_HEIGHT = 54;
+  // 【最重要】コマサイズ (横幅100px × 高さ46px) - 縦隙間を極限圧縮
+  const SYMBOL_HEIGHT = 46;
   const CANVAS_WIDTH = 100;
-  const REEL_SPEED_NORMAL = 24; // 通常時スピード
-  const REEL_SPEED_SLOW = 9;    // スロー旋回スピード
+  const REEL_SPEED_NORMAL = 22; // 通常時スピード
+  const REEL_SPEED_SLOW = 8;    // スロー旋回スピード
 
   // SアイムジャグラーEX 実機確率テーブル (設定1〜6)
   const PROBABILITY_TABLE = {
@@ -34,18 +34,19 @@
   const PROB_BELL   = 1 / 1092.2;
   const PROB_CLOWN  = 1 / 1092.2;
 
-  // ゲームステート (堅牢な状態マシン)
+  // ゲームステート
   const STATE_IDLE = 0;
   const STATE_SPINNING = 1;
   let gameState = STATE_IDLE;
   let activeReelsCount = 0;
+  let spinStartTime = 0; // 【最重要】ハードロック用タイマー
 
   // ゲーム内部状態
   let currentSetting = 6;
   let autoStopOnBonus = true;
   let weightCut = true;
   let masterVolume = 1.0;
-  let soundOn = false;         // 初期OFF
+  let soundOn = false;
 
   let credits = 50;
   let internalCredits = 50;
@@ -84,9 +85,7 @@
         }
         if (this.ctx.state === 'suspended') this.ctx.resume();
         this.loadExternalSounds();
-      } catch (e) {
-        // 音声エラーでメイン処理を止めない
-      }
+      } catch (e) {}
     },
     setVolume: function(vol) {
       masterVolume = vol;
@@ -120,7 +119,6 @@
           return;
         } catch(e) {}
       }
-      // WebAudio Fallback
       try {
         const now = this.ctx.currentTime;
         const osc = this.ctx.createOscillator();
@@ -177,13 +175,15 @@
   }
 
   // ===================================================
-  // 3. 【5大・光学改修】人間工学・視覚錯視描画エンジン
+  // 3. コマ高46pxフィッティング描画 (白枠・装飾の完全撤去)
   // ===================================================
   function decodeRLEToCanvasPrecisionCrop(symData) {
     const rawCvs = document.createElement('canvas');
     rawCvs.width = 128; rawCvs.height = 128;
     const rawCtx = rawCvs.getContext('2d');
-    rawCtx.fillStyle = '#ffffff'; rawCtx.fillRect(0, 0, 128, 128);
+    // 【重要】背景塗りつぶしはしない (透過)
+    rawCtx.clearRect(0, 0, 128, 128);
+
     if (!symData || !symData.rle) return { canvas: rawCvs, crop: { x: 0, y: 22, w: 128, h: 84 } };
 
     const imgData = rawCtx.createImageData(symData.w, symData.h);
@@ -196,12 +196,18 @@
       const parts = chunks[i].split(':');
       const count = parseInt(parts[1], 10);
       const hex = palette[parseInt(parts[0], 10)] || '#ffffff';
+      
+      // 白（#ffffff または #fff）の場合は透過ピクセルにする
+      const isWhite = (hex.toLowerCase() === '#ffffff' || hex.toLowerCase() === '#fff');
+      
       const r = parseInt(hex.substring(1, 3), 16) || 255;
       const g = parseInt(hex.substring(3, 5), 16) || 255;
       const b = parseInt(hex.substring(5, 7), 16) || 255;
+      const a = isWhite ? 0 : 255; // 白背景を除去
+
       for (let c = 0; c < count; c++) {
         const idx = pixelIndex * 4;
-        data[idx] = r; data[idx+1] = g; data[idx+2] = b; data[idx+3] = 255;
+        data[idx] = r; data[idx+1] = g; data[idx+2] = b; data[idx+3] = a;
         pixelIndex++;
       }
     }
@@ -217,55 +223,28 @@
     });
   }
 
-  // 1コマ描画（光学錯視・フィルム質感・立体影・遠近圧縮適用）
-  function drawSymbol(ctx, type, y, isReelSpinning = false, rowPos = 1) {
+  function drawSymbol(ctx, type, y, isReelSpinning = false) {
     const cached = symbolCanvasCache[type];
+    if (!cached) return;
     ctx.save();
     ctx.translate(0, y);
 
-    // 1. 【光学改修1】アイボリー曲面グラデーション背景 (ベタ塗り白を排除)
-    const bgGrad = ctx.createLinearGradient(0, 0, 0, SYMBOL_HEIGHT);
-    bgGrad.addColorStop(0, '#fafafc');
-    bgGrad.addColorStop(0.5, '#f2f2f6');
-    bgGrad.addColorStop(1, '#e5e5eb');
-    ctx.fillStyle = bgGrad;
-    ctx.fillRect(0, -0.5, CANVAS_WIDTH, SYMBOL_HEIGHT + 1.0);
+    // 【最重要】白背景・境界線・ドロップシャドウ等の装飾処理を1行残らず全削除。純粋な透過描画のみ。
 
-    // 2. 【光学改修2】コマ境界の繊細なセパレーター影ライン (1つのリール帯として認知させる)
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
-    ctx.fillRect(0, 0, CANVAS_WIDTH, 1);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-    ctx.fillRect(0, 1, CANVAS_WIDTH, 1);
+    // コマ高46pxに対して、7/BARは特大、小役は適正サイズに
+    let maxH = (type === '7' || type === 'BAR') ? SYMBOL_HEIGHT * 0.98 : SYMBOL_HEIGHT * 0.86;
+    let maxW = (type === '7' || type === 'BAR') ? CANVAS_WIDTH * 0.92 : CANVAS_WIDTH * 0.80;
 
-    if (cached) {
-      // 3. 【光学改修3】小役の光学的ボリューム感 (108%) 補正
-      const isBigSymbol = (type === '7' || type === 'BAR');
-      let baseMaxH = isBigSymbol ? SYMBOL_HEIGHT * 0.96 : SYMBOL_HEIGHT * 0.86; // 80%から86%へ拡大
-      let baseMaxW = isBigSymbol ? CANVAS_WIDTH * 0.92 : CANVAS_WIDTH * 0.78;   // 72%から78%へ拡大
+    const scale = Math.min(maxW / cached.crop.w, maxH / cached.crop.h);
+    let drawW = cached.crop.w * scale;
+    let drawH = cached.crop.h * scale;
 
-      // 4. 【光学改修4】ドラム曲面（3Dシリンダー）遠近錯視 (上下コマを92%縦圧縮)
-      let perspectiveScaleY = 1.0;
-      if (rowPos === 0 || rowPos === 2) {
-        perspectiveScaleY = 0.92; // 上段・下段は奥へ曲がるため視覚圧縮
-      }
+    const drawX = Math.round((CANVAS_WIDTH - drawW) / 2);
+    const drawY = Math.round((SYMBOL_HEIGHT - drawH) / 2);
 
-      const scale = Math.min(baseMaxW / cached.crop.w, baseMaxH / cached.crop.h);
-      let drawW = cached.crop.w * scale;
-      let drawH = cached.crop.h * scale * perspectiveScaleY;
-
-      const drawX = Math.round((CANVAS_WIDTH - drawW) / 2);
-      const drawY = Math.round((SYMBOL_HEIGHT - drawH) / 2);
-
-      // 5. 【光学改修5】図柄の立体ドロップシャドウ (印刷の厚みを表現)
-      if (!isReelSpinning) {
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.22)';
-        ctx.shadowBlur = 3;
-        ctx.shadowOffsetY = 2;
-      }
-
-      ctx.imageSmoothingEnabled = !isReelSpinning;
-      ctx.drawImage(cached.canvas, cached.crop.x, cached.crop.y, cached.crop.w, cached.crop.h, drawX, drawY, drawW, drawH);
-    }
+    ctx.imageSmoothingEnabled = !isReelSpinning; // 回転中はアンチエイリアスOFF
+    ctx.drawImage(cached.canvas, cached.crop.x, cached.crop.y, cached.crop.w, cached.crop.h, drawX, drawY, drawW, drawH);
+    
     ctx.restore();
   }
 
@@ -282,11 +261,9 @@
 
     const lampReplay = document.getElementById('lampReplay');
     const lampStart = document.getElementById('lampStart');
-    const lampWait = document.getElementById('lampWait');
 
     if (lampReplay) lampReplay.classList.toggle('active', isReplay);
     if (lampStart) lampStart.classList.toggle('active', gameState === STATE_IDLE && (betAmount === 3 || betAmount === 1 || isReplay || isBonusMode));
-    if (lampWait) lampWait.classList.toggle('active', false);
 
     if (window.DATA_COUNTER) {
       const stats = window.DATA_COUNTER.getStats();
@@ -350,7 +327,7 @@
   }
 
   // ===================================================
-  // 5. グローバルスロットエンジン (同期型状態遷移)
+  // 5. グローバルスロットエンジン
   // ===================================================
   window.JUGGLER_ENGINE = {
     isInitialized: false,
@@ -365,7 +342,7 @@
         canvas.width = CANVAS_WIDTH; canvas.height = SYMBOL_HEIGHT * strip.length * 3;
         const ctx = canvas.getContext('2d');
         const tripleStrip = [...strip, ...strip, ...strip];
-        tripleStrip.forEach((sym, i) => { drawSymbol(ctx, sym, i * SYMBOL_HEIGHT, false, i % 3); });
+        tripleStrip.forEach((sym, i) => { drawSymbol(ctx, sym, i * SYMBOL_HEIGHT, false); });
         const currentIdx = Math.floor(Math.random() * strip.length);
         const initialPos = currentIdx * SYMBOL_HEIGHT;
         canvas.style.transform = `translateY(-${initialPos}px)`;
@@ -395,13 +372,11 @@
     renderReelCanvas: function(reel, isSpinning) {
       const tripleStrip = [...reel.strip, ...reel.strip, ...reel.strip];
       reel.ctx.clearRect(0, 0, reel.canvas.width, reel.canvas.height);
-      tripleStrip.forEach((sym, i) => { drawSymbol(reel.ctx, sym, i * SYMBOL_HEIGHT, isSpinning, i % 3); });
+      tripleStrip.forEach((sym, i) => { drawSymbol(reel.ctx, sym, i * SYMBOL_HEIGHT, isSpinning); });
     },
 
-    // 役抽選ロジック
     drawFlag: function() {
       if (isBonusMode) return 'GRAPE';
-
       if (bonusFlag) return bonusFlag;
 
       const r = Math.random();
@@ -424,23 +399,23 @@
       return null;
     },
 
-    // レバーON処理 (同期型で即座に STATE_SPINNING 移行)
+    // レバーON処理
     startSpin: function() {
       if (gameState !== STATE_IDLE) return;
 
       try {
-        // 同期的に即座に回転状態へ移行（絶対に固まらない安全設計）
         gameState = STATE_SPINNING;
         activeReelsCount = 3;
+        spinStartTime = Date.now(); // 【最重要】ストップロック用のタイマー記録
 
         SoundEngine.init();
         triggerLeverVisual();
 
-        // Waitランプの演出（パチスロらしい200msの一滅タメ）
+        // Waitランプの演出 (一瞬点灯)
         const lampWait = document.getElementById('lampWait');
         if (lampWait) {
           lampWait.classList.add('active');
-          setTimeout(() => lampWait.classList.remove('active'), 200);
+          setTimeout(() => lampWait.classList.remove('active'), 250);
         }
 
         if (isBonusMode) {
@@ -459,8 +434,6 @@
         }
 
         SoundEngine.play('lever');
-
-        // 完全確率抽選
         currentFlag = this.drawFlag();
         
         if (currentFlag === 'BIG' || currentFlag === 'REG') {
@@ -494,14 +467,16 @@
         if (isAutoMode) this.scheduleAutoStop();
 
       } catch (e) {
-        // 万が一のエラー時はセーフティネットで待機状態へ強制復帰
-        console.error("Spin Error:", e);
-        gameState = STATE_IDLE;
+        gameState = STATE_IDLE; // セーフティネット
       }
     },
 
     stopReelIndex: function(index) {
       if (gameState !== STATE_SPINNING) return;
+      
+      // 【最重要ハードロック】レバーONから200ms以内はいかなるストップ操作も無視する（多重発火・フリーズの完封）
+      if (Date.now() - spinStartTime < 200) return;
+
       const reel = reels[index];
       if (!reel || !reel.isSpinning || reel.isStopping) return;
 
@@ -521,7 +496,6 @@
         if (baseIdx < 0) baseIdx += reel.strip.length;
         let targetIdx = baseIdx;
 
-        // 引込アシスト（生入りを完全許可）
         let targetSyms = [];
         if (currentFlag === 'BIG') targetSyms = ['7'];
         else if (currentFlag === 'REG') targetSyms = index === 2 ? ['BAR'] : ['7'];
@@ -549,18 +523,32 @@
         reel.targetPos = targetIdx * SYMBOL_HEIGHT;
 
         if (index === 2 && !isBonusMode && bonusFlag && pekaTiming === 'STOP3_UP') triggerPeka();
-      } catch (e) {
-        console.error("Stop Error:", e);
-      }
+      } catch (e) {}
     },
 
-    // 高速スライド押し（タンタンタン！）対応タップ処理
-    handleTap: function() {
+    // 【完全一元化】イベント窓口。多重登録のバブリングを排除
+    handleTap: function(e) {
       if (!this.isInitialized) return;
       const now = Date.now();
-      if (now - lastTapTime < 30) return; // 極小チャタリング防止(30ms)のみ
+      if (now - lastTapTime < 30) return; // 極小チャタリング防止
       lastTapTime = now;
 
+      // 個別ボタンの判定 (狙い打ち対応)
+      if (e && e.target) {
+        const targetId = e.target.id;
+        if (targetId === 'stopBtn0' || targetId === 'stopBtn1' || targetId === 'stopBtn2' || e.target.closest('.stop-btn')) {
+          const btn = e.target.closest('.stop-btn');
+          const idx = parseInt(btn.id.replace('stopBtn', ''), 10);
+          this.stopReelIndex(idx);
+          return;
+        }
+        if (targetId === 'startBtn' || e.target.closest('#startBtn')) {
+          this.startSpin();
+          return;
+        }
+      }
+
+      // 上記以外の全体タップ進行
       if (gameState === STATE_IDLE) {
         this.startSpin();
       } else if (gameState === STATE_SPINNING) {
@@ -578,6 +566,10 @@
         if (!elem) return;
         let handled = false;
         const downTrigger = (e) => {
+          // モーダルやシステムボタン操作は除外
+          if (e.target && (e.target.closest('.ctrl-btn') || e.target.closest('.modal-overlay') || e.target.closest('.modal-content') || e.target.closest('select') || e.target.closest('input'))) {
+            return;
+          }
           if (e.type === 'touchstart' || e.type === 'pointerdown') handled = true;
           else if (e.type === 'click' && handled) { handled = false; return; }
           if (handler) handler(e);
@@ -587,9 +579,11 @@
         elem.addEventListener('click', downTrigger);
       };
 
-      attachFastTouch(document.getElementById('startBtn'), (e) => { e.preventDefault(); this.handleTap(); });
-      [0,1,2].forEach(i => {
-        attachFastTouch(document.getElementById(`stopBtn${i}`), (e) => { e.preventDefault(); this.stopReelIndex(i); });
+      // 【一元化】画面全体（appViewport）への単一リスナー登録
+      const appViewport = document.getElementById('appViewport');
+      attachFastTouch(appViewport, (e) => {
+        if(e.cancelable) e.preventDefault();
+        this.handleTap(e);
       });
 
       const autoToggleBtn = document.getElementById('autoToggleBtn');
@@ -644,7 +638,7 @@
     },
 
     onAllStopped: function() {
-      gameState = STATE_IDLE; // 安全に待機状態へ復帰
+      gameState = STATE_IDLE; 
       betAmount = 0;
       
       const getSym = (rIdx, offset) => {
@@ -652,7 +646,6 @@
         return strip[(reels[rIdx].currentIndex + offset + strip.length) % strip.length];
       };
 
-      // 下段ライン判定修正済
       const lines = [
         [getSym(0, 0), getSym(1, 0), getSym(2, 0)],
         [getSym(0, 1), getSym(1, 1), getSym(2, 1)],
@@ -734,4 +727,5 @@
     }
   };
 })();
+
 
