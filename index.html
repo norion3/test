@@ -166,7 +166,7 @@
     .line-numbers {
       display: flex;
       flex-direction: column;
-      gap: 22px;
+      gap: 20px;
       font-weight: 900;
       font-size: 10px;
     }
@@ -188,10 +188,10 @@
     .line-badge.lit.badge-2 { background: #2196f3; color: #fff; border-color: #88ccff; box-shadow: 0 0 8px #2196f3; }
     .line-badge.lit.badge-1 { background: #4caf50; color: #fff; border-color: #88ff88; box-shadow: 0 0 8px #4caf50; }
 
-    /* 【引き締まった実機長方形プロポーション】リール窓 (320px × 180px) */
+    /* 【引き締まった実機長方形プロポーション】リール窓 (320px × 162px : コマ高54px) */
     .reels-screen {
       width: 320px;
-      height: 180px;
+      height: 162px;
       background: #fff;
       border: 3px solid #111;
       border-radius: 4px;
@@ -205,7 +205,7 @@
 
     .reel-column {
       width: 104px;
-      height: 180px;
+      height: 162px;
       background: #fff;
       position: relative;
       overflow: hidden;
@@ -259,8 +259,8 @@
     }
 
     .gogo-box {
-      width: 110px; 
-      height: 54px;
+      width: 100px; 
+      height: 52px;
       background: #020204;
       border: 2px solid #222;
       border-radius: 6px;
@@ -295,7 +295,7 @@
     --------------------------------------------------- */
     .led-group {
       display: flex;
-      gap: 12px;
+      gap: 8px;
       margin-bottom: 2px;
     }
 
@@ -316,15 +316,15 @@
       background: #080000;
       border: 2px solid #330000;
       border-radius: 4px;
-      padding: 3px 5px;
+      padding: 3px 4px;
       display: flex;
-      gap: 3px;
+      gap: 2px;
       box-shadow: inset 0 0 8px #000;
     }
 
     .digit7seg {
-      width: 15px;
-      height: 26px;
+      width: 14px;
+      height: 25px;
     }
     .seg {
       fill: var(--led-off);
@@ -346,9 +346,9 @@
       padding: 10px 18px;
       margin-top: 6px;
       display: flex;
-      justify-content: center; /* 【中央寄せ黄金レイアウト】 */
+      justify-content: center; /* 【ど中央寄せ黄金レイアウト】 */
       align-items: center;
-      gap: 20px;
+      gap: 22px;
       box-shadow: inset 0 2px 4px rgba(255,255,255,0.8), 0 5px 10px rgba(0,0,0,0.7);
     }
 
@@ -408,7 +408,7 @@
       background: radial-gradient(circle at 50% 50%, #000 0%, #151515 100%);
     }
 
-    /* ストップボタン (数字印字削除・プレーンな赤メッキ仕様) */
+    /* ストップボタン (数字印字完全排除・赤いプレーン仕様) */
     .stop-btn-group {
       display: flex;
       gap: 12px;
@@ -583,7 +583,7 @@
 </head>
 <body>
 
-  <!-- 全画面どこでもワンタップ進行レスポンシブコンテナ -->
+  <!-- 全画面どこでもワンタップ進行コンテナ -->
   <div class="app-viewport" id="appViewport">
     <div class="cabinet-scaler">
       
@@ -604,12 +604,12 @@
           <div class="reels-row">
             <!-- ライン表示 -->
             <div class="line-numbers">
-              <div class="line-badge badge-3">3</div>
-              <div class="line-badge badge-2">2</div>
-              <div class="line-badge badge-1">1</div>
+              <div class="line-badge badge-3 lit">3</div>
+              <div class="line-badge badge-2 lit">2</div>
+              <div class="line-badge badge-1 lit">1</div>
             </div>
 
-            <!-- 引き締まった実機プロポーション 3列リール窓 (320x180) -->
+            <!-- 引き締まった実機長方形プロポーション 3列リール窓 (320x162) -->
             <div class="reels-screen">
               <div class="reel-column"><canvas id="reelCanvas0" class="reel-canvas"></canvas></div>
               <div class="reel-separator"></div>
@@ -626,7 +626,7 @@
             </div>
           </div>
 
-          <!-- GOGOランプ ＆ SVG7セグ -->
+          <!-- GOGOランプ ＆ SVG7セグ (COUNTのみ3桁仕様) -->
           <div class="main-bottom-row">
             <div class="gogo-box" id="gogoBox">
               <svg class="gogo-svg" viewBox="0 0 100 60">
@@ -637,7 +637,7 @@
             </div>
 
             <div class="led-group">
-              <!-- CREDIT -->
+              <!-- CREDIT (2桁) -->
               <div class="led-unit">
                 <div class="led-label">CREDIT</div>
                 <div class="led-7seg-container" id="creditDisp">
@@ -662,16 +662,17 @@
                 </div>
               </div>
 
-              <!-- COUNT -->
+              <!-- COUNT (純増・BIG獲得数対応 3桁仕様) -->
               <div class="led-unit">
                 <div class="led-label">COUNT</div>
                 <div class="led-7seg-container" id="countDisp">
                   <svg class="digit7seg" viewBox="0 0 24 40" transform="skewX(-6)"><polygon class="seg seg-a" points="6,2 18,2 15,6 9,6" /><polygon class="seg seg-b" points="19,3 19,18 15,15 15,7" /><polygon class="seg seg-c" points="19,22 19,37 15,33 15,25" /><polygon class="seg seg-d" points="6,38 18,38 15,34 9,34" /><polygon class="seg seg-e" points="5,22 5,37 9,33 9,25" /><polygon class="seg seg-f" points="5,3 5,18 9,15 9,7" /><polygon class="seg seg-g" points="7,20 10,17 14,17 17,20 14,23 10,23" /></svg>
                   <svg class="digit7seg" viewBox="0 0 24 40" transform="skewX(-6)"><polygon class="seg seg-a" points="6,2 18,2 15,6 9,6" /><polygon class="seg seg-b" points="19,3 19,18 15,15 15,7" /><polygon class="seg seg-c" points="19,22 19,37 15,33 15,25" /><polygon class="seg seg-d" points="6,38 18,38 15,34 9,34" /><polygon class="seg seg-e" points="5,22 5,37 9,33 9,25" /><polygon class="seg seg-f" points="5,3 5,18 9,15 9,7" /><polygon class="seg seg-g" points="7,20 10,17 14,17 17,20 14,23 10,23" /></svg>
+                  <svg class="digit7seg" viewBox="0 0 24 40" transform="skewX(-6)"><polygon class="seg seg-a" points="6,2 18,2 15,6 9,6" /><polygon class="seg seg-b" points="19,3 19,18 15,15 15,7" /><polygon class="seg seg-c" points="19,22 19,37 15,33 15,25" /><polygon class="seg seg-d" points="6,38 18,38 15,34 9,34" /><polygon class="seg seg-e" points="5,22 5,37 9,33 9,25" /><polygon class="seg seg-f" points="5,3 5,18 9,15 9,7" /><polygon class="seg seg-g" points="7,20 10,17 14,17 17,20 14,23 10,23" /></svg>
                 </div>
               </div>
 
-              <!-- PAYOUT -->
+              <!-- PAYOUT (2桁) -->
               <div class="led-unit">
                 <div class="led-label">PAYOUT</div>
                 <div class="led-7seg-container" id="payoutDisp">
@@ -683,7 +684,7 @@
           </div>
         </div>
 
-        <!-- コントロールデッキ（正面視点 凹型沈み込みレバー ＋ 中央寄せプレーンボタン） -->
+        <!-- コントロールデッキ（正面視点 凹型沈み込みレバー ＋ 中央寄せ印字なし赤ボタン） -->
         <div class="control-deck">
           <div id="startBtn" class="real-lever-assembly" title="START">
             <div class="lever-housing"></div>
@@ -789,7 +790,7 @@
         </div>
         <div class="setting-row">
           <label>サウンド再生</label>
-          <input type="checkbox" id="soundEnableCheck" checked>
+          <input type="checkbox" id="soundEnableCheck">
         </div>
       </div>
       <button id="saveSettingBtn" style="background:#d31820; color:#fff; border:none; padding:8px; border-radius:4px; font-weight:bold; cursor:pointer;">設定を適用</button>
@@ -799,7 +800,7 @@
   <script>
     document.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
 
-    // 全画面どこでもワンタップ進行イベント
+    // 全画面どこでもワンタップ進行イベント (多重発火伝播遮断)
     const appViewport = document.getElementById('appViewport');
     if (appViewport) {
       const handleTap = (e) => {
