@@ -1,6 +1,6 @@
 /**
  * スロットゲームエンジン (engine.js)
- * DMM完全解析確率・目揃いズレ完治・AUTO解除フラグ修正・REG91枚ターゲット補正・21コマ超アシスト
+ * DMM完全解析確率・AUTO継続時2秒鑑賞ウェイト・目揃いズレ完治・音響ON/OFF一元化・REG91枚ターゲット補正
  */
 
 (function() {
@@ -41,7 +41,6 @@
   let currentSetting = 6;
   let autoStopOnBonus = true;
   let weightCut = true;
-  let masterVolume = 1.0;
   let soundOn = false;
 
   let credits = 50;
@@ -126,7 +125,7 @@
     if (gogoBox) gogoBox.classList.add('peka');
     if (window.SLOT_SOUND) window.SLOT_SOUND.play('gako');
     
-    // 【バグ修正】設定モーダルの「ボーナス時にAUTO解除」がONの時のみAUTO解除を実行
+    // 設定モーダルの「ボーナス時にAUTO解除」がONの時のみAUTO解除を実行
     if (isAutoMode && autoStopOnBonus) {
       stopAutoMode();
     }
@@ -249,19 +248,17 @@
     },
 
     getConfig: function() { 
-      return { setting: currentSetting, autoStopOnBonus: autoStopOnBonus, weightCut: weightCut, volume: masterVolume, soundOn: soundOn }; 
+      return { setting: currentSetting, autoStopOnBonus: autoStopOnBonus, weightCut: weightCut, soundOn: soundOn }; 
     },
     
     setConfig: function(config) {
       if (config.setting !== undefined) currentSetting = config.setting;
       if (config.autoStopOnBonus !== undefined) autoStopOnBonus = config.autoStopOnBonus;
       if (config.weightCut !== undefined) weightCut = config.weightCut;
-
-      if (config.volume !== undefined) masterVolume = config.volume;
       if (config.soundOn !== undefined) soundOn = config.soundOn;
 
       if (window.SLOT_SOUND) {
-        window.SLOT_SOUND.setVolumeAndState(masterVolume, soundOn);
+        window.SLOT_SOUND.setVolumeAndState(soundOn);
       }
     },
 
@@ -602,6 +599,8 @@
         return;
       }
 
+      const justWonBonus = (isBigWin || isRegWin);
+
       if (isBigWin) {
         isBonusMode = true; bonusType = 'BIG'; bonusAcquired = 0; bonusTarget = 266;
         bonusFlag = null; currentFlag = null; 
@@ -613,7 +612,7 @@
         }
         if (autoStopOnBonus) stopAutoMode();
       } else if (isRegWin) {
-        // 【理論補正】REG中の目標獲得枚数を 91枚 に補正 (13枚×7回＝91枚)
+        // REG中の目標獲得枚数を 91枚 に補正 (13枚×7回＝91枚)
         isBonusMode = true; bonusType = 'REG'; bonusAcquired = 0; bonusTarget = 91;
         bonusFlag = null; currentFlag = null;
         if (window.DATA_COUNTER) window.DATA_COUNTER.onBonusWin('REG');
@@ -633,9 +632,15 @@
       updateDisplays(payout);
 
       if (isAutoMode) {
+        // 【要件適用】AUTOモード継続中 ＋ ボーナス揃い時限定で「2秒間の鑑賞ウェイト（2000ms）」を挟む
+        let nextDelay = isReplayWin ? 150 : 450;
+        if (justWonBonus && !autoStopOnBonus) {
+          nextDelay = 2000; // ボーナス図柄鑑賞用2秒ウェイト
+        }
+
         setTimeout(() => {
           if (isAutoMode && gameState === STATE_IDLE) this.startSpin();
-        }, isReplayWin ? 150 : 450);
+        }, nextDelay);
       }
     }
   };

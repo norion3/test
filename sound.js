@@ -1,6 +1,6 @@
 /**
  * 音響専門モジュール (sound.js)
- * AudioContext常時スタンバイ(プリロード)・WebAudio小役合成音・BGM状態自動復帰＆排他タイマー制御
+ * AudioContext常時スタンバイ(プリロード)・WebAudio小役合成音・音量スライダー撤去による一元化 ＆ 排他タイマー制御
  */
 
 (function() {
@@ -14,8 +14,7 @@
   let currentBgmType = null; // 'BIG' | 'REG' | null
   let bgmTimer = null;
 
-  let masterVolume = 1.0;
-  let soundOn = false;
+  let soundOn = false; // 音量は100%標準固定。ON / OFF トグルのみで一元管理
 
   const SoundEngine = {
     // 初回画面タップ時に裏側で無音起動してスタンバイ化（ブラウザ制限の完全突破）
@@ -27,8 +26,8 @@
           masterGain = ctx.createGain();
           bgmGain = ctx.createGain();
           
-          masterGain.gain.setValueAtTime(soundOn ? masterVolume : 0, ctx.currentTime);
-          bgmGain.gain.setValueAtTime(soundOn ? masterVolume * 0.35 : 0, ctx.currentTime);
+          masterGain.gain.setValueAtTime(soundOn ? 1.0 : 0, ctx.currentTime);
+          bgmGain.gain.setValueAtTime(soundOn ? 0.35 : 0, ctx.currentTime);
           
           masterGain.connect(ctx.destination);
           bgmGain.connect(ctx.destination);
@@ -68,7 +67,7 @@
         const gain = ctx.createGain();
         osc.type = 'sine';
         osc.frequency.setValueAtTime(1046.50, now); // 高音ポーン♪
-        gain.gain.setValueAtTime(0.4 * masterVolume, now);
+        gain.gain.setValueAtTime(0.4, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
         osc.connect(gain);
         gain.connect(ctx.destination);
@@ -77,16 +76,15 @@
       } catch(e) {}
     },
 
-    // 音量およびON/OFF状態の動的設定
-    setVolumeAndState: function(vol, isSoundOn) {
-      masterVolume = vol;
+    // ON/OFF 状態のトグル切り替え（音量スライダー廃止に伴い単純・強固化）
+    setVolumeAndState: function(isSoundOn) {
       soundOn = isSoundOn;
       this.init();
       
       if (masterGain && ctx) {
-        const targetVol = soundOn ? masterVolume : 0;
+        const targetVol = soundOn ? 1.0 : 0;
         masterGain.gain.setValueAtTime(targetVol, ctx.currentTime);
-        bgmGain.gain.setValueAtTime(soundOn ? masterVolume * 0.35 : 0, ctx.currentTime);
+        bgmGain.gain.setValueAtTime(soundOn ? 0.35 : 0, ctx.currentTime);
       }
 
       if (soundOn) {
