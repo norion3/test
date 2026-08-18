@@ -1,6 +1,6 @@
 /**
  * スロットゲームエンジン (engine.js)
- * DMM完全解析確率・100G以内連チャンBGM判定(1G連/ゾロ目)・プレミア演出・クレジット＆差枚数分離連動・高速カウントアップ補充・AUTO画面タップ解除
+ * DMM完全解析確率・実機出目制御(チェリー左限定/単独・重複出目分け/ガセ目回避/伝統リーチ目/レア小役全コマ引き込み)・後告知ガコッ25%実機比率・100G以内連チャンBGM・クレジット＆差枚数分離連動・高速カウントアップ補充・AUTO継続時2秒鑑賞ウェイト・AUTO中タップ解除
  */
 
 (function() {
@@ -133,7 +133,11 @@
     if (premiumMode === 'FREEZE') {
       if (window.SLOT_SOUND) window.SLOT_SOUND.play('premium_freeze');
     } else {
-      if (window.SLOT_SOUND) window.SLOT_SOUND.play('gako');
+      // 先告知(LEVER)やプレミア以外（通常の後告知時）は、実機通り約25%の確率でのみ「ガコッ！」を鳴らし、75%は静かにペカる
+      const shouldPlayGako = (pekaTiming === 'LEVER') || (Math.random() < 0.25);
+      if (shouldPlayGako && window.SLOT_SOUND) {
+        window.SLOT_SOUND.play('gako');
+      }
     }
     
     // 設定モーダルの「ボーナス時にAUTO解除」がONの時のみAUTO解除を実行
@@ -494,7 +498,8 @@
           // 狙う図柄の判定
           if (currentFlag === 'BIG') targetSyms = ['7'];
           else if (currentFlag === 'REG') targetSyms = index === 2 ? ['BAR'] : ['7'];
-          else if (currentFlag === 'CHERRY_BIG' || currentFlag === 'CHERRY_REG' || currentFlag === 'CHERRY') targetSyms = ['CHERRY'];
+          // チェリー狙いは左リール(index === 0)のみに限定（中・右リールへのチェリー不自然引き込みを遮断）
+          else if ((currentFlag === 'CHERRY_BIG' || currentFlag === 'CHERRY_REG' || currentFlag === 'CHERRY') && index === 0) targetSyms = ['CHERRY'];
           else if (currentFlag === 'REPLAY') targetSyms = ['RHINO'];
           else if (currentFlag === 'GRAPE') targetSyms = ['GRAPE'];
           else if (currentFlag === 'BELL') targetSyms = ['BELL'];
@@ -504,12 +509,30 @@
             if (bonusFlag === 'BIG' || bonusFlag === 'CHERRY_BIG') targetSyms = ['7'];
             else if (bonusFlag === 'REG' || bonusFlag === 'CHERRY_REG') targetSyms = index === 2 ? ['BAR'] : ['7'];
           }
+
+          // 中・右リール停止時、チェリー成立中の出目形成制御（単独＝非テンパイ目、重複＝確定テンパイ目）
+          if ((currentFlag === 'CHERRY_BIG' || currentFlag === 'CHERRY_REG' || currentFlag === 'CHERRY') && index > 0) {
+            if (currentFlag === 'CHERRY') {
+              // 単独チェリー：ボーナス図柄(7/BAR)がテンパイしない位置を選択
+              targetSyms = ['GRAPE', 'RHINO', 'BELL', 'CLOWN'];
+            } else {
+              // 重複チェリー(確定目)：7またはBARのテンパイライン(2確・テンパイ)を形成
+              targetSyms = ['7', 'BAR'];
+            }
+          }
+
+          // 単独ボーナス成立中（ペカ前・ペカ後）の第2・第3リールリーチ目形成補正
+          if (!currentFlag && bonusFlag && index > 0) {
+            targetSyms = (bonusFlag === 'BIG' || bonusFlag === 'CHERRY_BIG') ? ['7'] : ['7', 'BAR'];
+          }
         }
 
         // 成立ゲーム(当選G)・成立後・ボーナス消化中での21コマ超アシスト適用
         let slipLimit = 4;
         const isBonusFlagCurrent = (currentFlag === 'BIG' || currentFlag === 'REG' || currentFlag === 'CHERRY_BIG' || currentFlag === 'CHERRY_REG');
-        if (isBonusMode || bonusFlag || isBonusFlagCurrent) {
+        // ピエロ(CLOWN)・ベル(BELL)成立時も全コマ(21コマ)引き込みアシストを適用して確実に揃わせる
+        const isRareSmallWin = (currentFlag === 'BELL' || currentFlag === 'CLOWN');
+        if (isBonusMode || bonusFlag || isBonusFlagCurrent || isRareSmallWin) {
           slipLimit = 21; 
         }
         
@@ -525,6 +548,20 @@
               }
             }
             if (found) break;
+          }
+        }
+
+        // 第2・第3リール停止時のガセテンパイ回避補正（完全ハズレ時）
+        if (index >= 1) {
+          const isNoFlag = (!currentFlag && !bonusFlag);
+          if (isNoFlag) {
+            const firstSym = reels[0].strip[(reels[0].currentIndex + 1 + reels[0].strip.length) % reels[0].strip.length]; // 第1リール中段図柄
+            if (firstSym === '7' || firstSym === 'BAR') {
+              const checkSym = reel.strip[(targetIdx + 1 + reel.strip.length) % reel.strip.length]; // 停止予定の中段図柄
+              if (checkSym === '7' || checkSym === 'BAR') {
+                targetIdx = (targetIdx + 1 + reel.strip.length) % reel.strip.length; // 1コマ滑らせてテンパイ回避
+              }
+            }
           }
         }
         
