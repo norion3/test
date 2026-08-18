@@ -1,6 +1,6 @@
 /**
  * リール描画モジュール (reel_renderer.js)
- * symbol_*.js の描画関数直接呼び出し・白枠透過・赤7/BAR 105%限界拡大描画・7セグLED描画
+ * typeof安全保護構文によるスクリプトクラッシュ防止・symbol_*.jsの安全呼び出し・白枠透過・赤7/BAR 105%限界拡大描画・7セグLED描画
  */
 
 (function() {
@@ -9,16 +9,17 @@
   const symbolCache = {};
 
   const ReelRenderer = {
-    // 各 symbol_*.js の描画関数を直接呼び出してキャッシュを初期化
+    // typeof安全保護付きで symbol_*.js の描画関数を取得・実行してキャッシュを初期化
     initSymbolCache: function() {
+      // typeof 判定により ReferenceError クラッシュを 100% 回避
       const drawFuncs = {
-        '7': drawSymbol7,
-        'BAR': drawSymbolBAR,
-        'GRAPE': drawSymbolGRAPE,
-        'CHERRY': drawSymbolCHERRY,
-        'BELL': drawSymbolBELL,
-        'RHINO': drawSymbolRHINO,
-        'CLOWN': drawSymbolCLOWN
+        '7': typeof drawSymbol7 !== 'undefined' ? drawSymbol7 : (typeof window.drawSymbol7 !== 'undefined' ? window.drawSymbol7 : null),
+        'BAR': typeof drawSymbolBAR !== 'undefined' ? drawSymbolBAR : (typeof window.drawSymbolBAR !== 'undefined' ? window.drawSymbolBAR : null),
+        'GRAPE': typeof drawSymbolGRAPE !== 'undefined' ? drawSymbolGRAPE : (typeof window.drawSymbolGRAPE !== 'undefined' ? window.drawSymbolGRAPE : null),
+        'CHERRY': typeof drawSymbolCHERRY !== 'undefined' ? drawSymbolCHERRY : (typeof window.drawSymbolCHERRY !== 'undefined' ? window.drawSymbolCHERRY : null),
+        'BELL': typeof drawSymbolBELL !== 'undefined' ? drawSymbolBELL : (typeof window.drawSymbolBELL !== 'undefined' ? window.drawSymbolBELL : null),
+        'RHINO': typeof drawSymbolRHINO !== 'undefined' ? drawSymbolRHINO : (typeof window.drawSymbolRHINO !== 'undefined' ? window.drawSymbolRHINO : null),
+        'CLOWN': typeof drawSymbolCLOWN !== 'undefined' ? drawSymbolCLOWN : (typeof window.drawSymbolCLOWN !== 'undefined' ? window.drawSymbolCLOWN : null)
       };
 
       Object.keys(drawFuncs).forEach(key => {
