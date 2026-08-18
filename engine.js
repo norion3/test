@@ -1,6 +1,6 @@
 /**
  * スロットゲームエンジン (engine.js)
- * DMM完全解析確率・クレジット＆差枚数分離連動・チャージ時コインSE演出・AUTO継続時2秒鑑賞ウェイト・目揃いズレ完治
+ * DMM完全解析確率・クレジット＆差枚数分離連動・150msディレイ時差音響制御・AUTO継続時2秒鑑賞ウェイト・目揃いズレ完治
  */
 
 (function() {
@@ -294,11 +294,12 @@
 
       try {
         const neededBet = isBonusMode ? 1 : 3;
+        let autoRefillHappened = false;
 
-        // 【演出強化】クレジットが不足している場合の自動補給＆コイン投入SE再生
+        // クレジット不足時の自動補給判定
         if (!isReplay && credits < neededBet) {
           credits = 50; // クレジット自動補給
-          if (window.SLOT_SOUND) window.SLOT_SOUND.play('bet'); // チャージ音再生
+          autoRefillHappened = true;
         }
 
         gameState = STATE_SPINNING;
@@ -334,41 +335,52 @@
           setTimeout(() => lampWait.classList.remove('active'), 250);
         }
 
-        if (window.SLOT_SOUND) window.SLOT_SOUND.play('lever');
-        
-        currentFlag = this.drawFlag();
-        
-        // ボーナス当選判定 ＆ GOGO!ランプ点灯タイミング決定
-        if (currentFlag === 'BIG' || currentFlag === 'REG' || currentFlag === 'CHERRY_BIG' || currentFlag === 'CHERRY_REG') {
-          if (!bonusFlag) {
-            bonusFlag = currentFlag;
-            if (currentFlag === 'CHERRY_BIG' || currentFlag === 'CHERRY_REG') {
-              pekaTiming = 'STOP3_UP';
-            } else {
-              const pekaRand = Math.random();
-              if (pekaRand < 0.25) pekaTiming = 'LEVER';
-              else if (pekaRand < 0.35) pekaTiming = 'STOP1';
-              else if (pekaRand < 0.50) pekaTiming = 'STOP3_DOWN';
-              else pekaTiming = 'STOP3_UP';
+        // リール回転＆抽選発火シーケンス（時差制御対応）
+        const executeSpinSequence = () => {
+          if (window.SLOT_SOUND) window.SLOT_SOUND.play('lever');
+          
+          currentFlag = this.drawFlag();
+          
+          // ボーナス当選判定 ＆ GOGO!ランプ点灯タイミング決定
+          if (currentFlag === 'BIG' || currentFlag === 'REG' || currentFlag === 'CHERRY_BIG' || currentFlag === 'CHERRY_REG') {
+            if (!bonusFlag) {
+              bonusFlag = currentFlag;
+              if (currentFlag === 'CHERRY_BIG' || currentFlag === 'CHERRY_REG') {
+                pekaTiming = 'STOP3_UP';
+              } else {
+                const pekaRand = Math.random();
+                if (pekaRand < 0.25) pekaTiming = 'LEVER';
+                else if (pekaRand < 0.35) pekaTiming = 'STOP1';
+                else if (pekaRand < 0.50) pekaTiming = 'STOP3_DOWN';
+                else pekaTiming = 'STOP3_UP';
+              }
             }
           }
+
+          if (!isBonusMode && bonusFlag && pekaTiming === 'LEVER') triggerPeka();
+
+          const spinSpeed = (isPeka && !isBonusMode) ? REEL_SPEED_SLOW : REEL_SPEED_NORMAL;
+
+          reels.forEach((reel, i) => {
+            reel.isSpinning = true;
+            reel.isStopping = false;
+            reel.speed = spinSpeed; 
+            if (window.REEL_RENDERER) window.REEL_RENDERER.renderReelCanvas(reel, true); 
+            this.spinReel(reel);
+            const btn = document.getElementById(`stopBtn${i}`);
+            if (btn) { btn.disabled = false; btn.classList.add('spinning'); }
+          });
+
+          if (isAutoMode) this.scheduleAutoStop();
+        };
+
+        // 【音響競合完治】自動補給発生時は150msのディレイを挟み「bet音(チャリーン) → lever音(ガチャ)」を分離再生
+        if (autoRefillHappened) {
+          if (window.SLOT_SOUND) window.SLOT_SOUND.play('bet');
+          setTimeout(executeSpinSequence, 150);
+        } else {
+          executeSpinSequence();
         }
-
-        if (!isBonusMode && bonusFlag && pekaTiming === 'LEVER') triggerPeka();
-
-        const spinSpeed = (isPeka && !isBonusMode) ? REEL_SPEED_SLOW : REEL_SPEED_NORMAL;
-
-        reels.forEach((reel, i) => {
-          reel.isSpinning = true;
-          reel.isStopping = false;
-          reel.speed = spinSpeed; 
-          if (window.REEL_RENDERER) window.REEL_RENDERER.renderReelCanvas(reel, true); 
-          this.spinReel(reel);
-          const btn = document.getElementById(`stopBtn${i}`);
-          if (btn) { btn.disabled = false; btn.classList.add('spinning'); }
-        });
-
-        if (isAutoMode) this.scheduleAutoStop();
 
       } catch (e) {
         gameState = STATE_IDLE; 
