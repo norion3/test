@@ -1,6 +1,6 @@
 /**
  * スロットゲームエンジン (engine.js)
- * ネオアイムジャグラーEX配列完全適合・ボタン直押し変則打ち完全対応・完全オート目押し仕様(21コマ引込)・直揃い禁止絶対保護・REG13枚払出(純増96枚)独自計算保護・ボーナス中全小役払出統合・ハサミ打ち/逆押し対応先読みアルゴリズム・100G連BGM
+ * ネオアイムジャグラーEX配列完全適合・リプレイ直後レバー音音響正常化・Wait機能(リアル4.1秒ウェイト＆自動補給テンポ補正)・フリーズ時ランプ同期・ボタン直押し変則打ち対応・完全オート目押し仕様(21コマ引込)・直揃い禁止絶対保護・REG13枚払出(純増96枚)独自計算保護・ボーナス中全小役払出統合・ハサミ打ち/逆押し対応先読みアルゴリズム・100G連BGM
  */
 
 (function() {
@@ -42,6 +42,9 @@
   let autoStopOnBonus = true;
   let weightCut = true;
   let soundOn = false;
+
+  // リアル4.1秒ウェイト制御用タイムスタンプ変数
+  let lastSpinTime = 0;
 
   let credits = 50;
   let betAmount = 0;
@@ -200,6 +203,7 @@
       activeReelsCount = 0;
       isTouchActive = false;
       hasActionExecutedInCurrentTouch = false;
+      lastSpinTime = 0;
       credits = 50; betAmount = 0; isAutoMode = false;
       if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; }
       
@@ -282,6 +286,17 @@
         setLineBadgesLit(false);
 
         const executeSpinSequence = () => {
+          // コイン補給完了直後に時刻を取得し、Wait二重加算を防止
+          const now = Date.now();
+          let waitDelay = 0;
+          if (!weightCut && lastSpinTime > 0) {
+            const elapsed = now - lastSpinTime;
+            if (elapsed < 4100) {
+              waitDelay = 4100 - elapsed;
+            }
+          }
+          lastSpinTime = now + waitDelay; // 次回計算基準値
+
           if (isBonusMode) {
             betAmount = 1; credits -= 1;
             if (window.DATA_COUNTER) window.DATA_COUNTER.onGameStart(1, true);
@@ -295,10 +310,10 @@
           }
           updateDisplays(0);
 
+          // WAITランプ演出制御
           const lampWait = document.getElementById('lampWait');
           if (lampWait) {
             lampWait.classList.add('active');
-            setTimeout(() => lampWait.classList.remove('active'), 250);
           }
 
           currentFlag = this.drawFlag();
@@ -330,7 +345,10 @@
             }
           }
 
-          if (premiumMode !== 'SILENT' && window.SLOT_SOUND) window.SLOT_SOUND.play('lever');
+          // リプレイ直後のゲームであってもレバーON音（lever）は正しく再生
+          if (premiumMode !== 'SILENT' && window.SLOT_SOUND) {
+            window.SLOT_SOUND.play('lever');
+          }
 
           const startReelAnimation = () => {
             if (!isBonusMode && bonusFlag && pekaTiming === 'LEVER') triggerPeka();
@@ -346,8 +364,21 @@
             if (isAutoMode) this.scheduleAutoStop();
           };
 
-          if (premiumMode === 'FREEZE') setTimeout(startReelAnimation, 600);
-          else startReelAnimation();
+          // 計算されたウェイト待機時間（0〜4.1秒）満了後にリール始動
+          setTimeout(() => {
+            if (premiumMode === 'FREEZE') {
+              setTimeout(() => {
+                if (lampWait) lampWait.classList.remove('active');
+                startReelAnimation();
+              }, 600);
+            } else {
+              if (lampWait) {
+                if (waitDelay > 0) lampWait.classList.remove('active');
+                else setTimeout(() => lampWait.classList.remove('active'), 250);
+              }
+              startReelAnimation();
+            }
+          }, waitDelay);
         };
 
         if (autoRefillHappened) {
@@ -583,7 +614,7 @@
       document.addEventListener('mousedown', startTouchSession, { passive: true });
       document.addEventListener('mouseup', endTouchSession, { passive: true });
 
-      // 【改修ポイント】各ストップボタンへの個別イベント追加（画面全体タップへのイベント伝播を遮断し変則打ちを実現）
+      // ストップボタン個別のイベント処理（変則打ち対応＆イベント伝播遮断）
       [0, 1, 2].forEach(i => {
         const btn = document.getElementById(`stopBtn${i}`);
         if (btn) {
