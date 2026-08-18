@@ -300,6 +300,22 @@
     }
     @keyframes pekaFlash { from { transform: scale(1); } to { transform: scale(1.03); } }
 
+    /* 【要件追加】プレミア発光スタイル (レインボー＆高速フラッシュ) */
+    .gogo-box.peka.rainbow {
+      background: radial-gradient(circle, #ff0000 0%, #ff7f00 20%, #ffff00 40%, #00ff00 60%, #0000ff 80%, #4b0082 100%);
+      border-color: #ffffff;
+      animation: rainbowGlow 2s linear infinite;
+    }
+    @keyframes rainbowGlow {
+      0% { filter: hue-rotate(0deg) drop-shadow(0 0 15px #ff0000); }
+      100% { filter: hue-rotate(360deg) drop-shadow(0 0 15px #00ffff); }
+    }
+
+    .gogo-box.peka.flash .gogo-svg {
+      animation: flashPeka 0.08s infinite alternate;
+    }
+    @keyframes flashPeka { from { opacity: 0.2; } to { opacity: 1; } }
+
     /* ---------------------------------------------------
        3. 7セグメントLED
     --------------------------------------------------- */
@@ -444,7 +460,7 @@
       to { box-shadow: 0 0 16px #ff3333, inset 0 0 10px #ffffff; } 
     }
 
-    /* 2. 押せない時（消灯状態）: 実機アクリルパールホワイト（消えたような違和感を完全排除） */
+    /* 2. 押せない時（消灯状態）: 実機アクリルパールホワイト */
     .stop-btn:disabled {
       background: radial-gradient(circle at 35% 35%, #ffffff 0%, #e8e8ed 50%, #c0c0ca 100%);
       border: 2px solid #d0d0db;
@@ -891,7 +907,7 @@
       if (modal) modal.classList.remove('active');
     };
 
-    // 4. 設定モーダル表示と動的同期（音量スライダー削除に伴う最適化）
+    // 4. 設定モーダル表示と動的同期
     document.getElementById('settingModalBtn').onclick = (e) => {
       e.stopPropagation();
       if(window.JUGGLER_ENGINE) {
@@ -914,7 +930,7 @@
       if (modal) modal.classList.remove('active');
     };
     
-    // 設定適用実行（サウンドON/OFFのみのシンプル一元制御）
+    // 設定適用実行
     document.getElementById('saveSettingBtn').onclick = (e) => {
       e.stopPropagation();
       if(window.JUGGLER_ENGINE) {
