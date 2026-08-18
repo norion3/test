@@ -1,14 +1,14 @@
 /**
  * スロットゲームエンジン (engine.js)
- * DMM完全解析確率・実機出目制御(チェリー左限定/単独・重複出目分け/ガセ目回避/伝統リーチ目/レア小役全コマ引き込み)・後告知ガコッ25%実機比率・100G以内連チャンBGM・クレジット＆差枚数分離連動・高速カウントアップ補充・AUTO継続時2秒鑑賞ウェイト・AUTO中タップ解除
+ * ネオアイムジャグラーEX画像配列完全適合・有効ライン連動出目制御・チェリー重複/単独出目分け・全5ラインガセ目回避・後告知ガコッ25%実機比率・100G以内連チャンBGM・クレジット＆差枚数分離連動・高速カウントアップ補充・AUTO継続時2秒鑑賞ウェイト・AUTO中タップ解除
  */
 
 (function() {
-  // 21コマの実機リール配列定義
+  // ネオアイムジャグラーEX 正統21コマ実機リール配列定義 (アップロード画像①〜㉑と100%同一)
   const REEL_STRIPS = [
-    ['BAR', 'GRAPE', 'RHINO', 'GRAPE', 'BELL', '7', 'RHINO', 'GRAPE', 'RHINO', 'GRAPE', 'BAR', 'CHERRY', 'GRAPE', 'RHINO', 'GRAPE', '7', 'CLOWN', 'GRAPE', 'RHINO', 'GRAPE', 'CHERRY'],
-    ['RHINO', 'BELL', 'GRAPE', 'CHERRY', 'RHINO', '7', 'GRAPE', 'CHERRY', 'RHINO', 'BELL', 'GRAPE', 'CHERRY', 'RHINO', 'BAR', 'GRAPE', 'CHERRY', 'CLOWN', 'RHINO', '7', 'GRAPE', 'CHERRY'],
-    ['GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', '7', 'BAR', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO']
+    ['BELL', '7', 'RHINO', 'GRAPE', 'RHINO', 'GRAPE', 'BAR', 'CHERRY', 'GRAPE', 'RHINO', 'GRAPE', '7', 'CLOWN', 'GRAPE', 'RHINO', 'GRAPE', 'CHERRY', 'BAR', 'GRAPE', 'RHINO', 'GRAPE'],
+    ['RHINO', '7', 'GRAPE', 'CHERRY', 'RHINO', 'BELL', 'GRAPE', 'CHERRY', 'RHINO', 'BAR', 'GRAPE', 'CHERRY', 'RHINO', 'BELL', 'GRAPE', 'CHERRY', 'RHINO', 'BAR', 'GRAPE', 'CHERRY', 'CLOWN'],
+    ['GRAPE', '7', 'BAR', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO', 'GRAPE', 'CLOWN', 'BELL', 'RHINO']
   ];
 
   const SYMBOL_HEIGHT = 46;
@@ -16,7 +16,7 @@
   const REEL_SPEED_NORMAL = 22; 
   const REEL_SPEED_SLOW = 8;    
 
-  // SアイムジャグラーEX 実機確率テーブル (設定1〜6) + DMM解析
+  // SアイムジャグラーEX / ネオアイムジャグラーEX 実機確率テーブル (設定1〜6) + DMM解析
   const PROBABILITY_TABLE = {
     1: { sBIG: 1/399.6, cBIG: 1/862.3, sREG: 1/630.2, cREG: 1/1456.4, grape: 1/6.02, cherry: 1/33.03 },
     2: { sBIG: 1/399.6, cBIG: 1/862.3, sREG: 1/565.0, cREG: 1/1365.3, grape: 1/6.02, cherry: 1/33.03 },
@@ -496,52 +496,63 @@
           targetSyms = ['GRAPE'];
         } else {
           // 狙う図柄の判定
-          if (currentFlag === 'BIG') targetSyms = ['7'];
-          else if (currentFlag === 'REG') targetSyms = index === 2 ? ['BAR'] : ['7'];
-          // チェリー狙いは左リール(index === 0)のみに限定（中・右リールへのチェリー不自然引き込みを遮断）
-          else if ((currentFlag === 'CHERRY_BIG' || currentFlag === 'CHERRY_REG' || currentFlag === 'CHERRY') && index === 0) targetSyms = ['CHERRY'];
-          else if (currentFlag === 'REPLAY') targetSyms = ['RHINO'];
-          else if (currentFlag === 'GRAPE') targetSyms = ['GRAPE'];
-          else if (currentFlag === 'BELL') targetSyms = ['BELL'];
-          else if (currentFlag === 'CLOWN') targetSyms = ['CLOWN'];
-          else if (!currentFlag && bonusFlag) {
-            // ボーナス成立後のハズレゲームではボーナス図柄を狙わせる
+          if (currentFlag === 'BIG') {
+            targetSyms = ['7'];
+          } else if (currentFlag === 'REG') {
+            targetSyms = (index === 2) ? ['BAR'] : ['7'];
+          } else if (currentFlag === 'CHERRY_BIG' || currentFlag === 'CHERRY_REG') {
+            if (index === 0) targetSyms = ['CHERRY'];
+            else if (index === 1) targetSyms = ['7', 'BAR']; // 2確・テンパイ目を形成
+            else targetSyms = ['GRAPE', 'RHINO', 'BELL', 'CLOWN']; // 同一ゲームでの777/77BAR直揃いを阻止してチェリー2枚のみ獲得させる
+          } else if (currentFlag === 'CHERRY') {
+            if (index === 0) targetSyms = ['CHERRY'];
+            else targetSyms = ['GRAPE', 'RHINO', 'BELL', 'CLOWN']; // 非テンパイ目を形成
+          } else if (currentFlag === 'REPLAY') {
+            targetSyms = ['RHINO'];
+          } else if (currentFlag === 'GRAPE') {
+            targetSyms = ['GRAPE'];
+          } else if (currentFlag === 'BELL') {
+            targetSyms = ['BELL'];
+          } else if (currentFlag === 'CLOWN') {
+            targetSyms = ['CLOWN'];
+          } else if (!currentFlag && bonusFlag) {
+            // ボーナス成立後のハズレゲームではボーナス図柄を狙う（テンパイ保証）
             if (bonusFlag === 'BIG' || bonusFlag === 'CHERRY_BIG') targetSyms = ['7'];
-            else if (bonusFlag === 'REG' || bonusFlag === 'CHERRY_REG') targetSyms = index === 2 ? ['BAR'] : ['7'];
-          }
-
-          // 中・右リール停止時、チェリー成立中の出目形成制御（単独＝非テンパイ目、重複＝確定テンパイ目）
-          if ((currentFlag === 'CHERRY_BIG' || currentFlag === 'CHERRY_REG' || currentFlag === 'CHERRY') && index > 0) {
-            if (currentFlag === 'CHERRY') {
-              // 単独チェリー：ボーナス図柄(7/BAR)がテンパイしない位置を選択
-              targetSyms = ['GRAPE', 'RHINO', 'BELL', 'CLOWN'];
-            } else {
-              // 重複チェリー(確定目)：7またはBARのテンパイライン(2確・テンパイ)を形成
-              targetSyms = ['7', 'BAR'];
-            }
-          }
-
-          // 単独ボーナス成立中（ペカ前・ペカ後）の第2・第3リールリーチ目形成補正
-          if (!currentFlag && bonusFlag && index > 0) {
-            targetSyms = (bonusFlag === 'BIG' || bonusFlag === 'CHERRY_BIG') ? ['7'] : ['7', 'BAR'];
+            else if (bonusFlag === 'REG' || bonusFlag === 'CHERRY_REG') targetSyms = (index === 2) ? ['BAR'] : ['7'];
           }
         }
 
-        // 成立ゲーム(当選G)・成立後・ボーナス消化中での21コマ超アシスト適用
+        // 引き込みコマ数の決定（ボーナス成立時、全小役成立時は21コマ全コマ引き込み）
         let slipLimit = 4;
         const isBonusFlagCurrent = (currentFlag === 'BIG' || currentFlag === 'REG' || currentFlag === 'CHERRY_BIG' || currentFlag === 'CHERRY_REG');
-        // ピエロ(CLOWN)・ベル(BELL)成立時も全コマ(21コマ)引き込みアシストを適用して確実に揃わせる
-        const isRareSmallWin = (currentFlag === 'BELL' || currentFlag === 'CLOWN');
-        if (isBonusMode || bonusFlag || isBonusFlagCurrent || isRareSmallWin) {
+        const isSmallWin = ['REPLAY', 'GRAPE', 'BELL', 'CLOWN', 'CHERRY', 'CHERRY_BIG', 'CHERRY_REG'].includes(currentFlag);
+        if (isBonusMode || bonusFlag || isBonusFlagCurrent || isSmallWin) {
           slipLimit = 21; 
         }
-        
+
+        // 第1リール停止時のライン・オフセットを取得（同一ラインへの小役完全引き込み連動）
+        let targetOffset = -1;
+        if (index > 0 && currentFlag && ['GRAPE', 'REPLAY', 'BELL', 'CLOWN'].includes(currentFlag)) {
+          const r0Strip = reels[0].strip;
+          const r0Idx = reels[0].currentIndex;
+          for (let offset = 0; offset < 3; offset++) {
+            const sym = r0Strip[(r0Idx + offset + r0Strip.length) % r0Strip.length];
+            if ((currentFlag === 'GRAPE' && sym === 'GRAPE') ||
+                (currentFlag === 'REPLAY' && sym === 'RHINO') ||
+                (currentFlag === 'BELL' && sym === 'BELL') ||
+                (currentFlag === 'CLOWN' && sym === 'CLOWN')) {
+              targetOffset = offset;
+              break;
+            }
+          }
+        }
+
         let found = false;
-        
         if (targetSyms.length > 0) {
           for (let slip = 0; slip <= slipLimit; slip++) {
             const checkTopIdx = (baseIdx - slip + reel.strip.length) % reel.strip.length;
-            const checkLines = (isBonusMode || betAmount === 1) ? [1] : [0, 1, 2];
+            // 小役成立時は第1リールと同じオフセット(ライン)を優先指定
+            const checkLines = (targetOffset >= 0) ? [targetOffset] : ((isBonusMode || betAmount === 1) ? [1] : [0, 1, 2]);
             for (let offset of checkLines) {
               if (targetSyms.includes(reel.strip[(checkTopIdx + offset) % reel.strip.length])) {
                 targetIdx = checkTopIdx; found = true; break;
@@ -551,20 +562,33 @@
           }
         }
 
-        // 第2・第3リール停止時のガセテンパイ回避補正（完全ハズレ時）
-        if (index >= 1) {
-          const isNoFlag = (!currentFlag && !bonusFlag);
-          if (isNoFlag) {
-            const firstSym = reels[0].strip[(reels[0].currentIndex + 1 + reels[0].strip.length) % reels[0].strip.length]; // 第1リール中段図柄
-            if (firstSym === '7' || firstSym === 'BAR') {
-              const checkSym = reel.strip[(targetIdx + 1 + reel.strip.length) % reel.strip.length]; // 停止予定の中段図柄
-              if (checkSym === '7' || checkSym === 'BAR') {
-                targetIdx = (targetIdx + 1 + reel.strip.length) % reel.strip.length; // 1コマ滑らせてテンパイ回避
-              }
+        // 全5ラインでのガセテンパイ回避（完全ハズレ時）
+        if (index >= 1 && !currentFlag && !bonusFlag) {
+          const lineOffsets = [
+            [0, 0, 0], // 上段
+            [1, 1, 1], // 中段
+            [2, 2, 2], // 下段
+            [0, 1, 2], // 右下がり
+            [2, 1, 0]  // 右上がり
+          ];
+          const r0Strip = reels[0].strip;
+          const r0Idx = reels[0].currentIndex;
+
+          let isGaseTenpai = false;
+          for (let l = 0; l < lineOffsets.length; l++) {
+            const lOffsets = lineOffsets[l];
+            const sym0 = r0Strip[(r0Idx + lOffsets[0] + r0Strip.length) % r0Strip.length];
+            const sym1 = reel.strip[(targetIdx + lOffsets[1] + reel.strip.length) % reel.strip.length];
+            if ((sym0 === '7' || sym0 === 'BAR') && (sym1 === '7' || sym1 === 'BAR')) {
+              isGaseTenpai = true;
+              break;
             }
           }
+          if (isGaseTenpai) {
+            targetIdx = (targetIdx + 1) % reel.strip.length; // 1コマ滑らせてテンパイ回避
+          }
         }
-        
+
         reel.currentIndex = targetIdx;
         reel.targetPos = targetIdx * SYMBOL_HEIGHT;
 
