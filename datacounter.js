@@ -267,7 +267,8 @@
         `;
       });
 
-      html += '</tbody>style></table>';
+      // タイポ箇所の修正: 余分な style> を除去し正常な閉じタグへ統一
+      html += '</tbody></table>';
       return html;
     }
   };
