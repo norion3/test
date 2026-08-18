@@ -236,7 +236,6 @@
       position: absolute;
       top: 0; left: 0;
       width: 100px;
-      height: 138px; /* Viewport固定サイズ (100px × 138px) に指定して WebKit GPUメモリ過制限を100%回避 */
       will-change: transform;
     }
 
@@ -972,16 +971,21 @@
       if (modal) modal.classList.remove('active');
     };
 
+    // モーダル背景領域タップで安全に閉じる処理
+    document.querySelectorAll('.modal-overlay').forEach(m => {
+      m.onclick = (e) => { if(e.target === m) m.classList.remove('active'); };
+    });
+
     // 6. 安全なマルチチェック付き起動シーケンス
     function bootEngine() {
       if(window.DATA_COUNTER) window.DATA_COUNTER.init();
       if(window.JUGGLER_ENGINE) window.JUGGLER_ENGINE.init();
     }
 
-    if (document.readyState === 'complete') {
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
       bootEngine();
     } else {
-      window.addEventListener('load', bootEngine);
+      window.addEventListener('DOMContentLoaded', bootEngine);
     }
   </script>
 </body>

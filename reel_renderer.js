@@ -1,82 +1,78 @@
 /**
  * リール描画モジュール (reel_renderer.js)
- * 表示窓固定(Viewport)ダイレクト描画・非同期画像ロード自動リスナー連動・白枠透過・赤7/BAR 105%限界拡大描画・7セグLED描画
+ * 確実な初期化時安全取得・白枠透過・赤7/BAR 105%限界拡大描画・7セグLED描画
  */
 
 (function() {
   const SYMBOL_HEIGHT = 46;
   const CANVAS_WIDTH = 100;
-  const VIEWPORT_HEIGHT = 138; // リール表示枠（高さ 138px）
   const symbolCache = {};
 
-  // 外部 symbol_*.js の描画関数を安全取得
-  function getDrawFunc(symName) {
-    try {
-      if (symName === '7' && typeof drawSymbol7 !== 'undefined') return drawSymbol7;
-      if (symName === 'BAR' && typeof drawSymbolBAR !== 'undefined') return drawSymbolBAR;
-      if (symName === 'GRAPE' && typeof drawSymbolGRAPE !== 'undefined') return drawSymbolGRAPE;
-      if (symName === 'CHERRY' && typeof drawSymbolCHERRY !== 'undefined') return drawSymbolCHERRY;
-      if (symName === 'BELL' && typeof drawSymbolBELL !== 'undefined') return drawSymbolBELL;
-      if (symName === 'RHINO' && typeof drawSymbolRHINO !== 'undefined') return drawSymbolRHINO;
-      if (symName === 'CLOWN' && typeof drawSymbolCLOWN !== 'undefined') return drawSymbolCLOWN;
-      
-      if (typeof window !== 'undefined') {
-        return window['drawSymbol' + symName] || null;
-      }
-    } catch(e) {}
-    return null;
-  }
-
   const ReelRenderer = {
-    // 描画関数の事前確認・初期化フック
-    initSymbolCache: function() {},
+    // 105%限界拡大描画対応キャンバスカッシュ初期化 (typeof安全保護とwindow参照をinitSymbolCache内に配置し確実取得)
+    initSymbolCache: function() {
+      const drawFuncs = {
+        '7': typeof drawSymbol7 !== 'undefined' ? drawSymbol7 : (typeof window.drawSymbol7 !== 'undefined' ? window.drawSymbol7 : null),
+        'BAR': typeof drawSymbolBAR !== 'undefined' ? drawSymbolBAR : (typeof window.drawSymbolBAR !== 'undefined' ? window.drawSymbolBAR : null),
+        'GRAPE': typeof drawSymbolGRAPE !== 'undefined' ? drawSymbolGRAPE : (typeof window.drawSymbolGRAPE !== 'undefined' ? window.drawSymbolGRAPE : null),
+        'CHERRY': typeof drawSymbolCHERRY !== 'undefined' ? drawSymbolCHERRY : (typeof window.drawSymbolCHERRY !== 'undefined' ? window.drawSymbolCHERRY : null),
+        'BELL': typeof drawSymbolBELL !== 'undefined' ? drawSymbolBELL : (typeof window.drawSymbolBELL !== 'undefined' ? window.drawSymbolBELL : null),
+        'RHINO': typeof drawSymbolRHINO !== 'undefined' ? drawSymbolRHINO : (typeof window.drawSymbolRHINO !== 'undefined' ? window.drawSymbolRHINO : null),
+        'CLOWN': typeof drawSymbolCLOWN !== 'undefined' ? drawSymbolCLOWN : (typeof window.drawSymbolCLOWN !== 'undefined' ? window.drawSymbolCLOWN : null)
+      };
 
-    // リールキャンバス描画（表示窓 138px 限定ビューポート描画で iOS Safari 制限を100%完全回避）
+      Object.keys(drawFuncs).forEach(key => {
+        const drawFn = drawFuncs[key];
+        if (typeof drawFn !== 'function') return;
+
+        const offscreen = document.createElement('canvas');
+        offscreen.width = CANVAS_WIDTH;
+        offscreen.height = SYMBOL_HEIGHT;
+        const ctx = offscreen.getContext('2d');
+
+        // 白枠を限界まで削ぎ落とし赤7/BARの縦サイズを最大化（105%スケール）
+        if (key === '7' || key === 'BAR') {
+          ctx.save();
+          ctx.translate(CANVAS_WIDTH / 2, SYMBOL_HEIGHT / 2);
+          ctx.scale(1.05, 1.05);
+          ctx.translate(-CANVAS_WIDTH / 2, -SYMBOL_HEIGHT / 2);
+          drawFn(ctx, 0, 0, CANVAS_WIDTH, SYMBOL_HEIGHT);
+          ctx.restore();
+        } else {
+          drawFn(ctx, 0, 0, CANVAS_WIDTH, SYMBOL_HEIGHT);
+        }
+
+        symbolCache[key] = offscreen;
+      });
+    },
+
+    // リールキャンバス描画（回転中ブラー効果 ＆ 通常静止描画）
     renderReelCanvas: function(reel, isSpinning) {
       if (!reel || !reel.ctx || !reel.strip) return;
       const ctx = reel.ctx;
       const strip = reel.strip;
       const totalSyms = strip.length;
-      const maxPos = totalSyms * SYMBOL_HEIGHT;
+      const fullHeight = SYMBOL_HEIGHT * totalSyms * 3;
 
-      // 表示枠（100px × 138px）内のみをクリア
-      ctx.clearRect(0, 0, CANVAS_WIDTH, VIEWPORT_HEIGHT);
+      ctx.clearRect(0, 0, CANVAS_WIDTH, fullHeight);
 
-      // 現在のリール回転位置（pos）に基づいて表示窓内に見えているコマ（-1コマ 〜 +3コマ）を直接計算
-      const currentPos = ((reel.pos % maxPos) + maxPos) % maxPos;
-      const baseIdx = Math.floor(currentPos / SYMBOL_HEIGHT);
-      const offsetY = currentPos % SYMBOL_HEIGHT;
+      // パフォーマンス最適化のため3周期分を描画
+      for (let pass = 0; pass < 3; pass++) {
+        for (let i = 0; i < totalSyms; i++) {
+          const symName = strip[i];
+          const y = (pass * totalSyms + i) * SYMBOL_HEIGHT;
+          const cachedImg = symbolCache[symName];
 
-      // 表示枠内に収まる4個のコマを描画
-      for (let i = -1; i <= 3; i++) {
-        const symIndex = (baseIdx + i + totalSyms) % totalSyms;
-        const symName = strip[symIndex];
-        const drawY = (i * SYMBOL_HEIGHT) - offsetY;
-
-        const drawFn = getDrawFunc(symName);
-
-        if (typeof drawFn === 'function') {
-          ctx.save();
-          
-          // 原点を出力コマのY位置に合わせる
-          ctx.translate(0, drawY);
-
-          // 回転中のブラー（透過）効果
-          if (isSpinning) {
-            ctx.globalAlpha = 0.85;
+          if (cachedImg) {
+            if (isSpinning) {
+              ctx.save();
+              ctx.globalAlpha = 0.85;
+              ctx.drawImage(cachedImg, 0, y);
+              ctx.restore();
+            } else {
+              ctx.drawImage(cachedImg, 0, y);
+            }
           }
-
-          // 赤7/BAR 105%限界拡大描画
-          if (symName === '7' || symName === 'BAR') {
-            ctx.translate(CANVAS_WIDTH / 2, SYMBOL_HEIGHT / 2);
-            ctx.scale(1.05, 1.05);
-            ctx.translate(-CANVAS_WIDTH / 2, -SYMBOL_HEIGHT / 2);
-          }
-
-          // (0, 0) 基準で外部描画関数を安全呼び出し
-          drawFn(ctx, 0, 0, CANVAS_WIDTH, SYMBOL_HEIGHT);
-
-          ctx.restore();
         }
       }
     },
