@@ -1,52 +1,37 @@
 /**
  * リール描画モジュール (reel_renderer.js)
- * symbol_*.js の描画関数直接呼び出し・クラッシュ防止保護・白枠透過・赤7/BAR 105%限界拡大描画・7セグLED描画
+ * 真因であったキャッシュシステムを全廃し、元のダイレクト描画方式を完全復活。
+ * 白枠透過・赤7/BAR 105%限界拡大描画・7セグLED描画機能は維持。
  */
 
 (function() {
   const SYMBOL_HEIGHT = 46;
   const CANVAS_WIDTH = 100;
-  const symbolCache = {};
+
+  // 実行時に安全に各図柄の描画関数を取得する
+  function getDrawFunc(symName) {
+    try {
+      if (symName === '7' && typeof drawSymbol7 !== 'undefined') return drawSymbol7;
+      if (symName === 'BAR' && typeof drawSymbolBAR !== 'undefined') return drawSymbolBAR;
+      if (symName === 'GRAPE' && typeof drawSymbolGRAPE !== 'undefined') return drawSymbolGRAPE;
+      if (symName === 'CHERRY' && typeof drawSymbolCHERRY !== 'undefined') return drawSymbolCHERRY;
+      if (symName === 'BELL' && typeof drawSymbolBELL !== 'undefined') return drawSymbolBELL;
+      if (symName === 'RHINO' && typeof drawSymbolRHINO !== 'undefined') return drawSymbolRHINO;
+      if (symName === 'CLOWN' && typeof drawSymbolCLOWN !== 'undefined') return drawSymbolCLOWN;
+      
+      // フォールバック
+      if (typeof window !== 'undefined') {
+        return window['drawSymbol' + symName] || null;
+      }
+    } catch(e) {}
+    return null;
+  }
 
   const ReelRenderer = {
-    // 各 symbol_*.js の描画関数を typeof 保護付きで直接呼び出してキャッシュを初期化
-    initSymbolCache: function() {
-      const drawFuncs = {
-        '7': typeof drawSymbol7 !== 'undefined' ? drawSymbol7 : (typeof window.drawSymbol7 !== 'undefined' ? window.drawSymbol7 : null),
-        'BAR': typeof drawSymbolBAR !== 'undefined' ? drawSymbolBAR : (typeof window.drawSymbolBAR !== 'undefined' ? window.drawSymbolBAR : null),
-        'GRAPE': typeof drawSymbolGRAPE !== 'undefined' ? drawSymbolGRAPE : (typeof window.drawSymbolGRAPE !== 'undefined' ? window.drawSymbolGRAPE : null),
-        'CHERRY': typeof drawSymbolCHERRY !== 'undefined' ? drawSymbolCHERRY : (typeof window.drawSymbolCHERRY !== 'undefined' ? window.drawSymbolCHERRY : null),
-        'BELL': typeof drawSymbolBELL !== 'undefined' ? drawSymbolBELL : (typeof window.drawSymbolBELL !== 'undefined' ? window.drawSymbolBELL : null),
-        'RHINO': typeof drawSymbolRHINO !== 'undefined' ? drawSymbolRHINO : (typeof window.drawSymbolRHINO !== 'undefined' ? window.drawSymbolRHINO : null),
-        'CLOWN': typeof drawSymbolCLOWN !== 'undefined' ? drawSymbolCLOWN : (typeof window.drawSymbolCLOWN !== 'undefined' ? window.drawSymbolCLOWN : null)
-      };
+    // キャッシュシステムは廃止したため、ここでは何もしない（エラー防止のため関数のみ残す）
+    initSymbolCache: function() {},
 
-      Object.keys(drawFuncs).forEach(key => {
-        const drawFn = drawFuncs[key];
-        if (typeof drawFn !== 'function') return;
-
-        const offscreen = document.createElement('canvas');
-        offscreen.width = CANVAS_WIDTH;
-        offscreen.height = SYMBOL_HEIGHT;
-        const ctx = offscreen.getContext('2d');
-
-        // 白枠を限界まで削ぎ落とし赤7/BARの縦サイズを最大化（105%スケール）
-        if (key === '7' || key === 'BAR') {
-          ctx.save();
-          ctx.translate(CANVAS_WIDTH / 2, SYMBOL_HEIGHT / 2);
-          ctx.scale(1.05, 1.05);
-          ctx.translate(-CANVAS_WIDTH / 2, -SYMBOL_HEIGHT / 2);
-          drawFn(ctx, 0, 0, CANVAS_WIDTH, SYMBOL_HEIGHT);
-          ctx.restore();
-        } else {
-          drawFn(ctx, 0, 0, CANVAS_WIDTH, SYMBOL_HEIGHT);
-        }
-
-        symbolCache[key] = offscreen;
-      });
-    },
-
-    // リールキャンバス描画（回転中ブラー効果 ＆ 通常静止描画）
+    // リールキャンバス描画（元のダイレクト描画方式を完全復活）
     renderReelCanvas: function(reel, isSpinning) {
       if (!reel || !reel.ctx || !reel.strip) return;
       const ctx = reel.ctx;
@@ -56,28 +41,42 @@
 
       ctx.clearRect(0, 0, CANVAS_WIDTH, fullHeight);
 
-      // パフォーマンス最適化のため3周期分を描画
+      // 3周期分を描画
       for (let pass = 0; pass < 3; pass++) {
         for (let i = 0; i < totalSyms; i++) {
           const symName = strip[i];
           const y = (pass * totalSyms + i) * SYMBOL_HEIGHT;
-          const cachedImg = symbolCache[symName];
+          
+          // その場で直接描画関数を取得
+          const drawFn = getDrawFunc(symName);
 
-          if (cachedImg) {
+          if (typeof drawFn === 'function') {
+            ctx.save();
+            
+            // 回転中のブラー効果
             if (isSpinning) {
-              ctx.save();
               ctx.globalAlpha = 0.85;
-              ctx.drawImage(cachedImg, 0, y);
-              ctx.restore();
-            } else {
-              ctx.drawImage(cachedImg, 0, y);
             }
+
+            // 赤7/BAR 105%限界拡大描画
+            if (symName === '7' || symName === 'BAR') {
+              ctx.translate(CANVAS_WIDTH / 2, y + SYMBOL_HEIGHT / 2);
+              ctx.scale(1.05, 1.05);
+              ctx.translate(-CANVAS_WIDTH / 2, -(y + SYMBOL_HEIGHT / 2));
+              // y座標は元の位置に描画させる
+              drawFn(ctx, 0, y, CANVAS_WIDTH, SYMBOL_HEIGHT);
+            } else {
+              // 通常図柄の直接描画
+              drawFn(ctx, 0, y, CANVAS_WIDTH, SYMBOL_HEIGHT);
+            }
+            
+            ctx.restore();
           }
         }
       }
     },
 
-    // 7セグメントLED更新処理
+    // 7セグメントLED更新処理（正常維持）
     update7SegDisplay: function(containerId, value, digitCount) {
       const container = document.getElementById(containerId);
       if (!container) return;
@@ -122,4 +121,5 @@
 
   window.REEL_RENDERER = ReelRenderer;
 })();
+
 
