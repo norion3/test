@@ -1,6 +1,6 @@
 /**
  * スロットゲームエンジン (engine.js)
- * DMM完全解析確率・AUTO継続時2秒鑑賞ウェイト・目揃いズレ完治・音響ON/OFF一元化・REG91枚ターゲット補正
+ * DMM完全解析確率・クレジット＆差枚数分離連動・AUTO継続時2秒鑑賞ウェイト・目揃いズレ完治・音響ON/OFF一元化
  */
 
 (function() {
@@ -43,9 +43,9 @@
   let weightCut = true;
   let soundOn = false;
 
-  let credits = 50;
-  let internalCredits = 50;
-  let betAmount = 0;
+  // メダル制御（クレジットと下皿/持ちメダルの完全分離）
+  let credits = 50;            // 画面表示クレジット (0〜50)
+  let betAmount = 0;           // 現在進行ゲームのBET数
   let isAutoMode = false;
   let autoTimer = null;
 
@@ -65,9 +65,6 @@
   // 1. UI ＆ ランプ更新
   // ===================================================
   function updateDisplays(payout = 0) {
-    if (internalCredits < 3 && !isBonusMode) internalCredits = 50;
-    credits = Math.min(50, internalCredits);
-
     if (window.REEL_RENDERER) {
       window.REEL_RENDERER.update7SegDisplay('creditDisp', credits, 2);
       window.REEL_RENDERER.update7SegDisplay('countDisp', isBonusMode ? bonusAcquired : 0, 3);
@@ -78,7 +75,10 @@
     const lampStart = document.getElementById('lampStart');
 
     if (lampReplay) lampReplay.classList.toggle('active', isReplay);
-    const canPlay = isReplay || (isBonusMode ? internalCredits >= 1 : internalCredits >= 3);
+    
+    // プレイ可能判定 (リプレイ中、またはクレジット/手持ちメダルが足りているか)
+    const neededBet = isBonusMode ? 1 : 3;
+    const canPlay = isReplay || (credits >= neededBet);
     if (lampStart) lampStart.classList.toggle('active', gameState === STATE_IDLE && canPlay);
 
     const mainCabinet = document.getElementById('mainCabinet');
@@ -200,7 +200,7 @@
       isTouchActive = false;
       hasActionExecutedInCurrentTouch = false;
       
-      internalCredits = 50;
+      credits = 50;
       betAmount = 0;
       isAutoMode = false;
       if (autoTimer) {
@@ -293,8 +293,12 @@
       if (gameState !== STATE_IDLE) return;
 
       try {
-        const canPlay = isReplay || (isBonusMode ? internalCredits >= 1 : internalCredits >= 3);
-        if (!canPlay && internalCredits < 3) internalCredits = 50; 
+        const neededBet = isBonusMode ? 1 : 3;
+
+        // クレジットが不足している場合は自動補給 (補充)
+        if (!isReplay && credits < neededBet) {
+          credits = 50; // クレジット補給
+        }
 
         gameState = STATE_SPINNING;
         activeReelsCount = 3;
@@ -304,24 +308,29 @@
         triggerLeverVisual();
 
         setLineBadgesLit(false);
+
+        // 【要件実現】BET消費によるクレジット即時減算 (レバーONで50→47へリアルタイム減算)
+        if (isBonusMode) {
+          betAmount = 1;
+          credits -= 1;
+          if (window.DATA_COUNTER) window.DATA_COUNTER.onGameStart(1, true);
+        } else if (!isReplay) {
+          betAmount = 3;
+          credits -= 3;
+          if (window.DATA_COUNTER) window.DATA_COUNTER.onGameStart(3, false);
+        } else {
+          betAmount = 3;
+          isReplay = false; // リプレイ時はBET減算なし
+          if (window.DATA_COUNTER) window.DATA_COUNTER.onGameStart(0, false);
+        }
+
         updateDisplays(0);
 
-        // 【不変要件】ウェイトカット時であっても実機同様に一瞬だけWaitランプを点灯させる演出
+        // ウェイトカット時であっても一瞬Waitランプを点灯させる演出
         const lampWait = document.getElementById('lampWait');
         if (lampWait) {
           lampWait.classList.add('active');
           setTimeout(() => lampWait.classList.remove('active'), 250);
-        }
-
-        if (isBonusMode) {
-          betAmount = 1; internalCredits -= 1;
-          if (window.DATA_COUNTER) window.DATA_COUNTER.onGameStart(1, true);
-        } else if (!isReplay) {
-          internalCredits -= 3; betAmount = 3;
-          if (window.DATA_COUNTER) window.DATA_COUNTER.onGameStart(3, false);
-        } else {
-          betAmount = 3; isReplay = false;
-          if (window.DATA_COUNTER) window.DATA_COUNTER.onGameStart(0, false);
         }
 
         if (window.SLOT_SOUND) window.SLOT_SOUND.play('lever');
@@ -461,7 +470,6 @@
     bindEvents: function() {
       const startTouchSession = () => {
         isTouchActive = true;
-        // 【不変要件】画面初回タップ時にSoundEngineを裏側で常時スタンバイ(プリロード)起動
         if (window.SLOT_SOUND) window.SLOT_SOUND.preload();
       };
       const endTouchSession = () => { isTouchActive = false; hasActionExecutedInCurrentTouch = false; };
@@ -506,7 +514,7 @@
         if (!reel.isSpinning) return;
         if (reel.isStopping) {
           let dist = (reel.pos - reel.targetPos + maxPos) % maxPos;
-          // 【目揃いズレ完全防ぎ】減速完了領域に達した時点でアニメーションIdをクリアし理論位置に確定固定
+          // 目揃いズレ完全防ぎ：減速完了領域に達した時点でアニメーションIdをクリアし理論位置に確定固定
           if (dist <= reel.speed || dist < 2) {
             reel.pos = reel.targetPos; 
             reel.isSpinning = false; 
@@ -576,8 +584,13 @@
       if (bellWin && !isBonusMode) { payout = Math.max(payout, 14); playSoundType = 'bell_clown'; }
       if (clownWin && !isBonusMode) { payout = Math.max(payout, 10); playSoundType = 'bell_clown'; }
 
+      // 【要件実現】払い出し（PAYOUT）の処理。クレジット（最大50）へ優先加算
       if (payout > 0) {
-        internalCredits += payout;
+        credits += payout;
+        if (credits > 50) {
+          credits = 50; // 50を超えた分は持ちメダル（差枚数）にプール
+        }
+
         if (window.DATA_COUNTER) {
           window.DATA_COUNTER.onPayout(payout, grapeWin ? (isBonusMode ? 'BONUS_GRAPE' : 'GRAPE') : 'OTHER');
         }
@@ -632,7 +645,7 @@
       updateDisplays(payout);
 
       if (isAutoMode) {
-        // 【要件適用】AUTOモード継続中 ＋ ボーナス揃い時限定で「2秒間の鑑賞ウェイト（2000ms）」を挟む
+        // AUTOモード継続中 ＋ ボーナス揃い時限定で「2秒間の鑑賞ウェイト（2000ms）」を挟む
         let nextDelay = isReplayWin ? 150 : 450;
         if (justWonBonus && !autoStopOnBonus) {
           nextDelay = 2000; // ボーナス図柄鑑賞用2秒ウェイト

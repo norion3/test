@@ -1,6 +1,6 @@
 /**
  * データカウンターモジュール (datacounter.js)
- * IN/OUT集計・機械割(RTP)算出・全件履歴保持・可変スランプグラフ描画
+ * IN/OUT集計・精密差枚数管理・機械割(RTP)算出・全件履歴保持・可変スランプグラフ描画
  */
 
 (function() {
@@ -10,7 +10,7 @@
     bigCount: 0,         // BIG回数
     regCount: 0,         // REG回数
     grapeCount: 0,       // 通常時のブドウ獲得回数
-    diffMedal: 0,        // 累計差枚数
+    diffMedal: 0,        // 累計差枚数（純差枚数）
     
     totalIn: 0,          // 累計投入枚数 (IN)
     totalOut: 0,         // 累計払出枚数 (OUT)
@@ -38,22 +38,22 @@
     // 1ゲーム開始時 (BET消費時)
     onGameStart: function(betCount, isBonusMode = false) {
       if (betCount > 0) {
-        this.totalIn += betCount; // 投入枚数(IN)を確実に集計
+        this.totalIn += betCount; // 投入枚数(IN)を集計
         
         // ボーナス消化中のゲーム数は通常総回転数に含めない
         if (!isBonusMode) {
           this.totalGames++;
           this.currentGames++;
         }
+        this.diffMedal -= betCount;
+        this.recordSlumpPoint();
       }
-      this.diffMedal -= betCount;
-      this.recordSlumpPoint();
     },
 
     // 払い出し発生時
     onPayout: function(payout, type = '') {
       if (payout > 0) {
-        this.totalOut += payout; // 払出枚数(OUT)を確実に集計
+        this.totalOut += payout; // 払出枚数(OUT)を集計
         this.diffMedal += payout;
         
         // 通常時のブドウのみカウント（ボーナス中のブドウ払出は除外）
@@ -136,7 +136,7 @@
       };
     },
 
-    // スランプグラフ描画 (初期±500レンジ、回転数に応じて1画面に自動縮尺表示)
+    // スランプグラフ描画 (初期±500レンジ、回転数・差枚に応じて自動縮尺表示)
     renderSlumpGraph: function(canvasElement) {
       if (!canvasElement) return;
       const ctx = canvasElement.getContext('2d');
@@ -267,7 +267,7 @@
         `;
       });
 
-      html += '</tbody></table>';
+      html += '</tbody>style></table>';
       return html;
     }
   };
