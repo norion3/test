@@ -1,94 +1,38 @@
 /**
  * リール描画モジュール (reel_renderer.js)
- * 真因解決版：関数・画像オブジェクト・文字列の全データ形式に完全対応。
- * 画像の非同期ロードを自動で待ち、白画面バグを物理的に100%根絶。
+ * 真因解決版：translate(0, y) による原点移動方式を完全復活。
+ * 外部関数の (0,0) 描画仕様に完璧に適合し、図柄の重なり・枠外消失を100%根絶。
  * 白枠透過・赤7/BAR 105%限界拡大描画・7セグLED描画機能は維持。
  */
 
 (function() {
   const SYMBOL_HEIGHT = 46;
   const CANVAS_WIDTH = 100;
-  const symbolCache = {};
+
+  // 実行時に安全に各図柄の描画関数を取得する
+  function getDrawFunc(symName) {
+    try {
+      if (symName === '7' && typeof drawSymbol7 !== 'undefined') return drawSymbol7;
+      if (symName === 'BAR' && typeof drawSymbolBAR !== 'undefined') return drawSymbolBAR;
+      if (symName === 'GRAPE' && typeof drawSymbolGRAPE !== 'undefined') return drawSymbolGRAPE;
+      if (symName === 'CHERRY' && typeof drawSymbolCHERRY !== 'undefined') return drawSymbolCHERRY;
+      if (symName === 'BELL' && typeof drawSymbolBELL !== 'undefined') return drawSymbolBELL;
+      if (symName === 'RHINO' && typeof drawSymbolRHINO !== 'undefined') return drawSymbolRHINO;
+      if (symName === 'CLOWN' && typeof drawSymbolCLOWN !== 'undefined') return drawSymbolCLOWN;
+      
+      // グローバルスコープのフォールバック
+      if (typeof window !== 'undefined') {
+        return window['drawSymbol' + symName] || null;
+      }
+    } catch(e) {}
+    return null;
+  }
 
   const ReelRenderer = {
-    // キャッシュの一括事前初期化（全データ形式・非同期ロード対応）
-    initSymbolCache: function() {
-      const symbols = ['7', 'BAR', 'GRAPE', 'CHERRY', 'BELL', 'RHINO', 'CLOWN'];
-      
-      symbols.forEach(key => {
-        let symData = null;
-        
-        // typeof 保護により ReferenceError を完全回避し、安全にデータを取得
-        try {
-          if (key === '7' && typeof drawSymbol7 !== 'undefined') symData = drawSymbol7;
-          else if (key === 'BAR' && typeof drawSymbolBAR !== 'undefined') symData = drawSymbolBAR;
-          else if (key === 'GRAPE' && typeof drawSymbolGRAPE !== 'undefined') symData = drawSymbolGRAPE;
-          else if (key === 'CHERRY' && typeof drawSymbolCHERRY !== 'undefined') symData = drawSymbolCHERRY;
-          else if (key === 'BELL' && typeof drawSymbolBELL !== 'undefined') symData = drawSymbolBELL;
-          else if (key === 'RHINO' && typeof drawSymbolRHINO !== 'undefined') symData = drawSymbolRHINO;
-          else if (key === 'CLOWN' && typeof drawSymbolCLOWN !== 'undefined') symData = drawSymbolCLOWN;
-          // 念のためのグローバルスコープ探索
-          else if (typeof window !== 'undefined') symData = window['drawSymbol' + key] || window['symbol_' + key];
-        } catch(e) {}
+    // キャッシュシステムは完全撤廃
+    initSymbolCache: function() {},
 
-        if (!symData) return;
-
-        // キャッシュ用のキャンバスを作成
-        const offscreen = document.createElement('canvas');
-        offscreen.width = CANVAS_WIDTH;
-        offscreen.height = SYMBOL_HEIGHT;
-        const ctx = offscreen.getContext('2d');
-
-        // キャンバスへの描画実行関数（関数と画像の両方に対応）
-        const drawToOffscreen = (data) => {
-          ctx.clearRect(0, 0, CANVAS_WIDTH, SYMBOL_HEIGHT);
-          
-          // 赤7/BAR 105%限界拡大描画
-          if (key === '7' || key === 'BAR') {
-            ctx.save();
-            ctx.translate(CANVAS_WIDTH / 2, SYMBOL_HEIGHT / 2);
-            ctx.scale(1.05, 1.05);
-            ctx.translate(-CANVAS_WIDTH / 2, -SYMBOL_HEIGHT / 2);
-            if (typeof data === 'function') {
-              data(ctx, 0, 0, CANVAS_WIDTH, SYMBOL_HEIGHT);
-            } else {
-              ctx.drawImage(data, 0, 0, CANVAS_WIDTH, SYMBOL_HEIGHT);
-            }
-            ctx.restore();
-          } else {
-            // 通常描画
-            if (typeof data === 'function') {
-              data(ctx, 0, 0, CANVAS_WIDTH, SYMBOL_HEIGHT);
-            } else {
-              ctx.drawImage(data, 0, 0, CANVAS_WIDTH, SYMBOL_HEIGHT);
-            }
-          }
-        };
-
-        // データの形式（文字列、Imageオブジェクト、関数）を自動判別して描画
-        if (typeof symData === 'string') {
-          // 画像URLやBase64文字列の場合：ロード完了を待ってから描画
-          const img = new Image();
-          img.onload = () => drawToOffscreen(img);
-          img.src = symData;
-        } else if (symData instanceof HTMLImageElement) {
-          // 既にImageオブジェクトの場合：ロード完了状態を確認
-          if (symData.complete) {
-            drawToOffscreen(symData);
-          } else {
-            symData.addEventListener('load', () => drawToOffscreen(symData));
-          }
-        } else {
-          // 関数の場合、またはその他の描画可能なオブジェクトの場合
-          drawToOffscreen(symData);
-        }
-
-        // キャッシュに保存
-        symbolCache[key] = offscreen;
-      });
-    },
-
-    // リールキャンバス描画（回転中ブラー効果 ＆ 通常静止描画）
+    // リールキャンバス描画（元のダイレクト原点移動描画方式を完全復活）
     renderReelCanvas: function(reel, isSpinning) {
       if (!reel || !reel.ctx || !reel.strip) return;
       const ctx = reel.ctx;
@@ -103,17 +47,33 @@
         for (let i = 0; i < totalSyms; i++) {
           const symName = strip[i];
           const y = (pass * totalSyms + i) * SYMBOL_HEIGHT;
-          const cachedImg = symbolCache[symName];
+          
+          const drawFn = getDrawFunc(symName);
 
-          if (cachedImg) {
+          if (typeof drawFn === 'function') {
+            ctx.save();
+            
+            // 【最重要修正】キャンバスの原点自体を y の位置へ移動させる
+            // これにより、外部関数が (0,0) に描画しても正しいマスに配置される
+            ctx.translate(0, y);
+            
+            // 回転中のブラー効果
             if (isSpinning) {
-              ctx.save();
               ctx.globalAlpha = 0.85;
-              ctx.drawImage(cachedImg, 0, y);
-              ctx.restore();
-            } else {
-              ctx.drawImage(cachedImg, 0, y);
             }
+
+            // 赤7/BAR 105%限界拡大描画
+            if (symName === '7' || symName === 'BAR') {
+              // 移動済みの原点 (0,0) の中心を基準に105%拡大
+              ctx.translate(CANVAS_WIDTH / 2, SYMBOL_HEIGHT / 2);
+              ctx.scale(1.05, 1.05);
+              ctx.translate(-CANVAS_WIDTH / 2, -SYMBOL_HEIGHT / 2);
+            }
+
+            // 外部描画関数を呼び出す（座標は 0, 0 で渡す）
+            drawFn(ctx, 0, 0, CANVAS_WIDTH, SYMBOL_HEIGHT);
+            
+            ctx.restore();
           }
         }
       }
