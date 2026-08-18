@@ -267,7 +267,8 @@
         `;
       });
 
-      html += '</tbody>style></table>';
+      // HTMLパースエラーの原因となっていた 'style>' タイポを修正除去
+      html += '</tbody></table>';
       return html;
     }
   };
