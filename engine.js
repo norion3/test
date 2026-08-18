@@ -1,6 +1,6 @@
 /**
  * スロットゲームエンジン (engine.js)
- * ネオアイムジャグラーEX配列完全適合・通常時/ボーナス時有効ライン分離(ボーナス中中段1ライン引き込み・斜め0枚払出不整合完全完治)・Wait機能(リアル4.1秒ウェイト＆自動補給テンポ補正)・フリーズ時ランプ同期・ボタン直押し変則打ち対応・完全オート目押し仕様(21コマ引込)・直揃い禁止絶対保護・REG13枚払出(純増96枚)独自計算保護・ボーナス中全小役払出統合・ハサミ打ち/逆押し対応先読みアルゴリズム・100G連BGM
+ * ネオアイムジャグラーEX配列完全適合・非チェリー時左リールチェリー露出回避制御(実機出目美観適合)・通常時/ボーナス時有効ライン分離・Wait機能(リアル4.1秒ウェイト＆自動補給テンポ補正)・フリーズ時ランプ同期・ボタン直押し変則打ち対応・完全オート目押し仕様(21コマ引込)・直揃い禁止絶対保護・REG13枚払出(純増96枚)独自計算保護・ボーナス中全小役払出統合・ハサミ打ち/逆押し対応先読みアルゴリズム・100G連BGM
  */
 
 (function() {
@@ -466,6 +466,15 @@
         const isStopped = (r) => (r === index) ? true : (!reels[r].isSpinning || reels[r].isStopping);
         const currentIdxFn = (r, checkIdx) => (r === index) ? checkIdx : reels[r].currentIndex;
 
+        // チェリーフラグ判定および左リールチェリー露出チェック用ヘルパー
+        const isCherryFlag = Boolean(currentFlag && currentFlag.includes('CHERRY'));
+        const isLeftReelShowingCherry = (checkIdx0) => {
+          const s0 = getSym(0, checkIdx0, 0);
+          const s1 = getSym(0, checkIdx0, 1);
+          const s2 = getSym(0, checkIdx0, 2);
+          return (s0 === 'CHERRY' || s1 === 'CHERRY' || s2 === 'CHERRY');
+        };
+
         // 禁じ手チェック関数 (直揃い禁止・誤揃い防止)
         const checkFinalState = (syms) => {
             if (!currentFlag && !bonusFlag) {
@@ -497,8 +506,13 @@
             let isValid = true;
             let isTargetMatched = false;
 
+            // 非チェリー成立時：左リール枠内（上中下）にチェリーが露出する停止位置を排除（実機出目違和感解消）
+            if (!isCherryFlag && index === 0 && isLeftReelShowingCherry(checkIdx)) {
+              isValid = false;
+            }
+
             // ① 狙い図柄の引き込み評価
-            if (targetSyms.length > 0) {
+            if (isValid && targetSyms.length > 0) {
                 for (let l = 0; l < lineOffsets.length; l++) {
                     let lineValid = true;
                     let hasTarget = false;
@@ -538,13 +552,19 @@
                      
                      for (let remIdx = 0; remIdx < 21; remIdx++) {
                          let allLinesSafeForThisRemIdx = true;
-                         for (let l = 0; l < lineOffsets.length; l++) {
-                             const syms = [
-                                 getSym(0, remainingReelId === 0 ? remIdx : currentIdxFn(0, checkIdx), lineOffsets[l][0]),
-                                 getSym(1, remainingReelId === 1 ? remIdx : currentIdxFn(1, checkIdx), lineOffsets[l][1]),
-                                 getSym(2, remainingReelId === 2 ? remIdx : currentIdxFn(2, checkIdx), lineOffsets[l][2])
-                             ];
-                             if (!checkFinalState(syms)) { allLinesSafeForThisRemIdx = false; break; }
+
+                         // 残りが左リールかつ非チェリー時、枠内にチェリーが出るremIdxを排除
+                         if (!isCherryFlag && remainingReelId === 0 && isLeftReelShowingCherry(remIdx)) {
+                           allLinesSafeForThisRemIdx = false;
+                         } else {
+                           for (let l = 0; l < lineOffsets.length; l++) {
+                               const syms = [
+                                   getSym(0, remainingReelId === 0 ? remIdx : currentIdxFn(0, checkIdx), lineOffsets[l][0]),
+                                   getSym(1, remainingReelId === 1 ? remIdx : currentIdxFn(1, checkIdx), lineOffsets[l][1]),
+                                   getSym(2, remainingReelId === 2 ? remIdx : currentIdxFn(2, checkIdx), lineOffsets[l][2])
+                               ];
+                               if (!checkFinalState(syms)) { allLinesSafeForThisRemIdx = false; break; }
+                           }
                          }
                          
                          // 逆押し時のチェリー・小役 先読みシミュレート追加
