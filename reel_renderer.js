@@ -1,6 +1,6 @@
 /**
  * リール描画モジュール (reel_renderer.js)
- * 白枠透過・赤7/BAR 105%限界拡大描画・7セグLED描画キャッシュ制御
+ * 動的関数参照による図柄不表示バグ完治・白枠透過・赤7/BAR 105%限界拡大描画・7セグLED描画キャッシュ制御
  */
 
 (function() {
@@ -8,21 +8,22 @@
   const CANVAS_WIDTH = 100;
   const symbolCache = {};
 
-  const SYMBOL_DRAW_FUNCS = {
-    '7': typeof drawSymbol7 !== 'undefined' ? drawSymbol7 : null,
-    'BAR': typeof drawSymbolBAR !== 'undefined' ? drawSymbolBAR : null,
-    'GRAPE': typeof drawSymbolGRAPE !== 'undefined' ? drawSymbolGRAPE : null,
-    'CHERRY': typeof drawSymbolCHERRY !== 'undefined' ? drawSymbolCHERRY : null,
-    'BELL': typeof drawSymbolBELL !== 'undefined' ? drawSymbolBELL : null,
-    'RHINO': typeof drawSymbolRHINO !== 'undefined' ? drawSymbolRHINO : null,
-    'CLOWN': typeof drawSymbolCLOWN !== 'undefined' ? drawSymbolCLOWN : null
-  };
-
   const ReelRenderer = {
-    // 105%限界拡大描画対応キャンバスカッシュ初期化
+    // 105%限界拡大描画対応キャンバスカッシュ初期化 (動的参照化により読み込みタイミング不一致を完全防ぎ)
     initSymbolCache: function() {
-      Object.keys(SYMBOL_DRAW_FUNCS).forEach(key => {
-        const drawFn = SYMBOL_DRAW_FUNCS[key];
+      // 実行時に window オブジェクトから最新の描画関数を動的取得
+      const symbolDrawFuncs = {
+        '7': typeof window.drawSymbol7 !== 'undefined' ? window.drawSymbol7 : (typeof drawSymbol7 !== 'undefined' ? drawSymbol7 : null),
+        'BAR': typeof window.drawSymbolBAR !== 'undefined' ? window.drawSymbolBAR : (typeof drawSymbolBAR !== 'undefined' ? drawSymbolBAR : null),
+        'GRAPE': typeof window.drawSymbolGRAPE !== 'undefined' ? window.drawSymbolGRAPE : (typeof drawSymbolGRAPE !== 'undefined' ? drawSymbolGRAPE : null),
+        'CHERRY': typeof window.drawSymbolCHERRY !== 'undefined' ? window.drawSymbolCHERRY : (typeof drawSymbolCHERRY !== 'undefined' ? drawSymbolCHERRY : null),
+        'BELL': typeof window.drawSymbolBELL !== 'undefined' ? window.drawSymbolBELL : (typeof drawSymbolBELL !== 'undefined' ? drawSymbolBELL : null),
+        'RHINO': typeof window.drawSymbolRHINO !== 'undefined' ? window.drawSymbolRHINO : (typeof drawSymbolRHINO !== 'undefined' ? drawSymbolRHINO : null),
+        'CLOWN': typeof window.drawSymbolCLOWN !== 'undefined' ? window.drawSymbolCLOWN : (typeof drawSymbolCLOWN !== 'undefined' ? drawSymbolCLOWN : null)
+      };
+
+      Object.keys(symbolDrawFuncs).forEach(key => {
+        const drawFn = symbolDrawFuncs[key];
         if (!drawFn) return;
 
         const offscreen = document.createElement('canvas');
