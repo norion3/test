@@ -1,6 +1,6 @@
 /**
  * リール描画モジュール (reel_renderer.js)
- * 動的関数参照による図柄不表示バグ完治・白枠透過・赤7/BAR 105%限界拡大描画・7セグLED描画キャッシュ制御
+ * symbol_*.js の描画関数直接呼び出し・白枠透過・赤7/BAR 105%限界拡大描画・7セグLED描画
  */
 
 (function() {
@@ -9,22 +9,21 @@
   const symbolCache = {};
 
   const ReelRenderer = {
-    // 105%限界拡大描画対応キャンバスカッシュ初期化 (動的参照化により読み込みタイミング不一致を完全防ぎ)
+    // 各 symbol_*.js の描画関数を直接呼び出してキャッシュを初期化
     initSymbolCache: function() {
-      // 実行時に window オブジェクトから最新の描画関数を動的取得
-      const symbolDrawFuncs = {
-        '7': typeof window.drawSymbol7 !== 'undefined' ? window.drawSymbol7 : (typeof drawSymbol7 !== 'undefined' ? drawSymbol7 : null),
-        'BAR': typeof window.drawSymbolBAR !== 'undefined' ? window.drawSymbolBAR : (typeof drawSymbolBAR !== 'undefined' ? drawSymbolBAR : null),
-        'GRAPE': typeof window.drawSymbolGRAPE !== 'undefined' ? window.drawSymbolGRAPE : (typeof drawSymbolGRAPE !== 'undefined' ? drawSymbolGRAPE : null),
-        'CHERRY': typeof window.drawSymbolCHERRY !== 'undefined' ? window.drawSymbolCHERRY : (typeof drawSymbolCHERRY !== 'undefined' ? drawSymbolCHERRY : null),
-        'BELL': typeof window.drawSymbolBELL !== 'undefined' ? window.drawSymbolBELL : (typeof drawSymbolBELL !== 'undefined' ? drawSymbolBELL : null),
-        'RHINO': typeof window.drawSymbolRHINO !== 'undefined' ? window.drawSymbolRHINO : (typeof drawSymbolRHINO !== 'undefined' ? drawSymbolRHINO : null),
-        'CLOWN': typeof window.drawSymbolCLOWN !== 'undefined' ? window.drawSymbolCLOWN : (typeof drawSymbolCLOWN !== 'undefined' ? drawSymbolCLOWN : null)
+      const drawFuncs = {
+        '7': drawSymbol7,
+        'BAR': drawSymbolBAR,
+        'GRAPE': drawSymbolGRAPE,
+        'CHERRY': drawSymbolCHERRY,
+        'BELL': drawSymbolBELL,
+        'RHINO': drawSymbolRHINO,
+        'CLOWN': drawSymbolCLOWN
       };
 
-      Object.keys(symbolDrawFuncs).forEach(key => {
-        const drawFn = symbolDrawFuncs[key];
-        if (!drawFn) return;
+      Object.keys(drawFuncs).forEach(key => {
+        const drawFn = drawFuncs[key];
+        if (typeof drawFn !== 'function') return;
 
         const offscreen = document.createElement('canvas');
         offscreen.width = CANVAS_WIDTH;
