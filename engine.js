@@ -1,6 +1,6 @@
 /**
  * スロットゲームエンジン (engine.js)
- * DMM完全解析確率・クレジット＆差枚数分離連動・AUTO継続時2秒鑑賞ウェイト・目揃いズレ完治・音響ON/OFF一元化
+ * DMM完全解析確率・クレジット＆差枚数分離連動・チャージ時コインSE演出・AUTO継続時2秒鑑賞ウェイト・目揃いズレ完治
  */
 
 (function() {
@@ -295,9 +295,10 @@
       try {
         const neededBet = isBonusMode ? 1 : 3;
 
-        // クレジットが不足している場合は自動補給 (補充)
+        // 【演出強化】クレジットが不足している場合の自動補給＆コイン投入SE再生
         if (!isReplay && credits < neededBet) {
-          credits = 50; // クレジット補給
+          credits = 50; // クレジット自動補給
+          if (window.SLOT_SOUND) window.SLOT_SOUND.play('bet'); // チャージ音再生
         }
 
         gameState = STATE_SPINNING;
@@ -309,7 +310,7 @@
 
         setLineBadgesLit(false);
 
-        // 【要件実現】BET消費によるクレジット即時減算 (レバーONで50→47へリアルタイム減算)
+        // BET消費によるクレジット即時減算 (レバーONで50→47へリアルタイム減算)
         if (isBonusMode) {
           betAmount = 1;
           credits -= 1;
@@ -584,7 +585,7 @@
       if (bellWin && !isBonusMode) { payout = Math.max(payout, 14); playSoundType = 'bell_clown'; }
       if (clownWin && !isBonusMode) { payout = Math.max(payout, 10); playSoundType = 'bell_clown'; }
 
-      // 【要件実現】払い出し（PAYOUT）の処理。クレジット（最大50）へ優先加算
+      // 払い出し（PAYOUT）の処理。クレジット（最大50）へ優先加算
       if (payout > 0) {
         credits += payout;
         if (credits > 50) {
