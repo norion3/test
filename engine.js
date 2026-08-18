@@ -1,6 +1,6 @@
 /**
  * スロットゲームエンジン (engine.js)
- * DMM完全解析確率・100G以内連チャンBGM判定(1G連/ゾロ目)・プレミア演出・クレジット＆差枚数分離連動・150ms時差音響・AUTO継続時2秒鑑賞ウェイト
+ * Viewport固定描画連動・DMM完全解析確率・100G以内連チャンBGM判定(1G連/ゾロ目)・プレミア演出・クレジット＆差枚数分離連動・150ms時差音響・AUTO継続時2秒鑑賞ウェイト
  */
 
 (function() {
@@ -13,6 +13,7 @@
 
   const SYMBOL_HEIGHT = 46;
   const CANVAS_WIDTH = 100;
+  const VIEWPORT_HEIGHT = 138; // リール窓の表示高さ (46px × 3コマ)
   const REEL_SPEED_NORMAL = 22; 
   const REEL_SPEED_SLOW = 8;    
 
@@ -182,7 +183,10 @@
       reels = REEL_STRIPS.map((strip, idx) => {
         const canvas = document.getElementById(`reelCanvas${idx}`);
         if (!canvas) return null;
-        canvas.width = CANVAS_WIDTH; canvas.height = SYMBOL_HEIGHT * strip.length * 3;
+        // iOS WebKit 制限回避のため、Canvas サイズを表示窓の高さ(138px)に固定
+        canvas.width = CANVAS_WIDTH; 
+        canvas.height = VIEWPORT_HEIGHT;
+        canvas.style.transform = 'translateY(0px)'; // transformでの巨大描画依存を撤廃
         const ctx = canvas.getContext('2d');
         
         const reelObj = {
@@ -195,12 +199,23 @@
         const initialPos = currentIdx * SYMBOL_HEIGHT;
         reelObj.currentIndex = currentIdx;
         reelObj.pos = initialPos;
-        canvas.style.transform = `translateY(-${initialPos}px)`;
 
         if (window.REEL_RENDERER) window.REEL_RENDERER.renderReelCanvas(reelObj, false);
 
         return reelObj;
       }).filter(Boolean);
+
+      // 画像ロードの非同期完了に対応する安全描画ループ (起動後1.5秒間定期的再描画)
+      let bootFrameCount = 0;
+      const bootInterval = setInterval(() => {
+        reels.forEach(r => {
+          if (window.REEL_RENDERER && !r.isSpinning) {
+            window.REEL_RENDERER.renderReelCanvas(r, false);
+          }
+        });
+        bootFrameCount++;
+        if (bootFrameCount > 15) clearInterval(bootInterval);
+      }, 100);
 
       setLineBadgesLit(true);
       updateDisplays();
@@ -246,7 +261,6 @@
         const currentIdx = Math.floor(Math.random() * reel.strip.length);
         reel.currentIndex = currentIdx;
         reel.pos = currentIdx * SYMBOL_HEIGHT;
-        reel.canvas.style.transform = `translateY(-${reel.pos}px)`;
         if (window.REEL_RENDERER) window.REEL_RENDERER.renderReelCanvas(reel, false);
         
         const btn = document.getElementById(`stopBtn${reel.id}`);
@@ -590,7 +604,6 @@
               cancelAnimationFrame(reel.animId);
               reel.animId = null;
             }
-            reel.canvas.style.transform = `translateY(-${reel.pos}px)`;
             if (window.REEL_RENDERER) window.REEL_RENDERER.renderReelCanvas(reel, false);
             if (activeReelsCount === 0) this.onAllStopped();
             return;
@@ -600,7 +613,7 @@
         } else {
           reel.pos = (reel.pos - reel.speed + maxPos) % maxPos;
         }
-        reel.canvas.style.transform = `translateY(-${reel.pos}px)`;
+        if (window.REEL_RENDERER) window.REEL_RENDERER.renderReelCanvas(reel, true);
         reel.animId = requestAnimationFrame(animate);
       };
       animate();

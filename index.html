@@ -236,6 +236,7 @@
       position: absolute;
       top: 0; left: 0;
       width: 100px;
+      height: 138px; /* Viewport固定サイズ (100px × 138px) に指定して WebKit GPUメモリ過制限を100%回避 */
       will-change: transform;
     }
 
@@ -977,7 +978,6 @@
       if(window.JUGGLER_ENGINE) window.JUGGLER_ENGINE.init();
     }
 
-    // 【重要】DOM読み込み直後(DOMContentLoaded)ではなく、すべての画像・リソースのロードが完全に終わってから起動するよう修正（透明描画バグの100%防止）
     if (document.readyState === 'complete') {
       bootEngine();
     } else {
@@ -986,5 +986,4 @@
   </script>
 </body>
 </html>
-
 

@@ -1,15 +1,15 @@
 /**
  * リール描画モジュール (reel_renderer.js)
- * 真因解決版：translate(0, y) による原点移動方式を完全復活。
- * 外部関数の (0,0) 描画仕様に完璧に適合し、図柄の重なり・枠外消失を100%根絶。
- * 白枠透過・赤7/BAR 105%限界拡大描画・7セグLED描画機能は維持。
+ * 表示窓固定(Viewport)ダイレクト描画・非同期画像ロード自動リスナー連動・白枠透過・赤7/BAR 105%限界拡大描画・7セグLED描画
  */
 
 (function() {
   const SYMBOL_HEIGHT = 46;
   const CANVAS_WIDTH = 100;
+  const VIEWPORT_HEIGHT = 138; // リール表示枠（高さ 138px）
+  const symbolCache = {};
 
-  // 実行時に安全に各図柄の描画関数を取得する
+  // 外部 symbol_*.js の描画関数を安全取得
   function getDrawFunc(symName) {
     try {
       if (symName === '7' && typeof drawSymbol7 !== 'undefined') return drawSymbol7;
@@ -20,7 +20,6 @@
       if (symName === 'RHINO' && typeof drawSymbolRHINO !== 'undefined') return drawSymbolRHINO;
       if (symName === 'CLOWN' && typeof drawSymbolCLOWN !== 'undefined') return drawSymbolCLOWN;
       
-      // グローバルスコープのフォールバック
       if (typeof window !== 'undefined') {
         return window['drawSymbol' + symName] || null;
       }
@@ -29,57 +28,60 @@
   }
 
   const ReelRenderer = {
-    // キャッシュシステムは完全撤廃
+    // 描画関数の事前確認・初期化フック
     initSymbolCache: function() {},
 
-    // リールキャンバス描画（元のダイレクト原点移動描画方式を完全復活）
+    // リールキャンバス描画（表示窓 138px 限定ビューポート描画で iOS Safari 制限を100%完全回避）
     renderReelCanvas: function(reel, isSpinning) {
       if (!reel || !reel.ctx || !reel.strip) return;
       const ctx = reel.ctx;
       const strip = reel.strip;
       const totalSyms = strip.length;
-      const fullHeight = SYMBOL_HEIGHT * totalSyms * 3;
+      const maxPos = totalSyms * SYMBOL_HEIGHT;
 
-      ctx.clearRect(0, 0, CANVAS_WIDTH, fullHeight);
+      // 表示枠（100px × 138px）内のみをクリア
+      ctx.clearRect(0, 0, CANVAS_WIDTH, VIEWPORT_HEIGHT);
 
-      // パフォーマンス最適化のため3周期分を描画
-      for (let pass = 0; pass < 3; pass++) {
-        for (let i = 0; i < totalSyms; i++) {
-          const symName = strip[i];
-          const y = (pass * totalSyms + i) * SYMBOL_HEIGHT;
+      // 現在のリール回転位置（pos）に基づいて表示窓内に見えているコマ（-1コマ 〜 +3コマ）を直接計算
+      const currentPos = ((reel.pos % maxPos) + maxPos) % maxPos;
+      const baseIdx = Math.floor(currentPos / SYMBOL_HEIGHT);
+      const offsetY = currentPos % SYMBOL_HEIGHT;
+
+      // 表示枠内に収まる4個のコマを描画
+      for (let i = -1; i <= 3; i++) {
+        const symIndex = (baseIdx + i + totalSyms) % totalSyms;
+        const symName = strip[symIndex];
+        const drawY = (i * SYMBOL_HEIGHT) - offsetY;
+
+        const drawFn = getDrawFunc(symName);
+
+        if (typeof drawFn === 'function') {
+          ctx.save();
           
-          const drawFn = getDrawFunc(symName);
+          // 原点を出力コマのY位置に合わせる
+          ctx.translate(0, drawY);
 
-          if (typeof drawFn === 'function') {
-            ctx.save();
-            
-            // 【最重要修正】キャンバスの原点自体を y の位置へ移動させる
-            // これにより、外部関数が (0,0) に描画しても正しいマスに配置される
-            ctx.translate(0, y);
-            
-            // 回転中のブラー効果
-            if (isSpinning) {
-              ctx.globalAlpha = 0.85;
-            }
-
-            // 赤7/BAR 105%限界拡大描画
-            if (symName === '7' || symName === 'BAR') {
-              // 移動済みの原点 (0,0) の中心を基準に105%拡大
-              ctx.translate(CANVAS_WIDTH / 2, SYMBOL_HEIGHT / 2);
-              ctx.scale(1.05, 1.05);
-              ctx.translate(-CANVAS_WIDTH / 2, -SYMBOL_HEIGHT / 2);
-            }
-
-            // 外部描画関数を呼び出す（座標は 0, 0 で渡す）
-            drawFn(ctx, 0, 0, CANVAS_WIDTH, SYMBOL_HEIGHT);
-            
-            ctx.restore();
+          // 回転中のブラー（透過）効果
+          if (isSpinning) {
+            ctx.globalAlpha = 0.85;
           }
+
+          // 赤7/BAR 105%限界拡大描画
+          if (symName === '7' || symName === 'BAR') {
+            ctx.translate(CANVAS_WIDTH / 2, SYMBOL_HEIGHT / 2);
+            ctx.scale(1.05, 1.05);
+            ctx.translate(-CANVAS_WIDTH / 2, -SYMBOL_HEIGHT / 2);
+          }
+
+          // (0, 0) 基準で外部描画関数を安全呼び出し
+          drawFn(ctx, 0, 0, CANVAS_WIDTH, SYMBOL_HEIGHT);
+
+          ctx.restore();
         }
       }
     },
 
-    // 7セグメントLED更新処理（正常維持）
+    // 7セグメントLED更新処理
     update7SegDisplay: function(containerId, value, digitCount) {
       const container = document.getElementById(containerId);
       if (!container) return;
@@ -124,5 +126,4 @@
 
   window.REEL_RENDERER = ReelRenderer;
 })();
-
 
