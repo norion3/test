@@ -38,9 +38,8 @@
     // 1ゲーム開始時 (BET消費時)
     onGameStart: function(betCount, isBonusMode = false) {
       if (betCount > 0) {
-        this.totalIn += betCount; // 投入枚数(IN)を集計
+        this.totalIn += betCount;
         
-        // ボーナス消化中のゲーム数は通常総回転数に含めない
         if (!isBonusMode) {
           this.totalGames++;
           this.currentGames++;
@@ -53,10 +52,9 @@
     // 払い出し発生時
     onPayout: function(payout, type = '') {
       if (payout > 0) {
-        this.totalOut += payout; // 払出枚数(OUT)を集計
+        this.totalOut += payout;
         this.diffMedal += payout;
         
-        // 通常時のブドウのみカウント（ボーナス中のブドウ払出は除外）
         if (type === 'GRAPE') {
           this.grapeCount++;
         }
@@ -75,16 +73,14 @@
       const now = new Date();
       const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-      // 履歴を無制限で保持（配列の先頭に追加）
       this.history.unshift({
         id: this.history.length + 1,
-        type: type, // 'BIG' | 'REG'
+        type: type,
         game: this.currentGames,
         totalGame: this.totalGames,
         time: timeStr
       });
 
-      // ボーナス間ゲーム数をリセット
       this.currentGames = 0;
       this.recordSlumpPoint(true);
     },
@@ -93,7 +89,6 @@
     recordSlumpPoint: function(forceRecord = false) {
       const lastPoint = this.slumpData[this.slumpData.length - 1];
       
-      // 強制記録(ボーナス時) または 通常時5G経過毎 または 差枚が10枚以上動いた場合にポイント保存
       if (forceRecord || !lastPoint || (this.totalGames - lastPoint.game >= 5) || Math.abs(this.diffMedal - lastPoint.diff) >= 10) {
         this.slumpData.push({
           game: this.totalGames,
@@ -115,8 +110,6 @@
       };
 
       const totalBonus = this.bigCount + this.regCount;
-      
-      // 機械割（PAYOUT率）の精密計算: (OUT ÷ IN) × 100
       const rtp = this.totalIn > 0 ? ((this.totalOut / this.totalIn) * 100).toFixed(1) + '%' : '--.-%';
 
       return {
@@ -136,7 +129,7 @@
       };
     },
 
-    // スランプグラフ描画 (初期±500レンジ、回転数・差枚に応じて自動縮尺表示)
+    // スランプグラフ描画
     renderSlumpGraph: function(canvasElement) {
       if (!canvasElement) return;
       const ctx = canvasElement.getContext('2d');
@@ -145,7 +138,6 @@
 
       if (width === 0 || height === 0) return;
 
-      // 背景クリア
       ctx.fillStyle = '#111622';
       ctx.fillRect(0, 0, width, height);
 
@@ -153,7 +145,6 @@
       const graphWidth = width - padding.left - padding.right;
       const graphHeight = height - padding.top - padding.bottom;
 
-      // Y軸レンジの動的スケーリング
       let maxDiff = 500;
       let minDiff = -500;
 
@@ -168,10 +159,8 @@
 
       const maxGame = Math.max(3000, this.totalGames + 200);
 
-      // ゼロ基準線のY位置
       const zeroY = padding.top + graphHeight * (maxDiff / (maxDiff - minDiff));
 
-      // グリッド線描画
       ctx.strokeStyle = '#2a3447';
       ctx.lineWidth = 1;
       
@@ -192,7 +181,6 @@
         ctx.fillText((val > 0 ? '+' : '') + Math.round(val), padding.left - 5, y);
       }
 
-      // ゼロライン（赤ライン）
       ctx.strokeStyle = '#ff4444';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
@@ -200,7 +188,6 @@
       ctx.lineTo(width - padding.right, zeroY);
       ctx.stroke();
 
-      // スランプ波形描画
       if (this.slumpData.length > 1) {
         ctx.strokeStyle = '#00e5ff';
         ctx.lineWidth = 2;
@@ -218,7 +205,6 @@
         });
         ctx.stroke();
 
-        // 現在位置マーク
         const lastPoint = this.slumpData[this.slumpData.length - 1];
         const lastX = padding.left + (lastPoint.game / maxGame) * graphWidth;
         const lastY = padding.top + graphHeight * ((maxDiff - lastPoint.diff) / (maxDiff - minDiff));
@@ -229,7 +215,6 @@
         ctx.fill();
       }
 
-      // X軸ラベル
       ctx.fillStyle = '#a0b0c8';
       ctx.font = '10px sans-serif';
       ctx.textAlign = 'center';

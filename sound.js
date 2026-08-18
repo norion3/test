@@ -1,6 +1,6 @@
 /**
  * 音響専門モジュール (sound.js)
- * AudioContext常時スタンバイ(プリロード)・WebAudio小役/BET/プレミア合成音・音量ON/OFF一元管理・排他BGM制御・100G以内スペシャルBGM対応
+ * AudioContextプリロード・WebAudio合成音・オリジナルBGM制御
  */
 
 (function() {
@@ -11,13 +11,12 @@
   
   let isAudioPreloaded = false;
   let isPlayingBGM = false;
-  let currentBgmType = null; // 'BIG' | 'BIG_SPECIAL' | 'REG' | null
+  let currentBgmType = null; // 'BIG' | 'REG' | null
   let bgmTimer = null;
 
-  let soundOn = false; // 音量は100%標準固定。ON / OFF トグルのみで一元管理
+  let soundOn = false;
 
   const SoundEngine = {
-    // 初回画面タップ時に裏側で無音起動してスタンバイ化（ブラウザ制限の完全突破）
     preload: function() {
       if (isAudioPreloaded) return;
       try {
@@ -36,7 +35,6 @@
           ctx.resume();
         }
         
-        // 無音バッファを再生してAudioContextを完全に動作状態にする
         const buffer = ctx.createBuffer(1, 1, 22050);
         const source = ctx.createBufferSource();
         source.buffer = buffer;
@@ -56,7 +54,6 @@
       }
     },
 
-    // 設定適用時の決定音（ポーン♪）即時再生
     playConfirm: function() {
       this.init();
       if (!soundOn || !ctx) return;
@@ -66,7 +63,7 @@
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(1046.50, now); // 高音ポーン♪
+        osc.frequency.setValueAtTime(1046.50, now);
         gain.gain.setValueAtTime(0.4, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
         osc.connect(gain);
@@ -76,7 +73,6 @@
       } catch(e) {}
     },
 
-    // ON/OFF 状態のトグル切り替え（音量スライダー廃止に伴い単純・強固化）
     setVolumeAndState: function(isSoundOn) {
       soundOn = isSoundOn;
       this.init();
@@ -89,7 +85,6 @@
 
       if (soundOn) {
         this.playConfirm();
-        // 無音でボーナス突入後に音をONにした場合、BGM状態を自動復帰再生
         if (currentBgmType) {
           this.playBGM(currentBgmType);
         }
@@ -105,8 +100,7 @@
     loadExternalSounds: function() {
       const soundFiles = {
         bet: 'sounds/bet.mp3', lever: 'sounds/lever.mp3', stop: 'sounds/stop.mp3',
-        gako: 'sounds/gako.mp3', premium_freeze: 'sounds/premium_freeze.mp3',
-        grape: 'sounds/grape.mp3', cherry: 'sounds/cherry.mp3',
+        gako: 'sounds/gako.mp3', grape: 'sounds/grape.mp3', cherry: 'sounds/cherry.mp3',
         replay: 'sounds/replay.mp3', bell_clown: 'sounds/bell_clown.mp3',
         big_fanfare: 'sounds/big_fanfare.mp3', reg_fanfare: 'sounds/reg_fanfare.mp3',
         bonus_pay: 'sounds/bonus_pay.mp3'
@@ -131,7 +125,6 @@
         } catch(e) {}
       }
       
-      // WebAudioアルペジオ本格合成音フォールバック
       try {
         const now = ctx.currentTime;
         const osc = ctx.createOscillator();
@@ -139,7 +132,6 @@
         osc.connect(gain); gain.connect(masterGain);
         
         if (type === 'bet') {
-          // コイン投入・補給合成音 (チャリーン♪ 高域2音アルペジオ)
           osc.type = 'sine';
           osc.frequency.setValueAtTime(1200, now);
           osc.frequency.setValueAtTime(1600, now + 0.04);
@@ -155,38 +147,14 @@
           gain.gain.setValueAtTime(0.6, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.06);
           osc.start(now); osc.stop(now + 0.06);
         } else if (type === 'gako') {
-          // 通常ガコッ！音
           osc.type = 'square'; osc.frequency.setValueAtTime(800, now);
           gain.gain.setValueAtTime(0.8, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
           osc.start(now); osc.stop(now + 0.15);
-        } else if (type === 'premium_freeze' || type === 'gako_loud') {
-          // フリーズ時・プレミアム時 重低音強烈ガコッ！＋閃光SE
-          const subOsc = ctx.createOscillator();
-          const subGain = ctx.createGain();
-          
-          osc.type = 'square';
-          osc.frequency.setValueAtTime(950, now);
-          osc.frequency.exponentialRampToValueAtTime(120, now + 0.25);
-          gain.gain.setValueAtTime(1.0, now);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-          
-          subOsc.type = 'sawtooth';
-          subOsc.frequency.setValueAtTime(150, now);
-          subOsc.frequency.exponentialRampToValueAtTime(30, now + 0.25);
-          subGain.gain.setValueAtTime(0.9, now);
-          subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-
-          osc.connect(gain); gain.connect(masterGain);
-          subOsc.connect(subGain); subGain.connect(masterGain);
-
-          osc.start(now); osc.stop(now + 0.25);
-          subOsc.start(now); subOsc.stop(now + 0.25);
         } else if (type === 'big_fanfare' || type === 'reg_fanfare') {
           osc.type = 'triangle'; osc.frequency.setValueAtTime(523.25, now);
           gain.gain.setValueAtTime(0.3, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
           osc.start(now); osc.stop(now + 0.5);
         } else if (type === 'grape' || type === 'bonus_pay') {
-          // ピロロピロロ♪ 合成音
           osc.type = 'sine';
           osc.frequency.setValueAtTime(659.25, now);
           osc.frequency.setValueAtTime(880.00, now + 0.05);
@@ -221,43 +189,26 @@
       } catch(e) {}
     },
 
-    // BGMシーケンサー (1G連/100G以内ゾロ目軍艦マーチ調BGM追加 ＆ 排他制御でタイマーリーク完全防ぎ)
     playBGM: function(type) {
-      currentBgmType = type; // BGM要求状態を記録 ('BIG' | 'BIG_SPECIAL' | 'REG')
+      currentBgmType = type;
       if (!soundOn) return;
       this.init();
-      this.stopBGM(false); // タイマーのみリセット（要求状態は保持）
+      this.stopBGM(false);
       
       isPlayingBGM = true;
       
-      // 通常BIGメロディ
       const melodyBIG = [
         [392.00, 150], [392.00, 150], [392.00, 150], [392.00, 300],
         [329.63, 300], [261.63, 300], [196.00, 300], [329.63, 300], [261.63, 300], [196.00, 300],
         [329.63, 300], [261.63, 300], [261.63, 600]
       ];
 
-      // 100G以内プレミアムBIGメロディ (軍艦マーチ風アップテンポアルペジオ)
-      const melodyBIG_SPECIAL = [
-        [523.25, 120], [659.25, 120], [783.99, 120], [1046.50, 240],
-        [783.99, 120], [659.25, 120], [523.25, 240], [659.25, 120], [783.99, 120],
-        [880.00, 120], [880.00, 120], [880.00, 240], [783.99, 240], [659.25, 240],
-        [523.25, 120], [523.25, 120], [659.25, 120], [783.99, 120], [1046.50, 480]
-      ];
-
-      // 通常REGメロディ
       const melodyREG = [
         [261.63, 300], [261.63, 300], [392.00, 300], [392.00, 300], 
         [440.00, 300], [440.00, 300], [392.00, 600]
       ];
       
-      let melody = melodyBIG;
-      if (type === 'BIG_SPECIAL') {
-        melody = melodyBIG_SPECIAL;
-      } else if (type === 'REG') {
-        melody = melodyREG;
-      }
-
+      let melody = (type === 'BIG') ? melodyBIG : melodyREG;
       let noteIndex = 0;
       
       const playNextNote = () => {
@@ -272,11 +223,11 @@
           const osc = ctx.createOscillator();
           const gain = ctx.createGain();
           
-          osc.type = (type === 'BIG_SPECIAL') ? 'sawtooth' : ((type === 'BIG') ? 'square' : 'triangle');
+          osc.type = (type === 'BIG') ? 'square' : 'triangle';
           osc.frequency.value = freq;
           
           gain.gain.setValueAtTime(0, now);
-          gain.gain.linearRampToValueAtTime(type === 'BIG_SPECIAL' ? 0.22 : 0.18, now + 0.02);
+          gain.gain.linearRampToValueAtTime(0.18, now + 0.02);
           gain.gain.linearRampToValueAtTime(0, now + (dur / 1000) - 0.02);
           
           osc.connect(gain);
