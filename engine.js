@@ -1,6 +1,6 @@
 /**
  * スロットゲームエンジン (engine.js)
- * DMM完全解析確率・100G以内連チャンBGM判定(1G連/ゾロ目)・プレミア演出・クレジット＆差枚数分離連動・150ms時差音響・AUTO継続時2秒鑑賞ウェイト
+ * DMM完全解析確率・100G以内連チャンBGM判定(1G連/ゾロ目)・プレミア演出・クレジット＆差枚数分離連動・高速カウントアップ補充・AUTO画面タップ解除
  */
 
 (function() {
@@ -314,7 +314,6 @@
 
         // クレジット不足時の自動補給判定
         if (!isReplay && credits < neededBet) {
-          credits = 50; // クレジット自動補給
           autoRefillHappened = true;
         }
 
@@ -327,33 +326,33 @@
 
         setLineBadgesLit(false);
 
-        // BET消費によるクレジット即時減算 (レバーONで50→47へリアルタイム減算)
-        if (isBonusMode) {
-          betAmount = 1;
-          credits -= 1;
-          if (window.DATA_COUNTER) window.DATA_COUNTER.onGameStart(1, true);
-        } else if (!isReplay) {
-          betAmount = 3;
-          credits -= 3;
-          gamesSinceLastBonus++; // 【100G以内連チャン判定】通常ゲーム数カウントアップ
-          if (window.DATA_COUNTER) window.DATA_COUNTER.onGameStart(3, false);
-        } else {
-          betAmount = 3;
-          isReplay = false; // リプレイ時はBET減算なし
-          if (window.DATA_COUNTER) window.DATA_COUNTER.onGameStart(0, false);
-        }
-
-        updateDisplays(0);
-
-        // ウェイトカット時であっても一瞬Waitランプを点灯させる演出
-        const lampWait = document.getElementById('lampWait');
-        if (lampWait) {
-          lampWait.classList.add('active');
-          setTimeout(() => lampWait.classList.remove('active'), 250);
-        }
-
         // リール回転＆抽選発火シーケンス
         const executeSpinSequence = () => {
+          // BET消費によるクレジット即時減算
+          if (isBonusMode) {
+            betAmount = 1;
+            credits -= 1;
+            if (window.DATA_COUNTER) window.DATA_COUNTER.onGameStart(1, true);
+          } else if (!isReplay) {
+            betAmount = 3;
+            credits -= 3;
+            gamesSinceLastBonus++; // 【100G以内連チャン判定】通常ゲーム数カウントアップ
+            if (window.DATA_COUNTER) window.DATA_COUNTER.onGameStart(3, false);
+          } else {
+            betAmount = 3;
+            isReplay = false; // リプレイ時はBET減算なし
+            if (window.DATA_COUNTER) window.DATA_COUNTER.onGameStart(0, false);
+          }
+
+          updateDisplays(0);
+
+          // ウェイトカット時であっても一瞬Waitランプを点灯させる演出
+          const lampWait = document.getElementById('lampWait');
+          if (lampWait) {
+            lampWait.classList.add('active');
+            setTimeout(() => lampWait.classList.remove('active'), 250);
+          }
+
           currentFlag = this.drawFlag();
           
           // ボーナス当選判定 ＆ プレミア演出振分
@@ -427,10 +426,27 @@
           }
         };
 
-        // 自動補給発生時は150msのディレイを挟み「bet音(チャリーン) → lever音(ガチャ)」を分離再生
+        // 自動補給発生時は約350msかけてトトトトッと50までカウントアップ増算演出（コイン投入感の体感）
         if (autoRefillHappened) {
-          if (window.SLOT_SOUND) window.SLOT_SOUND.play('bet');
-          setTimeout(executeSpinSequence, 150);
+          const startCredits = credits;
+          const targetCredits = 50;
+          const steps = 5;
+          const stepTime = 60; // 60ms * 5 = 300ms
+          let currentStep = 0;
+
+          const refillInterval = setInterval(() => {
+            currentStep++;
+            credits = Math.min(targetCredits, startCredits + Math.round((targetCredits - startCredits) * (currentStep / steps)));
+            updateDisplays(0);
+            if (window.SLOT_SOUND) window.SLOT_SOUND.play('bet');
+
+            if (currentStep >= steps) {
+              clearInterval(refillInterval);
+              credits = targetCredits;
+              updateDisplays(0);
+              setTimeout(executeSpinSequence, 100);
+            }
+          }, stepTime);
         } else {
           executeSpinSequence();
         }
@@ -522,6 +538,12 @@
 
     handleTap: function() {
       if (!this.isInitialized) return;
+
+      // AUTOモード稼働中に画面タップがあった場合、即座にMANUAL（手動）モードへ安全復帰
+      if (isAutoMode) {
+        stopAutoMode();
+      }
+
       if (gameState === STATE_IDLE) {
         this.startSpin();
       } else if (gameState === STATE_SPINNING) {
@@ -672,6 +694,9 @@
           bonusFlag = null; 
           currentFlag = null;
           gamesSinceLastBonus = 0; // 【重要】ボーナス終了時にゲーム数カウントを 0 にリセット
+          if (window.DATA_COUNTER && typeof window.DATA_COUNTER.onBonusEnd === 'function') {
+            window.DATA_COUNTER.onBonusEnd(); // データカウンターのゲーム数を0Gへリセット
+          }
           if (window.SLOT_SOUND) window.SLOT_SOUND.stopBGM();
         }
         setLineBadgesLit(true);

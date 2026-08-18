@@ -64,7 +64,7 @@
       }
     },
 
-    // ボーナス当選時記録
+    // ボーナス当選時記録（※当選時のゲーム数は維持し、ボーナス消化中も表示保持）
     onBonusWin: function(type) {
       if (type === 'BIG') {
         this.bigCount++;
@@ -84,7 +84,11 @@
         time: timeStr
       });
 
-      // ボーナス間ゲーム数をリセット
+      this.recordSlumpPoint(true);
+    },
+
+    // ボーナス終了時処理（通常時に戻る瞬間にゲーム数を 0G へリセット）
+    onBonusEnd: function() {
       this.currentGames = 0;
       this.recordSlumpPoint(true);
     },
@@ -267,7 +271,6 @@
         `;
       });
 
-      // タイポのstyle>を除去し、正常なテーブル閉じタグに変更
       html += '</tbody></table>';
       return html;
     }
