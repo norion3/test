@@ -335,7 +335,7 @@
         } else if (!isReplay) {
           betAmount = 3;
           credits -= 3;
-          gamesSinceLastBonus++; // 【100G以内連チャン判定】通常ゲーム数カウントアップ
+          gamesSinceLastBonus++; // 100G以内連チャン判定用ゲーム数加算
           if (window.DATA_COUNTER) window.DATA_COUNTER.onGameStart(3, false);
         } else {
           betAmount = 3;
@@ -671,7 +671,7 @@
           isBonusMode = false;
           bonusFlag = null; 
           currentFlag = null;
-          gamesSinceLastBonus = 0; // 【重要】ボーナス終了時にゲーム数カウントを 0 にリセット
+          gamesSinceLastBonus = 0; // ボーナス終了時にゲーム数カウントを 0 にリセット
           if (window.SLOT_SOUND) window.SLOT_SOUND.stopBGM();
         }
         setLineBadgesLit(true);
@@ -685,7 +685,7 @@
       if (isBigWin) {
         isBonusMode = true; bonusType = 'BIG'; bonusAcquired = 0; bonusTarget = 266;
         
-        // 【要件実現】100G以内連チャン判定（1G連 ＆ 11G〜99Gのゾロ目G数）
+        // 100G以内連チャン判定（1G連 ＆ 11G〜99Gのゾロ目G数）
         const is1GWin = (gamesSinceLastBonus === 1);
         const isZoromeWin = (gamesSinceLastBonus <= 100 && gamesSinceLastBonus > 0 && gamesSinceLastBonus % 11 === 0);
         const isSpecialBgm = is1GWin || isZoromeWin;
