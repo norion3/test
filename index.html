@@ -971,23 +971,20 @@
       if (modal) modal.classList.remove('active');
     };
 
-    // モーダル背景領域タップで安全に閉じる処理
-    document.querySelectorAll('.modal-overlay').forEach(m => {
-      m.onclick = (e) => { if(e.target === m) m.classList.remove('active'); };
-    });
-
     // 6. 安全なマルチチェック付き起動シーケンス
     function bootEngine() {
       if(window.DATA_COUNTER) window.DATA_COUNTER.init();
       if(window.JUGGLER_ENGINE) window.JUGGLER_ENGINE.init();
     }
 
-    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    // 【重要】DOM読み込み直後(DOMContentLoaded)ではなく、すべての画像・リソースのロードが完全に終わってから起動するよう修正（透明描画バグの100%防止）
+    if (document.readyState === 'complete') {
       bootEngine();
     } else {
-      window.addEventListener('DOMContentLoaded', bootEngine);
+      window.addEventListener('load', bootEngine);
     }
   </script>
 </body>
 </html>
+
 
