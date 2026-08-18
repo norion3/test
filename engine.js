@@ -1,6 +1,6 @@
 /**
  * スロットゲームエンジン (engine.js)
- * DMM完全解析確率・クレジット＆差枚数分離連動・150msディレイ時差音響制御・AUTO継続時2秒鑑賞ウェイト・目揃いズレ完治
+ * DMM完全解析確率・100G以内連チャンBGM判定(1G連/ゾロ目)・プレミア演出・クレジット＆差枚数分離連動・150ms時差音響・AUTO継続時2秒鑑賞ウェイト
  */
 
 (function() {
@@ -55,9 +55,11 @@
   let bonusType = null;
   let bonusAcquired = 0;
   let bonusTarget = 0; 
+  let gamesSinceLastBonus = 999; // 前回のボーナス終了後からの通常回転数カウント
 
   let isPeka = false;
   let pekaTiming = null;
+  let premiumMode = null;      // 'FREEZE' | 'SILENT' | 'RAINBOW' | 'FLASH' | null
   let isReplay = false;
   let reels = [];
 
@@ -122,8 +124,17 @@
     if (isPeka) return;
     isPeka = true;
     const gogoBox = document.getElementById('gogoBox');
-    if (gogoBox) gogoBox.classList.add('peka');
-    if (window.SLOT_SOUND) window.SLOT_SOUND.play('gako');
+    if (gogoBox) {
+      gogoBox.classList.add('peka');
+      if (premiumMode === 'RAINBOW') gogoBox.classList.add('rainbow');
+      else if (premiumMode === 'FLASH') gogoBox.classList.add('flash');
+    }
+
+    if (premiumMode === 'FREEZE') {
+      if (window.SLOT_SOUND) window.SLOT_SOUND.play('premium_freeze');
+    } else {
+      if (window.SLOT_SOUND) window.SLOT_SOUND.play('gako');
+    }
     
     // 設定モーダルの「ボーナス時にAUTO解除」がONの時のみAUTO解除を実行
     if (isAutoMode && autoStopOnBonus) {
@@ -133,8 +144,11 @@
 
   function turnOffGogoLamp() {
     isPeka = false;
+    premiumMode = null;
     const gogoBox = document.getElementById('gogoBox');
-    if (gogoBox) gogoBox.classList.remove('peka');
+    if (gogoBox) {
+      gogoBox.classList.remove('peka', 'rainbow', 'flash');
+    }
   }
 
   function stopAutoMode() {
@@ -213,8 +227,10 @@
       isBonusMode = false;
       bonusType = null;
       bonusAcquired = 0;
+      gamesSinceLastBonus = 999;
       isPeka = false;
       pekaTiming = null;
+      premiumMode = null;
       isReplay = false;
       
       if (window.SLOT_SOUND) window.SLOT_SOUND.stopBGM();
@@ -306,7 +322,7 @@
         activeReelsCount = 3;
         hasActionExecutedInCurrentTouch = true;
 
-        if (window.SLOT_SOUND) window.SLOT_SOUND.init();
+        if (window.SLOT_SOUND) window.SLOT_SOUND.preload();
         triggerLeverVisual();
 
         setLineBadgesLit(false);
@@ -319,6 +335,7 @@
         } else if (!isReplay) {
           betAmount = 3;
           credits -= 3;
+          gamesSinceLastBonus++; // 【100G以内連チャン判定】通常ゲーム数カウントアップ
           if (window.DATA_COUNTER) window.DATA_COUNTER.onGameStart(3, false);
         } else {
           betAmount = 3;
@@ -335,46 +352,82 @@
           setTimeout(() => lampWait.classList.remove('active'), 250);
         }
 
-        // リール回転＆抽選発火シーケンス（時差制御対応）
+        // リール回転＆抽選発火シーケンス
         const executeSpinSequence = () => {
-          if (window.SLOT_SOUND) window.SLOT_SOUND.play('lever');
-          
           currentFlag = this.drawFlag();
           
-          // ボーナス当選判定 ＆ GOGO!ランプ点灯タイミング決定
+          // ボーナス当選判定 ＆ プレミア演出振分
           if (currentFlag === 'BIG' || currentFlag === 'REG' || currentFlag === 'CHERRY_BIG' || currentFlag === 'CHERRY_REG') {
             if (!bonusFlag) {
               bonusFlag = currentFlag;
-              if (currentFlag === 'CHERRY_BIG' || currentFlag === 'CHERRY_REG') {
-                pekaTiming = 'STOP3_UP';
-              } else {
-                const pekaRand = Math.random();
-                if (pekaRand < 0.25) pekaTiming = 'LEVER';
-                else if (pekaRand < 0.35) pekaTiming = 'STOP1';
-                else if (pekaRand < 0.50) pekaTiming = 'STOP3_DOWN';
-                else pekaTiming = 'STOP3_UP';
+              premiumMode = null;
+
+              // BIG当選時限定のプレミア演出振分 (確率約25%)
+              if (bonusFlag === 'BIG' || bonusFlag === 'CHERRY_BIG') {
+                const premRand = Math.random();
+                if (premRand < 0.10) {
+                  premiumMode = 'FREEZE';  // 10%: 一瞬フリーズ＋爆音ガコッ！
+                  pekaTiming = 'LEVER';
+                } else if (premRand < 0.15) {
+                  premiumMode = 'SILENT';  // 5%: レバーON無音スタート
+                  pekaTiming = 'LEVER';
+                } else if (premRand < 0.20) {
+                  premiumMode = 'RAINBOW'; // 5%: プレミアムレインボー発光
+                  pekaTiming = 'LEVER';
+                } else if (premRand < 0.25) {
+                  premiumMode = 'FLASH';   // 5%: プレミアム高速点滅
+                  pekaTiming = 'STOP3_UP';
+                }
+              }
+
+              // 通常ペカタイミングの決定 (プレミア未当選時)
+              if (!premiumMode) {
+                if (currentFlag === 'CHERRY_BIG' || currentFlag === 'CHERRY_REG') {
+                  pekaTiming = 'STOP3_UP';
+                } else {
+                  const pekaRand = Math.random();
+                  if (pekaRand < 0.25) pekaTiming = 'LEVER';
+                  else if (pekaRand < 0.35) pekaTiming = 'STOP1';
+                  else if (pekaRand < 0.50) pekaTiming = 'STOP3_DOWN';
+                  else pekaTiming = 'STOP3_UP';
+                }
               }
             }
           }
 
-          if (!isBonusMode && bonusFlag && pekaTiming === 'LEVER') triggerPeka();
+          // 音響の再生 (無音スタート時はレバー音を消音)
+          if (premiumMode !== 'SILENT') {
+            if (window.SLOT_SOUND) window.SLOT_SOUND.play('lever');
+          }
 
-          const spinSpeed = (isPeka && !isBonusMode) ? REEL_SPEED_SLOW : REEL_SPEED_NORMAL;
+          // プレミアフリーズ処理 (0.6秒フリーズ後にリール始動)
+          const startReelAnimation = () => {
+            if (!isBonusMode && bonusFlag && pekaTiming === 'LEVER') triggerPeka();
 
-          reels.forEach((reel, i) => {
-            reel.isSpinning = true;
-            reel.isStopping = false;
-            reel.speed = spinSpeed; 
-            if (window.REEL_RENDERER) window.REEL_RENDERER.renderReelCanvas(reel, true); 
-            this.spinReel(reel);
-            const btn = document.getElementById(`stopBtn${i}`);
-            if (btn) { btn.disabled = false; btn.classList.add('spinning'); }
-          });
+            const spinSpeed = (isPeka && !isBonusMode) ? REEL_SPEED_SLOW : REEL_SPEED_NORMAL;
 
-          if (isAutoMode) this.scheduleAutoStop();
+            reels.forEach((reel, i) => {
+              reel.isSpinning = true;
+              reel.isStopping = false;
+              reel.speed = spinSpeed; 
+              if (window.REEL_RENDERER) window.REEL_RENDERER.renderReelCanvas(reel, true); 
+              this.spinReel(reel);
+              const btn = document.getElementById(`stopBtn${i}`);
+              if (btn) { btn.disabled = false; btn.classList.add('spinning'); }
+            });
+
+            if (isAutoMode) this.scheduleAutoStop();
+          };
+
+          if (premiumMode === 'FREEZE') {
+            // 一瞬フリーズ (600ms待機後にペカリ＆リール始動)
+            setTimeout(startReelAnimation, 600);
+          } else {
+            startReelAnimation();
+          }
         };
 
-        // 【音響競合完治】自動補給発生時は150msのディレイを挟み「bet音(チャリーン) → lever音(ガチャ)」を分離再生
+        // 自動補給発生時は150msのディレイを挟み「bet音(チャリーン) → lever音(ガチャ)」を分離再生
         if (autoRefillHappened) {
           if (window.SLOT_SOUND) window.SLOT_SOUND.play('bet');
           setTimeout(executeSpinSequence, 150);
@@ -462,6 +515,7 @@
         reel.currentIndex = targetIdx;
         reel.targetPos = targetIdx * SYMBOL_HEIGHT;
 
+        // 第3ボタン離し時のペカリ判定
         if (index === 2 && !isBonusMode && bonusFlag && pekaTiming === 'STOP3_UP') triggerPeka();
       } catch (e) {}
     },
@@ -617,6 +671,7 @@
           isBonusMode = false;
           bonusFlag = null; 
           currentFlag = null;
+          gamesSinceLastBonus = 0; // 【重要】ボーナス終了時にゲーム数カウントを 0 にリセット
           if (window.SLOT_SOUND) window.SLOT_SOUND.stopBGM();
         }
         setLineBadgesLit(true);
@@ -629,12 +684,20 @@
 
       if (isBigWin) {
         isBonusMode = true; bonusType = 'BIG'; bonusAcquired = 0; bonusTarget = 266;
+        
+        // 【要件実現】100G以内連チャン判定（1G連 ＆ 11G〜99Gのゾロ目G数）
+        const is1GWin = (gamesSinceLastBonus === 1);
+        const isZoromeWin = (gamesSinceLastBonus <= 100 && gamesSinceLastBonus > 0 && gamesSinceLastBonus % 11 === 0);
+        const isSpecialBgm = is1GWin || isZoromeWin;
+
         bonusFlag = null; currentFlag = null; 
         if (window.DATA_COUNTER) window.DATA_COUNTER.onBonusWin('BIG');
         turnOffGogoLamp();
+        
         if (window.SLOT_SOUND) {
           window.SLOT_SOUND.play('big_fanfare');
-          setTimeout(() => { window.SLOT_SOUND.playBGM('BIG'); }, 1500);
+          const bgmType = isSpecialBgm ? 'BIG_SPECIAL' : 'BIG';
+          setTimeout(() => { window.SLOT_SOUND.playBGM(bgmType); }, 1500);
         }
         if (autoStopOnBonus) stopAutoMode();
       } else if (isRegWin) {
