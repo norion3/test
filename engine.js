@@ -1,6 +1,6 @@
 /**
  * スロットゲームエンジン (engine.js)
- * ネオアイムジャグラーEX配列完全適合・完全オート目押し仕様(21コマ引込)・直揃い禁止絶対保護(フリーズバグ修正)・REG13枚払出(純増96枚)独自計算保護・ボーナス中全小役払出統合・ハサミ打ち/逆押し完全対応チェリー先読みアルゴリズム・100G連BGM
+ * ネオアイムジャグラーEX配列完全適合・ボタン直押し変則打ち完全対応・完全オート目押し仕様(21コマ引込)・直揃い禁止絶対保護・REG13枚払出(純増96枚)独自計算保護・ボーナス中全小役払出統合・ハサミ打ち/逆押し対応先読みアルゴリズム・100G連BGM
  */
 
 (function() {
@@ -401,7 +401,7 @@
           else targetSyms = ['GRAPE'];
         } else {
           if (currentFlag === 'BIG' || currentFlag === 'REG') {
-              // バグ修復: ペカ前は直揃い禁止のため、狙い図柄を空にして命令矛盾(フリーズ)を完全に回避
+              // ペカ前は直揃い禁止のため、狙い図柄を空にして命令矛盾(フリーズ)を完全に回避
               targetSyms = []; 
           } else if (currentFlag && currentFlag.includes('CHERRY')) {
               targetSyms = (index === 0) ? ['CHERRY'] : [];
@@ -514,7 +514,7 @@
                              if (!checkFinalState(syms)) { allLinesSafeForThisRemIdx = false; break; }
                          }
                          
-                         // バグ修復: 逆押し時のチェリー・小役 先読みシミュレート追加
+                         // 逆押し時のチェリー・小役 先読みシミュレート追加
                          if (allLinesSafeForThisRemIdx) {
                              let hasTargetInRem = false;
                              let checkTarget = false;
@@ -582,6 +582,24 @@
       document.addEventListener('touchcancel', endTouchSession, { passive: true });
       document.addEventListener('mousedown', startTouchSession, { passive: true });
       document.addEventListener('mouseup', endTouchSession, { passive: true });
+
+      // 【改修ポイント】各ストップボタンへの個別イベント追加（画面全体タップへのイベント伝播を遮断し変則打ちを実現）
+      [0, 1, 2].forEach(i => {
+        const btn = document.getElementById(`stopBtn${i}`);
+        if (btn) {
+          const handleStopBtn = (e) => {
+            if (e) {
+              e.stopPropagation();
+              if (e.cancelable) e.preventDefault();
+            }
+            if (gameState === STATE_SPINNING) {
+              this.stopReelIndex(i, false);
+            }
+          };
+          btn.addEventListener('touchstart', handleStopBtn, { passive: false });
+          btn.addEventListener('click', handleStopBtn);
+        }
+      });
 
       const autoToggleBtn = document.getElementById('autoToggleBtn');
       if (autoToggleBtn) {
@@ -731,5 +749,4 @@
     }
   };
 })();
-
 
