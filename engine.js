@@ -1,6 +1,6 @@
 /**
  * スロットゲームエンジン (engine.js)
- * ネオアイムジャグラーEX配列完全適合・単独ボーナス(ペカ前)リーチ目優先形成制御・非チェリー時左リールチェリー露出回避・通常時/ボーナス時有効ライン分離・Wait機能(リアル4.1秒ウェイト＆自動補給テンポ補正)・フリーズ時ランプ同期・ボタン直押し変則打ち対応・完全オート目押し仕様(21コマ引込)・直揃い禁止絶対保護・REG13枚払出(純増96枚)独自計算保護・ボーナス中全小役払出統合・ハサミ打ち/逆押し対応先読みアルゴリズム・100G連BGM
+ * ネオアイムジャグラーEX配列完全適合・AUTO時ボーナス揃い余韻ウェイト最適化(3.5秒静止目視確認確保)・単独ボーナス(ペカ前)リーチ目優先形成制御・非チェリー時左リールチェリー露出回避・通常時/ボーナス時有効ライン分離・Wait機能(リアル4.1秒ウェイト＆自動補給テンポ補正)・フリーズ時ランプ同期・ボタン直押し変則打ち対応・完全オート目押し仕様(21コマ引込)・直揃い禁止絶対保護・REG13枚払出(純増96枚)独自計算保護・ボーナス中全小役払出統合・ハサミ打ち/逆押し対応先読みアルゴリズム・100G連BGM
  */
 
 (function() {
@@ -284,7 +284,7 @@
         if (window.SLOT_SOUND) window.SLOT_SOUND.preload();
         triggerLeverVisual();
 
-        // 回転開始時は元の挙動通り消灯
+        // 自動ベット区切り演出：レバーON時に有効ラインランプを消灯（自動ベット時の1G進行の明瞭化）
         setLineBadgesLit(false);
 
         const executeSpinSequence = () => {
@@ -861,7 +861,8 @@
 
       if (isAutoMode) {
         let nextDelay = isReplayWin ? 150 : 450;
-        if (justWonBonus && !autoStopOnBonus) nextDelay = 2000;
+        // 案2採用：AUTO自動解除オフ時、ボーナス揃い直後のウェイトを3.5秒（3500ms）に拡大。揃った絵柄の目視確認とファンファーレの余韻を確保。
+        if (justWonBonus && !autoStopOnBonus) nextDelay = 3500;
         setTimeout(() => { if (isAutoMode && gameState === STATE_IDLE) this.startSpin(); }, nextDelay);
       }
     }
