@@ -1,6 +1,6 @@
 /**
  * スロットゲームエンジン (engine.js)
- * ネオアイムジャグラーEX配列完全適合・AUTO動作中手動ストップボタン割り込み時安全解除補正・AUTOストップタイミング自然テンポ最適化(前リール完全停止+220ms自然ウェイト)・ボーナス揃い音響シーケンスチェーン固定(3.5秒目視確認待ち)・単独ボーナス(ペカ前)リーチ目優先形成制御・非チェリー時左リールチェリー露出回避・通常時/ボーナス時有効ライン分離・Wait機能(リアル4.1秒ウェイト＆自動補給テンポ補正)・フリーズ時ランプ同期・ボタン直押し変則打ち対応・完全オート目押し仕様(21コマ引込)・直揃い禁止絶対保護・REG13枚払出(純増96枚)独自計算保護・ボーナス中全小役払出統合・ハサミ打ち/逆押し対応先読みアルゴリズム・100G連BGM
+ * ネオアイムジャグラーEX配列完全適合・ペカ後ボーナス揃い時動的ターゲット目押しタイマー搭載(一発揃い確約)・AUTO動作中手動ストップボタン割り込み時安全解除補正・AUTOストップタイミング自然テンポ最適化(前リール完全停止+220ms自然ウェイト)・ボーナス揃い音響シーケンスチェーン固定(3.5秒目視確認待ち)・単独ボーナス(ペカ前)リーチ目優先形成制御・非チェリー時左リールチェリー露出回避・通常時/ボーナス時有効ライン分離・Wait機能(リアル4.1秒ウェイト＆自動補給テンポ補正)・フリーズ時ランプ同期・ボタン直押し変則打ち対応・完全オート目押し仕様(21コマ引込)・直揃い禁止絶対保護・REG13枚払出(純増96枚)独自計算保護・ボーナス中全小役払出統合・ハサミ打ち/逆押し対応先読みアルゴリズム・100G連BGM
  */
 
 (function() {
@@ -710,7 +710,7 @@
               e.stopPropagation();
               if (e.cancelable) e.preventDefault();
             }
-            if (isAutoMode) stopAutoMode(); // 案2安全補正：AUTO時に個別ボタンを手動タップした際、安全にAUTO解除（MANUAL復帰）
+            if (isAutoMode) stopAutoMode(); // AUTO時に個別ボタンを手動タップした際、安全にAUTO解除（MANUAL復帰）
             if (gameState === STATE_SPINNING) {
               this.stopReelIndex(i, false);
             }
@@ -734,22 +734,49 @@
       }
     },
 
-    // 案2改修：前リール完全停止確認 ＋ 220ms自然ウェイト挿入制御 (忙しさを100%解消し、人間が遊ぶような心地よいテンポを導入)
+    // 案A改修：ペカ後ボーナス揃いゲーム時、ターゲット図柄(7/BAR)が枠上〜上段(手前0〜3コマ)を通過するベストタイミングを検知して狙い打ち
     scheduleAutoStop: function() {
       if (!isAutoMode || gameState !== STATE_SPINNING) return;
       if (autoTimer) clearTimeout(autoTimer);
 
-      let step = 0; // 0: 左待機, 1: 左停止後220msウェイト, 2: 中待機, 3: 中停止後220msウェイト, 4: 右待機
+      let step = 0; // 0: 左待機, 1: 左停止後ウェイト, 2: 中待機, 3: 中停止後ウェイト, 4: 右待機
+
+      // 目押しターゲット(7/BAR)が引き込みやすい通過タイミング(手前0〜3コマ)かチェックする判定関数
+      const isTargetInAimRange = (reelIndex, targetSyms) => {
+        const reel = reels[reelIndex];
+        if (!reel) return true;
+        const len = reel.strip.length;
+        let baseIdx = Math.floor(reel.pos / SYMBOL_HEIGHT) % len;
+        if (baseIdx < 0) baseIdx += len;
+
+        for (let i = 0; i < len; i++) {
+          if (targetSyms.includes(reel.strip[i])) {
+            let dist = (baseIdx - i + len) % len;
+            if (dist <= 3) return true; // 手前0〜3コマのベストタイミング
+          }
+        }
+        return false;
+      };
 
       const runAutoStep = () => {
         if (!isAutoMode || gameState !== STATE_SPINNING) return;
 
+        // ペカ後かつハサミ・小役未成立(＝ボーナスが揃うハズレG)かどうかの判定
+        const isBonusAimGame = Boolean(!isBonusMode && bonusFlag && !currentFlag);
+
         // 【左リール(0)処理】
         if (reels[0].isSpinning) {
           if (!reels[0].isStopping) {
+            if (isBonusAimGame) {
+              const targets = ['7'];
+              if (!isTargetInAimRange(0, targets)) {
+                autoTimer = setTimeout(runAutoStep, 30); // ベスト位置まで高速監視ループ
+                return;
+              }
+            }
             this.stopReelIndex(0, true);
           }
-          autoTimer = setTimeout(runAutoStep, 50);
+          autoTimer = setTimeout(runAutoStep, 40);
           return;
         }
 
@@ -763,9 +790,16 @@
         // 【中リール(1)処理】
         if (reels[1].isSpinning) {
           if (!reels[1].isStopping) {
+            if (isBonusAimGame) {
+              const targets = ['7'];
+              if (!isTargetInAimRange(1, targets)) {
+                autoTimer = setTimeout(runAutoStep, 30); // ベスト位置まで高速監視ループ
+                return;
+              }
+            }
             this.stopReelIndex(1, true);
           }
-          autoTimer = setTimeout(runAutoStep, 50);
+          autoTimer = setTimeout(runAutoStep, 40);
           return;
         }
 
@@ -779,9 +813,16 @@
         // 【右リール(2)処理】
         if (reels[2].isSpinning) {
           if (!reels[2].isStopping) {
+            if (isBonusAimGame) {
+              const targets = (bonusFlag === 'REG' || bonusFlag === 'CHERRY_REG') ? ['BAR'] : ['7'];
+              if (!isTargetInAimRange(2, targets)) {
+                autoTimer = setTimeout(runAutoStep, 30); // ベスト位置まで高速監視ループ
+                return;
+              }
+            }
             this.stopReelIndex(2, true);
           }
-          autoTimer = setTimeout(runAutoStep, 50);
+          autoTimer = setTimeout(runAutoStep, 40);
           return;
         }
       };
