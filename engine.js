@@ -1,6 +1,6 @@
 /**
  * スロットゲームエンジン (engine.js)
- * ネオアイムジャグラーEX配列完全適合・ペカ後ボーナス揃い時動的ターゲット目押しタイマー搭載(一発揃い確約)・AUTO動作中手動ストップボタン割り込み時安全解除補正・AUTOストップタイミング自然テンポ最適化(前リール完全停止+220ms自然ウェイト)・ボーナス揃い音響シーケンスチェーン固定(3.5秒目視確認待ち)・単独ボーナス(ペカ前)リーチ目優先形成制御・非チェリー時左リールチェリー露出回避・通常時/ボーナス時有効ライン分離・Wait機能(リアル4.1秒ウェイト＆自動補給テンポ補正)・フリーズ時ランプ同期・ボタン直押し変則打ち対応・完全オート目押し仕様(21コマ引込)・直揃い禁止絶対保護・REG13枚払出(純増96枚)独自計算保護・ボーナス中全小役払出統合・ハサミ打ち/逆押し対応先読みアルゴリズム・100G連BGM
+ * ネオアイムジャグラーEX配列完全適合・ペカ後ボーナス揃いゲーム実機完全準拠1枚掛け中段1ライン一発揃い制御・AUTO動作中手動ストップボタン割り込み時安全解除補正・AUTOストップタイミング自然テンポ最適化(前リール完全停止+220ms自然ウェイト)・ボーナス揃い音響シーケンスチェーン固定(3.5秒目視確認待ち)・単独ボーナス(ペカ前)リーチ目優先形成制御・非チェリー時左リールチェリー露出回避・Wait機能(リアル4.1秒ウェイト＆自動補給テンポ補正)・フリーズ時ランプ同期・ボタン直押し変則打ち対応・完全オート目押し仕様(21コマ引込)・直揃い禁止絶対保護・REG13枚払出(純増96枚)独自計算保護・ボーナス中全小役払出統合・ハサミ打ち/逆押し対応先読みアルゴリズム・100G連BGM
  */
 
 (function() {
@@ -76,7 +76,9 @@
     const lampStart = document.getElementById('lampStart');
     if (lampReplay) lampReplay.classList.toggle('active', isReplay);
     
-    const neededBet = isBonusMode ? 1 : 3;
+    // 実機準拠：ボーナス消化中およびペカ後のボーナス揃いゲームは1枚掛け
+    const isOneBetGame = isBonusMode || Boolean(bonusFlag);
+    const neededBet = isOneBetGame ? 1 : 3;
     const canPlay = isReplay || (credits >= neededBet);
     if (lampStart) lampStart.classList.toggle('active', gameState === STATE_IDLE && canPlay);
 
@@ -107,7 +109,9 @@
     if (!b1 || !b2 || !b3) return;
 
     if (isLit) {
-      if (isBonusMode) {
+      // 実機準拠：ボーナス消化中およびペカ後のボーナス揃いゲームは「中段1ライン（1枚掛け）」のみ点灯
+      const isOneBetGame = isBonusMode || Boolean(bonusFlag);
+      if (isOneBetGame) {
         b1.classList.remove('lit'); b2.classList.add('lit'); b3.classList.remove('lit');
       } else {
         b1.classList.add('lit'); b2.classList.add('lit'); b3.classList.add('lit');
@@ -272,7 +276,9 @@
     startSpin: function() {
       if (gameState !== STATE_IDLE) return;
       try {
-        const neededBet = isBonusMode ? 1 : 3;
+        // 実機準拠：ボーナス消化中およびペカ後のボーナス揃いゲームは1枚掛け（メダル1枚消費）
+        const isOneBetGame = isBonusMode || Boolean(bonusFlag);
+        const neededBet = isOneBetGame ? 1 : 3;
         let autoRefillHappened = false;
 
         if (!isReplay && credits < neededBet) autoRefillHappened = true;
@@ -299,9 +305,9 @@
           }
           lastSpinTime = now + waitDelay; // 次回計算基準値
 
-          if (isBonusMode) {
+          if (isOneBetGame) {
             betAmount = 1; credits -= 1;
-            if (window.DATA_COUNTER) window.DATA_COUNTER.onGameStart(1, true);
+            if (window.DATA_COUNTER) window.DATA_COUNTER.onGameStart(1, isBonusMode);
           } else if (!isReplay) {
             betAmount = 3; credits -= 3;
             gamesSinceLastBonus++;
@@ -454,9 +460,10 @@
             slipLimit = 21; 
         }
 
-        // ボーナス時と通常時で有効ライン（引き込み判定ライン）を動的分離
-        const lineOffsets = isBonusMode
-          ? [[1, 1, 1]]  // ボーナス中（1枚掛け）：中段1ラインのみで引き込み位置を正しく計算
+        // 実機準拠：ボーナス消化中およびペカ後のボーナス揃いゲーム（1枚掛け）は「中段1ラインのみ」で引き込み計算
+        const isOneBetGame = isBonusMode || Boolean(bonusFlag);
+        const lineOffsets = isOneBetGame
+          ? [[1, 1, 1]]  // 1枚掛け：中段1ライン限定（上段・斜め等への誤揃いを100%遮断）
           : [            // 通常時（3枚掛け）：全5ライン（斜め含む）で従来の引き込みを100%完全保持
               [0, 0, 0], [1, 1, 1], [2, 2, 2], [0, 1, 2], [2, 1, 0]
             ];
@@ -734,14 +741,14 @@
       }
     },
 
-    // 案A改修：ペカ後ボーナス揃いゲーム時、ターゲット図柄(7/BAR)が枠上〜上段(手前0〜3コマ)を通過するベストタイミングを検知して狙い打ち
+    // 案A改修：ペカ後ボーナス揃いゲーム時、ターゲット図柄(7/BAR)が中段ラインへピタッと引き込めるベストタイミングを検知して狙い打ち
     scheduleAutoStop: function() {
       if (!isAutoMode || gameState !== STATE_SPINNING) return;
       if (autoTimer) clearTimeout(autoTimer);
 
       let step = 0; // 0: 左待機, 1: 左停止後ウェイト, 2: 中待機, 3: 中停止後ウェイト, 4: 右待機
 
-      // 目押しターゲット(7/BAR)が引き込みやすい通過タイミング(手前0〜3コマ)かチェックする判定関数
+      // 目押しターゲット(7/BAR)が中段ラインに引き込める通過タイミング(手前0〜3コマ)かチェックする判定関数
       const isTargetInAimRange = (reelIndex, targetSyms) => {
         const reel = reels[reelIndex];
         if (!reel) return true;
@@ -752,7 +759,7 @@
         for (let i = 0; i < len; i++) {
           if (targetSyms.includes(reel.strip[i])) {
             let dist = (baseIdx - i + len) % len;
-            if (dist <= 3) return true; // 手前0〜3コマのベストタイミング
+            if (dist <= 3) return true; // 中段にすっと引き込める手前0〜3コマのベストタイミング
           }
         }
         return false;
@@ -860,7 +867,9 @@
         [getSym(0, 0), getSym(1, 1), getSym(2, 2)], [getSym(0, 2), getSym(1, 1), getSym(2, 0)]
       ];
 
-      let activeLines = isBonusMode ? [lines[1]] : lines;
+      // 実機準拠：ボーナス消化中およびペカ後のボーナス揃いゲーム（1枚掛け）は「中段1ライン（lines[1]）のみ」で入賞判定
+      const isOneBetGame = isBonusMode || Boolean(bonusFlag);
+      let activeLines = isOneBetGame ? [lines[1]] : lines;
       let payout = 0;
       let isBigWin = false, isRegWin = false, isReplayWin = false;
       let playSoundType = 'bonus_pay';
