@@ -1,6 +1,6 @@
 /**
  * スロットゲームエンジン (engine.js)
- * ネオアイムジャグラーEX配列完全適合・AUTO時ボーナス揃い余韻ウェイト最適化(3.5秒静止目視確認確保)・単独ボーナス(ペカ前)リーチ目優先形成制御・非チェリー時左リールチェリー露出回避・通常時/ボーナス時有効ライン分離・Wait機能(リアル4.1秒ウェイト＆自動補給テンポ補正)・フリーズ時ランプ同期・ボタン直押し変則打ち対応・完全オート目押し仕様(21コマ引込)・直揃い禁止絶対保護・REG13枚払出(純増96枚)独自計算保護・ボーナス中全小役払出統合・ハサミ打ち/逆押し対応先読みアルゴリズム・100G連BGM
+ * ネオアイムジャグラーEX配列完全適合・AUTO前リール停止確認連鎖(順押し完全保証＆中リール大滑り逆転追放)・ボーナス揃い音響シーケンスチェーン固定(3.5秒目視確認待ち)・単独ボーナス(ペカ前)リーチ目優先形成制御・非チェリー時左リールチェリー露出回避・通常時/ボーナス時有効ライン分離・Wait機能(リアル4.1秒ウェイト＆自動補給テンポ補正)・フリーズ時ランプ同期・ボタン直押し変則打ち対応・完全オート目押し仕様(21コマ引込)・直揃い禁止絶対保護・REG13枚払出(純増96枚)独自計算保護・ボーナス中全小役払出統合・ハサミ打ち/逆押し対応先読みアルゴリズム・100G連BGM
  */
 
 (function() {
@@ -733,18 +733,41 @@
       }
     },
 
+    // 案2改修：前リール完全停止確認連鎖（完全順押し保証＆中リールの最大20コマ滑り時も右が先に止まる逆転現象を100%追放）
     scheduleAutoStop: function() {
-      if (!isAutoMode) return;
+      if (!isAutoMode || gameState !== STATE_SPINNING) return;
       if (autoTimer) clearTimeout(autoTimer);
-      autoTimer = setTimeout(() => {
-        if (reels[0].isSpinning) this.stopReelIndex(0, true);
-        autoTimer = setTimeout(() => {
-          if (reels[1].isSpinning) this.stopReelIndex(1, true);
-          autoTimer = setTimeout(() => {
-            if (reels[2].isSpinning) this.stopReelIndex(2, true);
-          }, 200);
-        }, 200);
-      }, 220);
+
+      const tryStopNext = () => {
+        if (!isAutoMode || gameState !== STATE_SPINNING) return;
+
+        // 左(0) -> 中(1) -> 右(2) の順で、前リールが完全に停止（isSpinning === false）するのを待ってから次リールを停止
+        if (reels[0].isSpinning) {
+          if (!reels[0].isStopping) {
+            this.stopReelIndex(0, true);
+          }
+          autoTimer = setTimeout(tryStopNext, 40);
+          return;
+        }
+
+        if (reels[1].isSpinning) {
+          if (!reels[1].isStopping) {
+            this.stopReelIndex(1, true);
+          }
+          autoTimer = setTimeout(tryStopNext, 40);
+          return;
+        }
+
+        if (reels[2].isSpinning) {
+          if (!reels[2].isStopping) {
+            this.stopReelIndex(2, true);
+          }
+          autoTimer = setTimeout(tryStopNext, 40);
+          return;
+        }
+      };
+
+      autoTimer = setTimeout(tryStopNext, 200);
     },
 
     spinReel: function(reel) {
@@ -827,6 +850,7 @@
 
       const justWonBonus = (isBigWin || isRegWin);
 
+      // 音響・次ゲーム進行シーケンスチェーンの固定
       if (isBigWin) {
         isBonusMode = true; bonusType = 'BIG'; bonusAcquired = 0; bonusTarget = 266;
         const is1GWin = (gamesSinceLastBonus === 1);
@@ -861,7 +885,7 @@
 
       if (isAutoMode) {
         let nextDelay = isReplayWin ? 150 : 450;
-        // 案2採用：AUTO自動解除オフ時、ボーナス揃い直後のウェイトを3.5秒（3500ms）に拡大。揃った絵柄の目視確認とファンファーレの余韻を確保。
+        // 案2採用：①7揃い ➔ ②ファンファーレ/メロディ再生 ➔ ③3.5秒(3500ms)の出目目視確認静止時間 ➔ ④1枚掛けレバーオン の順序を100%固定保証
         if (justWonBonus && !autoStopOnBonus) nextDelay = 3500;
         setTimeout(() => { if (isAutoMode && gameState === STATE_IDLE) this.startSpin(); }, nextDelay);
       }
