@@ -1,6 +1,6 @@
 /**
  * スロットゲームエンジン (engine.js)
- * ネオアイムジャグラーEX配列完全適合・非チェリー時左リールチェリー露出回避制御(実機出目美観適合)・通常時/ボーナス時有効ライン分離・Wait機能(リアル4.1秒ウェイト＆自動補給テンポ補正)・フリーズ時ランプ同期・ボタン直押し変則打ち対応・完全オート目押し仕様(21コマ引込)・直揃い禁止絶対保護・REG13枚払出(純増96枚)独自計算保護・ボーナス中全小役払出統合・ハサミ打ち/逆押し対応先読みアルゴリズム・100G連BGM
+ * ネオアイムジャグラーEX配列完全適合・単独ボーナス(ペカ前)リーチ目優先形成制御・非チェリー時左リールチェリー露出回避・通常時/ボーナス時有効ライン分離・Wait機能(リアル4.1秒ウェイト＆自動補給テンポ補正)・フリーズ時ランプ同期・ボタン直押し変則打ち対応・完全オート目押し仕様(21コマ引込)・直揃い禁止絶対保護・REG13枚払出(純増96枚)独自計算保護・ボーナス中全小役払出統合・ハサミ打ち/逆押し対応先読みアルゴリズム・100G連BGM
  */
 
 (function() {
@@ -283,6 +283,8 @@
 
         if (window.SLOT_SOUND) window.SLOT_SOUND.preload();
         triggerLeverVisual();
+
+        // 回転開始時は元の挙動通り消灯
         setLineBadgesLit(false);
 
         const executeSpinSequence = () => {
@@ -475,6 +477,57 @@
           return (s0 === 'CHERRY' || s1 === 'CHERRY' || s2 === 'CHERRY');
         };
 
+        // 単独ボーナス成立時（ペカ前）のリーチ目スコアリング関数
+        const isSingleBonusPekaBefore = Boolean((currentFlag === 'BIG' || currentFlag === 'REG') && !isBonusMode);
+        const calculateReachScore = (checkIdx) => {
+          if (!isSingleBonusPekaBefore) return 0;
+          let score = 0;
+          const stoppedSyms = [0, 1, 2].map(r => {
+            const cIdx = (r === index) ? checkIdx : reels[r].currentIndex;
+            return [getSym(r, cIdx, 0), getSym(r, cIdx, 1), getSym(r, cIdx, 2)];
+          });
+
+          // 1. 枠内のボーナス図柄（7, BAR）の個数
+          let bonusSymbolCount = 0;
+          for (let r = 0; r < 3; r++) {
+            if (isStopped(r)) {
+              for (let o = 0; o < 3; o++) {
+                if (stoppedSyms[r][o] === '7' || stoppedSyms[r][o] === 'BAR') bonusSymbolCount++;
+              }
+            }
+          }
+          score += bonusSymbolCount * 10;
+
+          // 2. ハサミ対角線・平行のボーナス図柄配置（アツいリーチ目形成）
+          if (isStopped(0) && isStopped(2)) {
+            const leftTop = stoppedSyms[0][0], leftBottom = stoppedSyms[0][2];
+            const rightTop = stoppedSyms[2][0], rightBottom = stoppedSyms[2][2];
+            const isBonusSym = (s) => (s === '7' || s === 'BAR');
+
+            // 対角線（左上＋右下、または左下＋右上）
+            if ((isBonusSym(leftTop) && isBonusSym(rightBottom)) || (isBonusSym(leftBottom) && isBonusSym(rightTop))) {
+              score += 50;
+            }
+            // 平行（上段同士、または下段同士）
+            if ((isBonusSym(leftTop) && isBonusSym(rightTop)) || (isBonusSym(leftBottom) && isBonusSym(rightBottom))) {
+              score += 30;
+            }
+          }
+
+          // 3. 2連テンパイ（7-7, 7-BAR等）
+          if (isStopped(0) && isStopped(1)) {
+            for (let line of lineOffsets) {
+              const s0 = stoppedSyms[0][line[0]];
+              const s1 = stoppedSyms[1][line[1]];
+              if ((s0 === '7' || s0 === 'BAR') && (s1 === '7' || s1 === 'BAR')) {
+                score += 40;
+              }
+            }
+          }
+
+          return score;
+        };
+
         // 禁じ手チェック関数 (直揃い禁止・誤揃い防止)
         const checkFinalState = (syms) => {
             if (!currentFlag && !bonusFlag) {
@@ -501,12 +554,14 @@
 
         const stoppedCount = [0, 1, 2].filter(r => isStopped(r)).length;
 
+        let bestReachScore = -1;
+
         for (let slip = 0; slip <= 21; slip++) {
             const checkIdx = (baseIdx - slip + reel.strip.length) % reel.strip.length;
             let isValid = true;
             let isTargetMatched = false;
 
-            // 非チェリー成立時：左リール枠内（上中下）にチェリーが露出する停止位置を排除（実機出目違和感解消）
+            // 非チェリー成立時：左リール枠内（上中下）にチェリーが露出する停止位置を排除（実機出目美観適合）
             if (!isCherryFlag && index === 0 && isLeftReelShowingCherry(checkIdx)) {
               isValid = false;
             }
@@ -603,8 +658,18 @@
             }
 
             if (isValid) {
-                if (slip <= slipLimit) { finalSlip = slip; foundValid = true; break; } 
-                else if (!foundValid) { finalSlip = slip; foundValid = true; } 
+                // 単独ボーナス時（ペカ前）はスコアの高いリーチ目を優先選択
+                if (isSingleBonusPekaBefore) {
+                  const reachScore = calculateReachScore(checkIdx);
+                  if (reachScore > bestReachScore) {
+                    bestReachScore = reachScore;
+                    finalSlip = slip;
+                    foundValid = true;
+                  }
+                } else {
+                  if (slip <= slipLimit) { finalSlip = slip; foundValid = true; break; } 
+                  else if (!foundValid) { finalSlip = slip; foundValid = true; } 
+                }
             }
         }
         
