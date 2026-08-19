@@ -1,6 +1,6 @@
 /**
  * スロットゲームエンジン (engine.js)
- * ネオアイムジャグラーEX配列完全適合・AUTO前リール停止確認連鎖(順押し完全保証＆中リール大滑り逆転追放)・ボーナス揃い音響シーケンスチェーン固定(3.5秒目視確認待ち)・単独ボーナス(ペカ前)リーチ目優先形成制御・非チェリー時左リールチェリー露出回避・通常時/ボーナス時有効ライン分離・Wait機能(リアル4.1秒ウェイト＆自動補給テンポ補正)・フリーズ時ランプ同期・ボタン直押し変則打ち対応・完全オート目押し仕様(21コマ引込)・直揃い禁止絶対保護・REG13枚払出(純増96枚)独自計算保護・ボーナス中全小役払出統合・ハサミ打ち/逆押し対応先読みアルゴリズム・100G連BGM
+ * ネオアイムジャグラーEX配列完全適合・AUTO動作中手動ストップボタン割り込み時安全解除補正・AUTOストップタイミング自然テンポ最適化(前リール完全停止+220ms自然ウェイト)・ボーナス揃い音響シーケンスチェーン固定(3.5秒目視確認待ち)・単独ボーナス(ペカ前)リーチ目優先形成制御・非チェリー時左リールチェリー露出回避・通常時/ボーナス時有効ライン分離・Wait機能(リアル4.1秒ウェイト＆自動補給テンポ補正)・フリーズ時ランプ同期・ボタン直押し変則打ち対応・完全オート目押し仕様(21コマ引込)・直揃い禁止絶対保護・REG13枚払出(純増96枚)独自計算保護・ボーナス中全小役払出統合・ハサミ打ち/逆押し対応先読みアルゴリズム・100G連BGM
  */
 
 (function() {
@@ -701,7 +701,7 @@
       document.addEventListener('mousedown', startTouchSession, { passive: true });
       document.addEventListener('mouseup', endTouchSession, { passive: true });
 
-      // ストップボタン個別のイベント処理（変則打ち対応＆イベント伝播遮断）
+      // ストップボタン個別のイベント処理（変則打ち対応＆イベント伝播遮断＆AUTO時手動タップ安全解除）
       [0, 1, 2].forEach(i => {
         const btn = document.getElementById(`stopBtn${i}`);
         if (btn) {
@@ -710,6 +710,7 @@
               e.stopPropagation();
               if (e.cancelable) e.preventDefault();
             }
+            if (isAutoMode) stopAutoMode(); // 案2安全補正：AUTO時に個別ボタンを手動タップした際、安全にAUTO解除（MANUAL復帰）
             if (gameState === STATE_SPINNING) {
               this.stopReelIndex(i, false);
             }
@@ -733,41 +734,60 @@
       }
     },
 
-    // 案2改修：前リール完全停止確認連鎖（完全順押し保証＆中リールの最大20コマ滑り時も右が先に止まる逆転現象を100%追放）
+    // 案2改修：前リール完全停止確認 ＋ 220ms自然ウェイト挿入制御 (忙しさを100%解消し、人間が遊ぶような心地よいテンポを導入)
     scheduleAutoStop: function() {
       if (!isAutoMode || gameState !== STATE_SPINNING) return;
       if (autoTimer) clearTimeout(autoTimer);
 
-      const tryStopNext = () => {
+      let step = 0; // 0: 左待機, 1: 左停止後220msウェイト, 2: 中待機, 3: 中停止後220msウェイト, 4: 右待機
+
+      const runAutoStep = () => {
         if (!isAutoMode || gameState !== STATE_SPINNING) return;
 
-        // 左(0) -> 中(1) -> 右(2) の順で、前リールが完全に停止（isSpinning === false）するのを待ってから次リールを停止
+        // 【左リール(0)処理】
         if (reels[0].isSpinning) {
           if (!reels[0].isStopping) {
             this.stopReelIndex(0, true);
           }
-          autoTimer = setTimeout(tryStopNext, 40);
+          autoTimer = setTimeout(runAutoStep, 50);
           return;
         }
 
+        // 左が完全停止した直後の自然な「間（220ms）」
+        if (step === 0) {
+          step = 1;
+          autoTimer = setTimeout(runAutoStep, 220);
+          return;
+        }
+
+        // 【中リール(1)処理】
         if (reels[1].isSpinning) {
           if (!reels[1].isStopping) {
             this.stopReelIndex(1, true);
           }
-          autoTimer = setTimeout(tryStopNext, 40);
+          autoTimer = setTimeout(runAutoStep, 50);
           return;
         }
 
+        // 中が完全停止した直後の自然な「間（220ms）」
+        if (step === 1) {
+          step = 2;
+          autoTimer = setTimeout(runAutoStep, 220);
+          return;
+        }
+
+        // 【右リール(2)処理】
         if (reels[2].isSpinning) {
           if (!reels[2].isStopping) {
             this.stopReelIndex(2, true);
           }
-          autoTimer = setTimeout(tryStopNext, 40);
+          autoTimer = setTimeout(runAutoStep, 50);
           return;
         }
       };
 
-      autoTimer = setTimeout(tryStopNext, 200);
+      // スピン開始後 250ms で最初の左リールストップを呼び出し
+      autoTimer = setTimeout(runAutoStep, 250);
     },
 
     spinReel: function(reel) {
